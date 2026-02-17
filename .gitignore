@@ -1,0 +1,48 @@
+# << Editor configuration files >>
+# IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+
+# Sublime
+*.sublime-workspace
+
+# Neovim
+.nvim.lua
+
+# << Build systems >>
+**/target/
+**/build/
+**/out/
+**/dist/
+**/site/
+
+# << Programming languages >>
+# Python
+venv/
+.venv/
+.ruff_cache
+*.egg-info
+**/__pycache__/
+*.pyc
+
+# JavaScript
+**/node_modules/
+
+# << Debugging/logs >>
+*.log*
+
+# << Environment >>
+**/.env
+**/.env.*
+!.env.example
+!.env.template
+
+# << OS >>
+# MAC
+**/.DS_Store
+
+# Windows
+**/Thumbs.db
