@@ -1,0 +1,38 @@
+---
+name: Backend checks
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - "**/*.py"
+
+permissions:
+  contents: write
+
+jobs:
+  python-linting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/ruff-action@v3
+
+      - name: Linting check
+        run: |
+          ruff check server/
+  python-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/ruff-action@v3
+
+      - name: Formatting check
+        run: |
+          ruff format --check server/
