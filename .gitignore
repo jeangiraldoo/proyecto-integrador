@@ -18,6 +18,7 @@
 **/out/
 **/dist/
 **/site/
+*.sqlite3
 
 # << Programming languages >>
 # Python
