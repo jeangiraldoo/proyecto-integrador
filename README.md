@@ -27,9 +27,3 @@ proyecto-integrador/
 ├── .github/workflows/   ← CI/CD (lint, format, commits)
 └── README.md
 ```
-
-## Convenciones
-
-- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
-  `docs:`, `chore:`, etc.)
-- **Ramas**: ver [CONTRIBUTING.md](CONTRIBUTING.md)
