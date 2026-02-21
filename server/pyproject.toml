@@ -2,7 +2,7 @@
 name = "Advancy"
 version = "0.0.1"
 description = "Website for managing school tasks"
-requires-python = ">=3.15,<4.0"
+requires-python = ">=3.14,<4.0"
 dependencies = [
     "django>=6.0",
     "djangorestframework>=3.16,<3.17",
@@ -23,7 +23,7 @@ authors = [
 	{name = "Mónica Cortés"},
 	{name = "Santiago Valencia"},
 	{name = "Manuel Rodriguez"},
-	{name = "Andrés Perea"}
+	{name = "Andrés Perea"},
 	{name = "Jean Giraldo"}
 ]
 
@@ -33,7 +33,7 @@ build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
 dev = [
-	"raices_caninas[lint]"
+	"Advancy[lint]"
 ]
 lint = [
 	"ruff>=0.15.2"
