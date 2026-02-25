@@ -85,6 +85,7 @@ REST_FRAMEWORK = {
 	"DEFAULT_AUTHENTICATION_CLASSES": [
 		"rest_framework_simplejwt.authentication.JWTAuthentication",
 	],
+	"EXCEPTION_HANDLER": "planner.exceptions.custom_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
