@@ -1,15 +1,10 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 
-class User(models.Model):
+class User(AbstractUser):
+	max_daily_hours = models.PositiveIntegerField(default=8)
 	name = models.CharField(max_length=100)
-	email = models.EmailField(unique=True)
-	password_hash = models.CharField(max_length=255)
-	max_daily_hours = models.PositiveIntegerField()
-	created_at = models.DateTimeField(auto_now_add=True)
-
-	def __str__(self):
-		return self.name
 
 
 class Activity(models.Model):
