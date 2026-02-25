@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from datetime import datetime
 
 
 class User(AbstractUser):
@@ -21,15 +22,17 @@ class Activity(models.Model):
 
 
 class Subtask(models.Model):
-	activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="subtasks")
-	title = models.CharField(max_length=200)
-	target_date = models.DateField()
+	activity_id = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="subtasks")
+	name = models.CharField(max_length=200)
 	estimated_hours = models.PositiveIntegerField()
+	target_date = models.DateField()
 	status = models.CharField(max_length=50)
 	ordering = models.PositiveIntegerField()
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
 
 	def __str__(self):
-		return self.title
+		return self.name
 
 
 class Progress(models.Model):
