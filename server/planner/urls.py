@@ -14,11 +14,15 @@ subtask_list = SubtaskViewSet.as_view(
 
 urlpatterns = [
 	path("health/", health_check),
-	# /activities/{id}/subtasks/
 	path(
 		"activities/<int:activity_id>/subtasks/",
 		subtask_list,
 		name="activity-subtasks",
+	),
+	path(
+		"activities/<int:activity_id>/subtasks/<int:subtask_id>/",
+		SubtaskViewSet.as_view({"delete": "destroy", "patch": "partial_update"}),
+		name="activity-subtask-detail",
 	),
 ]
 
