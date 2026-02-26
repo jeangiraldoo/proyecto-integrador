@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import health_check, ActivityViewSet, SubtaskViewSet
+from .views import health_check, ActivityViewSet, SubtaskViewSet, TodayView
 
 router = DefaultRouter()
 router.register("activities", ActivityViewSet, basename="activity")
@@ -24,6 +24,7 @@ urlpatterns = [
 		SubtaskViewSet.as_view({"delete": "destroy", "patch": "partial_update"}),
 		name="activity-subtask-detail",
 	),
+	path("today/", TodayView.as_view(), name="today"),
 ]
 
 urlpatterns += router.urls
