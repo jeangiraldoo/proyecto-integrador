@@ -8,6 +8,9 @@ from rest_framework import status, viewsets
 import logging
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.exceptions import NotFound
+from django.utils import timezone
+from rest_framework.views import APIView
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +159,66 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 			return Response(e.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 		except Exception:
 			logger.exception("Unexpected error updating subtask")
+			return Response(
+				{"errors": {"server": "Internal server error"}},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+class TodayView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		try:
+			n_days_param = request.query_params.get("n_days")
+
+			if n_days_param is None:
+				n_days = 7
+			else:
+				try:
+					n_days = int(n_days_param)
+					if n_days < 0:
+						raise ValueError
+				except ValueError:
+					raise ValidationError({"errors": {"n_days": "Must be a non-negative integer."}})
+
+			today = timezone.localdate()
+			upcoming_limit = today + timedelta(days=n_days)
+
+			subtasks = Subtask.objects.filter(activity_id__user=request.user).select_related(
+				"activity_id"
+			)
+
+			overdue = []
+			today_tasks = []
+			upcoming = []
+
+			for subtask in subtasks:
+				if subtask.target_date < today:
+					overdue.append(subtask)
+				elif subtask.target_date == today:
+					today_tasks.append(subtask)
+				elif today < subtask.target_date <= upcoming_limit:
+					upcoming.append(subtask)
+
+			overdue.sort(key=lambda s: (s.target_date, s.estimated_hours))
+			today_tasks.sort(key=lambda s: (s.estimated_hours,))
+			upcoming.sort(key=lambda s: (s.target_date, s.estimated_hours))
+
+			return Response(
+				{
+					"overdue": SubtaskSerializer(overdue, many=True).data,
+					"today": SubtaskSerializer(today_tasks, many=True).data,
+					"upcoming": SubtaskSerializer(upcoming, many=True).data,
+					"meta": {"n_days": n_days},
+				}
+			)
+
+		except ValidationError:
+			raise
+
+		except Exception:
+			logger.exception("Unexpected error generating today view")
 			return Response(
 				{"errors": {"server": "Internal server error"}},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
