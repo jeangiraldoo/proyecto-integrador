@@ -14,20 +14,21 @@ class ActivitySerializer(serializers.ModelSerializer):
 	def validate(self, attrs):
 		errors = {}
 
-		title = attrs.get("title", "").strip()
-		if not title:
-			errors["title"] = "Title is required"
+		if "title" in attrs:
+			title = attrs.get("title", "").strip()
+			if not title:
+				errors["title"] = "Title is required"
 
-		status = attrs.get("status")
-		allowed_statuses = ["pending", "completed", "in_progress"]
-		if status not in allowed_statuses:
-			errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
+		if "status" in attrs:
+			status = attrs.get("status")
+			allowed_statuses = ["pending", "completed", "in_progress"]
+			if status not in allowed_statuses:
+				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
 
-		due_date = attrs.get("due_date")
-		if due_date is None:
-			errors["due_date"] = "Due date is required"
-		elif due_date < date.today():
-			errors["due_date"] = "Due date cannot be earlier than today"
+		if "due_date" in attrs:
+			due_date = attrs.get("due_date")
+			if due_date < date.today():
+				errors["due_date"] = "Due date cannot be earlier than today"
 
 		if errors:
 			raise serializers.ValidationError({"errors": errors})
@@ -57,30 +58,32 @@ class SubtaskSerializer(serializers.ModelSerializer):
 	def validate(self, attrs):
 		errors = {}
 
-		name = attrs.get("name", "").strip()
-		if not name:
-			errors["name"] = "Name is required"
+		if "name" in attrs:
+			name = attrs["name"].strip()
+			if not name:
+				errors["name"] = "Name is required"
 
-		status = attrs.get("status")
-		allowed_statuses = ["pending", "completed", "in_progress"]
-		if status not in allowed_statuses:
-			errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
+		if "status" in attrs:
+			status = attrs["status"]
+			allowed_statuses = ["pending", "completed", "in_progress"]
+			if status not in allowed_statuses:
+				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
 
-		target_date = attrs.get("target_date")
-		if target_date is None:
-			errors["target_date"] = "Target date is required"
-		elif target_date < date.today():
-			errors["target_date"] = "Target date cannot be earlier than today"
+		if "target_date" in attrs:
+			target_date = attrs["target_date"]
+			if target_date < date.today():
+				errors["target_date"] = "Target date cannot be earlier than today"
 
-		activity = self.context.get("activity")
-		if activity and target_date and target_date > activity.due_date:
-			errors["target_date"] = (
-				f"Target date cannot be later than the activity due date ({activity.due_date})"
-			)
+			activity = self.context.get("activity")
+			if activity and target_date > activity.due_date:
+				errors["target_date"] = (
+					f"Target date cannot be later than the activity due date ({activity.due_date})"
+				)
 
-		estimated_hours = attrs.get("estimated_hours")
-		if estimated_hours is None or estimated_hours <= 0:
-			errors["estimated_hours"] = "Estimated hours must be a positive number"
+		if "estimated_hours" in attrs:
+			estimated_hours = attrs["estimated_hours"]
+			if estimated_hours <= 0:
+				errors["estimated_hours"] = "Estimated hours must be a positive number"
 
 		if errors:
 			raise serializers.ValidationError({"errors": errors})
