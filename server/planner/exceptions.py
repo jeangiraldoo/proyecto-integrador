@@ -15,9 +15,9 @@ def custom_exception_handler(exc, context):
 
 	All errors follow:
 	{
-	  "errors": {
-	    "field_or_resource": "message"
-	  }
+		"errors": {
+			"field_or_resource": "message"
+		}
 	}
 	"""
 
