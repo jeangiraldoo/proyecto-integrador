@@ -55,7 +55,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 			return Response(status=status.HTTP_204_NO_CONTENT)
 
 		except Http404:
-			raise NotFound("There is no activity with such id")
+			raise NotFound("There is no activity with such id") from None
 
 		except Exception:
 			logger.exception("Unexpected error deleting activity")
@@ -68,7 +68,9 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		try:
 			activity = self.get_object()
 		except Http404:
-			raise NotFound(detail={"errors": {"resource": "There is no activity with such id"}})
+			raise NotFound(
+				detail={"errors": {"resource": "There is no activity with such id"}}
+			) from None
 
 		serializer = self.get_serializer(
 			activity,
@@ -94,7 +96,7 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				user=self.request.user,
 			)
 		except Activity.DoesNotExist:
-			raise NotFound(detail="There is no activity with the given id")
+			raise NotFound(detail="There is no activity with the given id") from None
 
 	def get_queryset(self):
 		activity = self.get_activity()
@@ -138,7 +140,7 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			)
+			) from None
 
 		subtask.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
@@ -156,7 +158,7 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			)
+			) from None
 
 		serializer = self.get_serializer(subtask, data=request.data, partial=True)
 		try:
@@ -189,7 +191,9 @@ class TodayView(APIView):
 					if n_days < 0:
 						raise ValueError
 				except ValueError:
-					raise ValidationError({"errors": {"n_days": "Must be a non-negative integer."}})
+					raise ValidationError(
+						{"errors": {"n_days": "Must be a non-negative integer."}}
+					) from None
 
 			today = timezone.localdate()
 			upcoming_limit = today + timedelta(days=n_days)
