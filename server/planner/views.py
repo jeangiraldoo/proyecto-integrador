@@ -1,16 +1,17 @@
+import logging
+from datetime import timedelta
+
 from django.http import Http404
+from django.utils import timezone
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .models import Activity, Subtask
 from .serializers import ActivitySerializer, SubtaskSerializer, UserSerializer
-from rest_framework import status, viewsets
-import logging
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.exceptions import NotFound
-from django.utils import timezone
-from rest_framework.views import APIView
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +22,11 @@ def health_check():
 
 
 class MeView(APIView):
-    permission_classes = [IsAuthenticated]
+	permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+	def get(self, request):
+		serializer = UserSerializer(request.user)
+		return Response(serializer.data)
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
