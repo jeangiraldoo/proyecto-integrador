@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
 import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
 import client from "./api/client";
 import "./App.css";
 
@@ -48,16 +49,7 @@ function App() {
 	return (
 		<>
 			<Toaster position="top-right" theme="dark" richColors />
-			<div style={{ padding: "20px", color: "white" }}>
-				<h1>Dashboard (Próximamente)</h1>
-				<p>¡Has iniciado sesión correctamente!</p>
-				<button
-					onClick={handleLogout}
-					style={{ marginTop: "20px", backgroundColor: "#f7768e", color: "#1a1b26" }}
-				>
-					Cerrar Sesión
-				</button>
-			</div>
+			<Dashboard onLogout={handleLogout} />
 		</>
 	);
 }
