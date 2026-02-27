@@ -20,23 +20,23 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").sp
 
 # Application definition
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "corsheaders",
-    "rest_framework",
-    "drf_spectacular",
-    "planner",
+	"django.contrib.admin",
+	"django.contrib.auth",
+	"django.contrib.contenttypes",
+	"django.contrib.sessions",
+	"django.contrib.messages",
+	"django.contrib.staticfiles",
+	"corsheaders",
+	"rest_framework",
+	"drf_spectacular",
+	"planner",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
+	"corsheaders.middleware.CorsMiddleware",
+	"django.middleware.security.SecurityMiddleware",
+	"django.contrib.sessions.middleware.SessionMiddleware",
+	"django.middleware.common.CommonMiddleware",
 	"django.middleware.csrf.CsrfViewMiddleware",
 	"django.contrib.auth.middleware.AuthenticationMiddleware",
 	"django.contrib.messages.middleware.MessageMiddleware",
@@ -75,17 +75,23 @@ else:
 		}
 	}
 
-# Django REST Framework
 REST_FRAMEWORK = {
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+	"DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+	"DEFAULT_RENDERER_CLASSES": [
+		"rest_framework.renderers.JSONRenderer",
+		"rest_framework.renderers.BrowsableAPIRenderer",
+	],
+	"DEFAULT_AUTHENTICATION_CLASSES": [
+		"rest_framework_simplejwt.authentication.JWTAuthentication",
+	],
+	"EXCEPTION_HANDLER": "planner.exceptions.custom_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Advancy API",
-    "DESCRIPTION": "API for school task management",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
+	"TITLE": "Advancy API",
+	"DESCRIPTION": "API for school task management",
+	"VERSION": "1.0.0",
+	"SERVE_INCLUDE_SCHEMA": False,
 }
 
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
@@ -105,5 +111,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+AUTH_USER_MODEL = "planner.User"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
