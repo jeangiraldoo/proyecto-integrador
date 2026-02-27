@@ -1,41 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Toaster } from "sonner";
+import Login from "./components/Login";
 import client from "./api/client";
 import "./App.css";
 
 function App() {
-	const [data, setData] = useState<string | null>(null);
-
-	const handleConnect = async () => {
-		try {
-			const response = await client.get("/health/");
-			setData(JSON.stringify(response.data, null, 2));
-		} catch (error) {
-			console.error(error);
-			setData("Error al conectar con el servidor");
+	const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+		const token = localStorage.getItem("access_token");
+		if (token) {
+			client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+			return true;
 		}
+		return false;
+	});
+
+	// Efecto para sincronizar el header de axios si el estado cambia (por si acaso)
+	useEffect(() => {
+		const token = localStorage.getItem("access_token");
+		if (isAuthenticated && token) {
+			client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+		} else {
+			delete client.defaults.headers.common["Authorization"];
+		}
+	}, [isAuthenticated]);
+
+	const handleLoginSuccess = (token: string) => {
+		client.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+		setIsAuthenticated(true);
 	};
+
+	const handleLogout = () => {
+		localStorage.removeItem("access_token");
+		localStorage.removeItem("refresh_token");
+		delete client.defaults.headers.common["Authorization"];
+		setIsAuthenticated(false);
+	};
+
+	if (!isAuthenticated) {
+		return (
+			<>
+				<Toaster position="top-right" theme="dark" richColors />
+				<Login onLoginSuccess={handleLoginSuccess} />
+			</>
+		);
+	}
 
 	return (
 		<>
-			<div style={{ padding: "20px" }}>
-				<h1>Llamado a la API</h1>
-				<button onClick={handleConnect}>Probar conexión /health</button>
-				{data && (
-					<div
-						style={{
-							marginTop: "20px",
-							padding: "20px",
-							background: "#1a1a1a",
-							color: "#ffffff",
-							borderRadius: "8px",
-							border: "1px solid #333",
-							textAlign: "left",
-						}}
-					>
-						<h3 style={{ margin: "0 0 10px 0" }}>Respuesta del Servidor:</h3>
-						<pre style={{ margin: 0, overflow: "auto" }}>{data}</pre>
-					</div>
-				)}
+			<Toaster position="top-right" theme="dark" richColors />
+			<div style={{ padding: "20px", color: "white" }}>
+				<h1>Dashboard (Próximamente)</h1>
+				<p>¡Has iniciado sesión correctamente!</p>
+				<button
+					onClick={handleLogout}
+					style={{ marginTop: "20px", backgroundColor: "#f7768e", color: "#1a1b26" }}
+				>
+					Cerrar Sesión
+				</button>
 			</div>
 		</>
 	);
