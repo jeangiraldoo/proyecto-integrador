@@ -54,8 +54,8 @@ class ActivityViewSet(viewsets.ModelViewSet):
 			activity.delete()
 			return Response(status=status.HTTP_204_NO_CONTENT)
 
-		except Http404:
-			raise NotFound("There is no activity with such id") from None
+		except Http404 as err:
+			raise NotFound("There is no activity with such id") from err
 
 		except Exception:
 			logger.exception("Unexpected error deleting activity")
@@ -67,10 +67,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	def partial_update(self, request, *args, **kwargs):
 		try:
 			activity = self.get_object()
-		except Http404:
+		except Http404 as err:
 			raise NotFound(
 				detail={"errors": {"resource": "There is no activity with such id"}}
-			) from None
+			) from err
 
 		serializer = self.get_serializer(
 			activity,
@@ -95,8 +95,8 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=self.kwargs["activity_id"],
 				user=self.request.user,
 			)
-		except Activity.DoesNotExist:
-			raise NotFound(detail="There is no activity with the given id") from None
+		except Activity.DoesNotExist as err:
+			raise NotFound(detail="There is no activity with the given id") from err
 
 	def get_queryset(self):
 		activity = self.get_activity()
@@ -116,9 +116,9 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 			serializer.save(activity_id=activity)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-		except ValidationError as e:
-			logger.warning("Subtask validation error", extra={"errors": e.detail})
-			return Response(e.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+		except ValidationError as err:
+			logger.warning("Subtask validation error", extra={"errors": err.detail})
+			return Response(err.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 		except Exception:
 			logger.exception("Unexpected error creating subtask")
@@ -135,12 +135,12 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=subtask_id,
 				activity_id=activity,  # ✅ FIXED
 			)
-		except Subtask.DoesNotExist:
+		except Subtask.DoesNotExist as err:
 			raise NotFound(
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			) from None
+			) from err
 
 		subtask.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
@@ -153,12 +153,12 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=subtask_id,
 				activity_id=activity,
 			)
-		except Subtask.DoesNotExist:
+		except Subtask.DoesNotExist as err:
 			raise NotFound(
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			) from None
+			) from err
 
 		serializer = self.get_serializer(subtask, data=request.data, partial=True)
 		try:
@@ -190,10 +190,10 @@ class TodayView(APIView):
 					n_days = int(n_days_param)
 					if n_days < 0:
 						raise ValueError
-				except ValueError:
+				except ValueError as err:
 					raise ValidationError(
 						{"errors": {"n_days": "Must be a non-negative integer."}}
-					) from None
+					) from err
 
 			today = timezone.localdate()
 			upcoming_limit = today + timedelta(days=n_days)
