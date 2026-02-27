@@ -1,11 +1,12 @@
 from django.contrib import admin
+
 from .models import (
-    User,
-    Activity,
-    Subtask,
-    Progress,
-    Conflict,
-    ConflictResolution,
+	Activity,
+	Conflict,
+	ConflictResolution,
+	Progress,
+	Subtask,
+	User,
 )
 
 admin.site.register(User)
