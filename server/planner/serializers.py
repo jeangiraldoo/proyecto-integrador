@@ -1,8 +1,13 @@
 from datetime import date
 
 from rest_framework import serializers
+from .models import Activity, Subtask, User
 
-from .models import Activity, Subtask
+
+class UserSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = User
+		fields = ["id", "username", "email", "first_name", "last_name", "date_joined"]
 
 
 class ActivitySerializer(serializers.ModelSerializer):

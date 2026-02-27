@@ -9,9 +9,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from .models import Activity, Subtask
-from .serializers import ActivitySerializer, SubtaskSerializer
+from .serializers import ActivitySerializer, SubtaskSerializer, UserSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,14 @@ logger = logging.getLogger(__name__)
 @api_view(["GET"])
 def health_check():
 	return Response({"status": "ok"})
+
+
+class MeView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		serializer = UserSerializer(request.user)
+		return Response(serializer.data)
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
