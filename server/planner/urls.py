@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import health_check, ActivityViewSet, SubtaskViewSet, TodayView
+
+from .views import ActivityViewSet, SubtaskViewSet, TodayView, health_check
 
 router = DefaultRouter()
 router.register("activities", ActivityViewSet, basename="activity")

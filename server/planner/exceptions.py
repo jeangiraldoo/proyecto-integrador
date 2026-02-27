@@ -1,10 +1,10 @@
 import logging
 
 from django.http import Http404
-from rest_framework.views import exception_handler
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.response import Response
+from rest_framework.views import exception_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +15,9 @@ def custom_exception_handler(exc, context):
 
 	All errors follow:
 	{
-	  "errors": {
-	    "field_or_resource": "message"
-	  }
+		"errors": {
+			"field_or_resource": "message"
+		}
 	}
 	"""
 
