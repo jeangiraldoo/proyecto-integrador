@@ -1,8 +1,8 @@
-from .models import Activity
-from rest_framework import serializers
 from datetime import date
-from .models import Subtask
-from rest_framework.exceptions import NotFound
+
+from rest_framework import serializers
+
+from .models import Activity, Subtask
 
 
 class ActivitySerializer(serializers.ModelSerializer):

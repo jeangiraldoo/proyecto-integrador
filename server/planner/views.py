@@ -1,16 +1,17 @@
+import logging
+from datetime import timedelta
+
 from django.http import Http404
+from django.utils import timezone
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .models import Activity, Subtask
 from .serializers import ActivitySerializer, SubtaskSerializer
-from rest_framework import status, viewsets
-import logging
-from rest_framework.exceptions import ValidationError, NotFound
-from rest_framework.exceptions import NotFound
-from django.utils import timezone
-from rest_framework.views import APIView
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ class ActivityViewSet(viewsets.ModelViewSet):
 			activity.delete()
 			return Response(status=status.HTTP_204_NO_CONTENT)
 
-		except Http404:
-			raise NotFound("There is no activity with such id")
+		except Http404 as err:
+			raise NotFound("There is no activity with such id") from err
 
 		except Exception:
 			logger.exception("Unexpected error deleting activity")
@@ -58,8 +59,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	def partial_update(self, request, *args, **kwargs):
 		try:
 			activity = self.get_object()
-		except Http404:
-			raise NotFound(detail={"errors": {"resource": "There is no activity with such id"}})
+		except Http404 as err:
+			raise NotFound(
+				detail={"errors": {"resource": "There is no activity with such id"}}
+			) from err
 
 		serializer = self.get_serializer(
 			activity,
@@ -84,8 +87,8 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=self.kwargs["activity_id"],
 				user=self.request.user,
 			)
-		except Activity.DoesNotExist:
-			raise NotFound(detail="There is no activity with the given id")
+		except Activity.DoesNotExist as err:
+			raise NotFound(detail="There is no activity with the given id") from err
 
 	def get_queryset(self):
 		activity = self.get_activity()
@@ -105,9 +108,9 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 			serializer.save(activity_id=activity)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-		except ValidationError as e:
-			logger.warning("Subtask validation error", extra={"errors": e.detail})
-			return Response(e.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+		except ValidationError as err:
+			logger.warning("Subtask validation error", extra={"errors": err.detail})
+			return Response(err.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 		except Exception:
 			logger.exception("Unexpected error creating subtask")
@@ -124,12 +127,12 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=subtask_id,
 				activity_id=activity,  # ✅ FIXED
 			)
-		except Subtask.DoesNotExist:
+		except Subtask.DoesNotExist as err:
 			raise NotFound(
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			)
+			) from err
 
 		subtask.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
@@ -142,12 +145,12 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				id=subtask_id,
 				activity_id=activity,
 			)
-		except Subtask.DoesNotExist:
+		except Subtask.DoesNotExist as err:
 			raise NotFound(
 				detail={
 					"errors": {"resource": "There is no subtask with such id for this activity"}
 				}
-			)
+			) from err
 
 		serializer = self.get_serializer(subtask, data=request.data, partial=True)
 		try:
@@ -179,8 +182,10 @@ class TodayView(APIView):
 					n_days = int(n_days_param)
 					if n_days < 0:
 						raise ValueError
-				except ValueError:
-					raise ValidationError({"errors": {"n_days": "Must be a non-negative integer."}})
+				except ValueError as err:
+					raise ValidationError(
+						{"errors": {"n_days": "Must be a non-negative integer."}}
+					) from err
 
 			today = timezone.localdate()
 			upcoming_limit = today + timedelta(days=n_days)
