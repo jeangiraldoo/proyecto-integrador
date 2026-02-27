@@ -1,14 +1,14 @@
-from .models import Activity, User
-from rest_framework import serializers
 from datetime import date
-from .models import Subtask
-from rest_framework.exceptions import NotFound
+
+from rest_framework import serializers
+
+from .models import Activity, Subtask, User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "date_joined"]
+	class Meta:
+		model = User
+		fields = ["id", "username", "email", "first_name", "last_name", "date_joined"]
 
 
 class ActivitySerializer(serializers.ModelSerializer):
