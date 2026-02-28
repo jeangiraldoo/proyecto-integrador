@@ -526,10 +526,7 @@ class TodayView(APIView):
 
 	@extend_schema(
 		summary="Today view",
-		description=(
-			"Return overdue, today and upcoming subtasks. "
-			"Optional query param `n_days`."
-		),
+		description=("Return overdue, today and upcoming subtasks. Optional query param `n_days`."),
 		responses=OpenApiTypes.OBJECT,
 		examples=[
 			OpenApiExample(
