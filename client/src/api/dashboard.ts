@@ -15,6 +15,7 @@ export interface Activity {
 	id: number;
 	user: number;
 	title: string;
+	course_name: string;
 	description: string;
 	due_date: string; // "YYYY-MM-DD"
 	status: "pending" | "completed" | "in_progress";
@@ -52,9 +53,16 @@ export async function fetchActivities(): Promise<Activity[]> {
 	return data;
 }
 
-export async function createActivity(
-	payload: Pick<Activity, "title" | "description" | "due_date" | "status">,
-): Promise<Activity> {
+export type CreateActivityPayload = {
+	title: string;
+	description?: string;
+	due_date: string;
+	status: Activity["status"];
+	total_estimated_hours?: number;
+	subtasks?: { name: string; target_date: string; estimated_hours: number }[];
+};
+
+export async function createActivity(payload: CreateActivityPayload): Promise<Activity> {
 	const { data } = await client.post<Activity>("/activities/", payload);
 	return data;
 }
