@@ -1,0 +1,775 @@
+/* ============================================================
+   CSS VARIABLES
+   ============================================================ */
+.ca-backdrop {
+  --ca-purple: #7c5cff;
+  --ca-purple-light: #a78bfa;
+  --ca-green: #22c55e;
+  --ca-green-dark: #10b981;
+  --ca-red: #f87171;
+  --ca-orange: #fb923c;
+  --ca-bg-deep: #09071a;
+  --ca-bg-modal: #0f0d1f;
+  --ca-bg-card: rgba(255,255,255,0.025);
+  --ca-border: rgba(255,255,255,0.07);
+  --ca-text: rgba(255,255,255,0.9);
+  --ca-text-muted: rgba(255,255,255,0.4);
+  --ca-text-dim: rgba(255,255,255,0.22);
+
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 3, 12, 0.78);
+  backdrop-filter: blur(18px) saturate(160%);
+  z-index: 9999;
+  padding: 24px;
+}
+
+/* ============================================================
+   MODAL SHELL
+   ============================================================ */
+.ca-modal {
+  width: 900px;
+  max-width: calc(100vw - 48px);
+  height: 620px;
+  max-height: calc(100vh - 48px);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 60% 40% at 10% 0%, rgba(124,92,255,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(34,197,94,0.05) 0%, transparent 70%),
+    linear-gradient(155deg, #15122b 0%, #0f0d1f 45%, #09071a 100%);
+
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow:
+    0 0 0 1px rgba(124,92,255,0.1),
+    0 40px 100px rgba(0,0,0,0.8),
+    0 0 80px rgba(124,92,255,0.05) inset;
+
+  font-family: inherit;
+  animation: ca-appear 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ca-appear {
+  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.ca-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px 30px 22px;
+  gap: 16px;
+  position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.ca-header::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(124,92,255,0.6) 25%,
+    rgba(167,139,250,0.4) 50%,
+    rgba(34,197,94,0.2) 75%,
+    transparent 100%
+  );
+}
+
+.ca-header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 40px;
+  background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(124,92,255,0.12), transparent);
+  pointer-events: none;
+}
+
+.ca-header-left { display: flex; align-items: center; gap: 14px; }
+
+.ca-header-icon {
+  width: 42px; height: 42px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(124,92,255,0.25), rgba(167,139,250,0.1));
+  border: 1px solid rgba(124,92,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ca-purple-light);
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(124,92,255,0.15);
+}
+
+.ca-header-text { display: flex; flex-direction: column; gap: 3px; }
+
+.ca-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #ede9ff;
+}
+
+.ca-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ca-text-muted);
+}
+
+.ca-close {
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: var(--ca-text-muted);
+  padding: 8px;
+  border-radius: 11px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, transform 0.22s, border-color 0.15s;
+}
+.ca-close:hover {
+  background: rgba(248,113,113,0.1);
+  border-color: rgba(248,113,113,0.2);
+  color: var(--ca-red);
+  transform: rotate(90deg);
+}
+
+/* ============================================================
+   BODY — TWO-COLUMN LAYOUT
+   ============================================================ */
+.ca-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+}
+
+.ca-body::-webkit-scrollbar { width: 4px; }
+.ca-body::-webkit-scrollbar-track { background: transparent; }
+.ca-body::-webkit-scrollbar-thumb { background: rgba(124,92,255,0.2); border-radius: 4px; }
+
+/* Left column */
+.ca-col-left {
+  padding: 24px 28px 24px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-right: 1px solid rgba(255,255,255,0.04);
+}
+
+/* Right column */
+.ca-col-right {
+  padding: 24px 30px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255,255,255,0.04);
+}
+
+/* ============================================================
+   COLUMN ACTIONS (buttons at bottom of right column)
+   ============================================================ */
+.ca-col-actions {
+  margin-top: auto;
+  padding: 16px 0 4px; /* bottom padding so box-shadow isn't clipped by overflow-y */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-shrink: 0; /* never shrink — always visible at bottom */
+}
+
+.ca-footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(251,146,60,0.85);
+  text-align: center;
+  animation: hint-in 180ms ease both;
+}
+@keyframes hint-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ca-footer-hint svg { flex-shrink: 0; }
+
+
+.ca-footer-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch; 
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 44px; 
+}
+
+
+
+/* ============================================================
+   COLUMN HEADINGS
+   ============================================================ */
+.ca-col-heading {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 2px;
+}
+
+.ca-col-heading-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ca-purple), var(--ca-purple-light));
+  box-shadow: 0 0 8px rgba(124,92,255,0.5);
+  flex-shrink: 0;
+}
+.ca-col-heading-dot.green {
+  background: linear-gradient(135deg, var(--ca-green), var(--ca-green-dark));
+  box-shadow: 0 0 8px rgba(34,197,94,0.4);
+}
+
+.ca-col-heading span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ca-text-dim);
+}
+
+/* ============================================================
+   FORM ROWS & INPUTS
+   ============================================================ */
+.ca-row { display: flex; flex-direction: column; gap: 6px; }
+
+.ca-row.split { flex-direction: row; gap: 12px; }
+.ca-row.split > div { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+.ca-row label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ca-text-dim);
+}
+
+.ca-row label.label-error { color: rgba(248,113,113,0.8); }
+
+/* Agregamos "select" a los estilos base */
+.ca-row input:not([type="date"]),
+.ca-row textarea,
+.ca-row select {
+  background-color: rgba(255,255,255,0.03);
+  border: 1px solid var(--ca-border);
+  color: var(--ca-text);
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Estilos específicos para el Select (Flecha customizada) */
+.ca-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(167,139,250,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+.ca-row select:focus {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+.ca-row select option {
+  background: var(--ca-bg-modal);
+  color: var(--ca-text);
+}
+.ca-row select:invalid {
+  color: var(--ca-text-dim);
+}
+
+.ca-row input:not([type="date"])::placeholder,
+.ca-row textarea::placeholder { color: var(--ca-text-dim); }
+
+.ca-row input:not([type="date"]):focus,
+.ca-row textarea:focus,
+.ca-row select:focus {
+  border-color: rgba(124,92,255,0.5);
+  background-color: rgba(124,92,255,0.04);
+  box-shadow: 0 0 0 3px rgba(124,92,255,0.1), 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Error state on inputs */
+.ca-row input.input-error,
+.ca-row textarea.input-error,
+.ca-row select.input-error {
+  border-color: rgba(248,113,113,0.45) !important;
+  background-color: rgba(248,113,113,0.04) !important;
+  box-shadow: 0 0 0 3px rgba(248,113,113,0.08) !important;
+}
+.ca-row .ca-date-wrapper.input-error input[type="date"] {
+  border-color: rgba(248,113,113,0.45) !important;
+  background-color: rgba(248,113,113,0.05) !important;
+  box-shadow: 0 0 0 3px rgba(248,113,113,0.08) !important;
+}
+
+.ca-row textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.6;
+}
+
+/* Inline error message */
+.ca-field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: rgba(248,113,113,0.9);
+  animation: err-in 180ms ease both;
+}
+@keyframes err-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   CUSTOM DATE PICKER
+   ============================================================ */
+.ca-date-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ca-date-icon {
+  position: absolute;
+  left: 12px;
+  color: rgba(167,139,250,0.7);
+  pointer-events: none;
+  display: flex; align-items: center;
+  z-index: 1;
+  transition: color 0.15s;
+}
+.ca-date-wrapper:focus-within .ca-date-icon { color: var(--ca-purple-light); }
+
+.ca-date-wrapper input[type="date"] {
+  width: 100%;
+  background: rgba(124,92,255,0.06);
+  border: 1px solid rgba(124,92,255,0.2);
+  color: rgba(255,255,255,0.85);
+  padding: 11px 14px 11px 38px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  color-scheme: dark;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+.ca-date-wrapper input[type="date"]:focus {
+  border-color: rgba(124,92,255,0.55);
+  background: rgba(124,92,255,0.1);
+  box-shadow: 0 0 0 3px rgba(124,92,255,0.12), 0 2px 8px rgba(0,0,0,0.2);
+}
+.ca-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
+  filter: brightness(10) saturate(0.5) hue-rotate(220deg);
+  cursor: pointer;
+  padding: 0; margin: 0;
+  width: 16px; height: 16px;
+  transition: opacity 0.15s;
+}
+.ca-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* ============================================================
+   SUBTASK SUBFORM
+   ============================================================ */
+.ca-subform {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  position: relative; overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ca-subform::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 80px; height: 40px;
+  background: radial-gradient(ellipse at top left, rgba(34,197,94,0.08), transparent);
+  pointer-events: none;
+}
+
+.ca-subform-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ca-subform-field { display: flex; flex-direction: column; gap: 5px; }
+.ca-subform-field.full { grid-column: 1 / -1; }
+
+.ca-subform-field label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ca-text-dim);
+}
+
+.ca-subform-field input:not([type="date"]) {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--ca-border);
+  color: var(--ca-text);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ca-subform-field input:not([type="date"])::placeholder { color: var(--ca-text-dim); }
+.ca-subform-field input:not([type="date"]):focus {
+  border-color: rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.04);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
+}
+
+/* subform date */
+.ca-subform-date-wrapper {
+  position: relative;
+  display: flex; align-items: center;
+}
+.ca-subform-date-wrapper .ca-date-icon {
+  left: 10px;
+  color: rgba(34,197,94,0.6);
+}
+.ca-subform-date-wrapper:focus-within .ca-date-icon { color: var(--ca-green); }
+.ca-subform-date-wrapper input[type="date"] {
+  width: 100%;
+  background: rgba(34,197,94,0.05);
+  border: 1px solid rgba(34,197,94,0.18);
+  color: rgba(255,255,255,0.85);
+  padding: 9px 12px 9px 34px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  color-scheme: dark;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+.ca-subform-date-wrapper input[type="date"]:focus {
+  border-color: rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.08);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
+}
+.ca-subform-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
+  filter: brightness(10) saturate(1) hue-rotate(100deg);
+  cursor: pointer;
+  width: 14px; height: 14px;
+}
+.ca-subform-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* Subform add button */
+.ca-subform-add-btn {
+  width: 100%;
+  height: 38px;
+  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+  position: relative; overflow: hidden;
+}
+.ca-subform-add-btn::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.ca-subform-add-btn:hover::after { opacity: 1; }
+.ca-subform-add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16,185,129,0.38), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.ca-subform-add-btn:active { transform: translateY(0); }
+.ca-subform-add-btn:disabled {
+  opacity: 0.3; cursor: default; transform: none;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.1);
+}
+
+/* Subform max reached notice */
+.ca-subform-max {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px dashed rgba(251,146,60,0.3);
+  background: rgba(251,146,60,0.04);
+  font-size: 12.5px;
+  color: rgba(251,146,60,0.7);
+  font-weight: 600;
+  animation: err-in 200ms ease both;
+}
+
+/* ============================================================
+   SUBTASK TABLE  —  capped height + scroll
+   ============================================================ */
+.ca-subtask-table-wrap {
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 13px;
+  background: rgba(255,255,255,0.01);
+  /* thead ~29px + 2 rows × ~40px = ~109px, scroll from row 3 */
+  max-height: 112px;
+  overflow-y: auto;
+}
+
+.ca-subtask-table-wrap::-webkit-scrollbar { width: 3px; }
+.ca-subtask-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.ca-subtask-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(124,92,255,0.25);
+  border-radius: 4px;
+}
+
+/* Sticky header when scrolling */
+.ca-subtask-table thead tr { position: sticky; top: 0; z-index: 1; }
+
+/* Empty state */
+.ca-subtask-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 28px 20px;
+  color: var(--ca-text-dim); text-align: center;
+}
+.ca-subtask-empty-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.15);
+}
+.ca-subtask-empty p { margin: 0; font-size: 12px; line-height: 1.5; }
+
+.ca-subtask-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ca-subtask-table thead tr {
+  background: rgba(15,13,31,0.98);
+  backdrop-filter: blur(4px);
+}
+.ca-subtask-table thead th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--ca-text-dim);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  white-space: nowrap;
+}
+.ca-subtask-table thead th.th-center { text-align: center; }
+
+.ca-subtask-table tbody tr { transition: background 0.1s; }
+.ca-subtask-table tbody tr:not(:last-child) td { border-bottom: 1px solid rgba(255,255,255,0.03); }
+.ca-subtask-table tbody tr:hover { background: rgba(124,92,255,0.04); }
+
+.ca-subtask-table tbody tr.row-dragging { opacity: 0.25; }
+.ca-subtask-table tbody tr.row-drag-over { background: rgba(124,92,255,0.08); }
+.ca-subtask-table tbody tr.row-drag-over td:first-child {
+  box-shadow: inset 3px 0 0 rgba(124,92,255,0.6);
+}
+
+.ca-subtask-table tbody td {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  vertical-align: middle;
+}
+
+.ca-subtask-table tbody td.col-drag {
+  width: 24px; padding: 9px 2px 9px 10px;
+  color: rgba(255,255,255,0.15);
+  cursor: grab; user-select: none; transition: color 0.12s;
+}
+.ca-subtask-table tbody td.col-drag:active { cursor: grabbing; }
+.ca-subtask-table tbody tr:hover td.col-drag { color: rgba(255,255,255,0.45); }
+
+.ca-subtask-table tbody td.col-order { width: 36px; text-align: center; }
+
+.ca-order-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  background: rgba(124,92,255,0.12);
+  border: 1px solid rgba(124,92,255,0.2);
+  border-radius: 6px;
+  font-size: 10px; font-weight: 800;
+  color: rgba(167,139,250,0.8);
+}
+
+.ca-subtask-table td.col-title {
+  font-weight: 500; color: rgba(255,255,255,0.88);
+  max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.ca-pill {
+  display: inline-flex; align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 7px; padding: 2px 9px;
+  font-size: 11.5px; color: rgba(255,255,255,0.5); white-space: nowrap;
+}
+
+.ca-subtask-table tbody td.col-delete {
+  width: 36px; text-align: center;
+  padding-left: 4px; padding-right: 10px;
+}
+.ca-subtask-table td.col-delete button {
+  background: transparent; border: none;
+  color: rgba(255,255,255,0.18); cursor: pointer;
+  padding: 4px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color 0.12s, background 0.12s;
+}
+.ca-subtask-table td.col-delete button:hover {
+  color: var(--ca-red); background: rgba(248,113,113,0.1);
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.ca-subtask-table tbody tr { animation: row-in 180ms cubic-bezier(0.2, 1, 0.3, 1) both; }
+
+/* ============================================================
+   BUTTONS BASE
+   ============================================================ */
+.btn {
+  height: 100%; /* 👈 3. Heredan exactamente los 44px del padre */
+  margin: 0;
+  padding: 0 28px;
+  border-radius: 13px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: normal;
+  box-sizing: border-box;
+  
+  border: 1px solid transparent; /* Volvemos al borde transparente normal */
+  white-space: nowrap;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 1;
+  max-width: 180px;
+
+  overflow: hidden; /* 🚨 4. LA MAGIA: Ambos deben tener esto para que Flexbox los mida igual */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ============================================================
+   BOTÓN CANCELAR
+   ============================================================ */
+.btn-ghost {
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.65);
+  border-color: rgba(255,255,255,0.08); /* Su borde visible */
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+}
+
+/* ============================================================
+   BOTÓN PRIMARIO
+   ============================================================ */
+.btn-primary {
+  background: linear-gradient(135deg, #7c5cff 0%, #9b7dff 100%);
+  color: #fff;
+  border-color: transparent; 
+  position: relative;
+  /* overflow: hidden; -> Ya no hace falta aquí porque lo pusimos en .btn */
+}
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transition: left 0.4s ease;
+}
+.btn-primary:hover::before { left: 160%; }
+.btn-primary:hover {
+  box-shadow: 0 0 0 1px rgba(124,92,255,0.6), 0 0 20px rgba(124,92,255,0.25);
+}
+.btn-primary:active { opacity: 0.9; }
+.btn-primary:disabled {
+  opacity: 0.4; cursor: default; transform: none;
+  box-shadow: 0 4px 14px rgba(124,92,255,0.15);
+}
+.btn-primary:disabled::before { display: none; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 720px) {
+  .ca-modal { border-radius: 18px; }
+
+  .ca-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .ca-col-left {
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    padding: 20px;
+  }
+  .ca-col-right { padding: 20px; }
+  .ca-footer-spacer { grid-column: 1; height: 0; }
+
+.ca-footer { flex-wrap: wrap; }
+  .ca-row.split { flex-direction: column; }
+  .ca-subform-grid { grid-template-columns: 1fr; }
+  .ca-subform-field.full { grid-column: 1; }
+}
