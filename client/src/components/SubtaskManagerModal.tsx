@@ -1,6 +1,6 @@
 // src/components/SubtaskManagerModal.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, Layers, AlertCircle, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Layers, Loader2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";

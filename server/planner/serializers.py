@@ -118,7 +118,7 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 		return attrs
 
-	def get_total_estimated_hours(self, obj):
+	def get_total_estimated_hours(self, obj) -> int:
 		# Sum estimated_hours across related subtasks. If there are no subtasks,
 		# allow a client-provided hint (stored temporarily on the instance during create)
 		if obj.subtasks.exists():
@@ -132,7 +132,7 @@ class ActivitySerializer(serializers.ModelSerializer):
 				return 0
 		return 0
 
-	def get_subtask_count(self, obj):
+	def get_subtask_count(self, obj) -> int:
 		return obj.subtasks.count()
 
 	def create(self, validated_data):
@@ -168,56 +168,4 @@ class ActivitySerializer(serializers.ModelSerializer):
 		return activity
 
 
-class SubtaskSerializer(serializers.ModelSerializer):
-	name = serializers.CharField(required=True, allow_blank=True)
-	status = serializers.CharField(required=True, allow_blank=True)
-	target_date = serializers.DateField(required=True)
-
-	class Meta:
-		model = Subtask
-		fields = [
-			"id",
-			"name",
-			"estimated_hours",
-			"target_date",
-			"status",
-			"ordering",
-			"created_at",
-			"updated_at",
-		]
-		read_only_fields = ["id", "created_at", "updated_at"]
-
-	def validate(self, attrs):
-		errors = {}
-
-		if "name" in attrs:
-			name = attrs["name"].strip()
-			if not name:
-				errors["name"] = "Name is required"
-
-		if "status" in attrs:
-			status = attrs["status"]
-			allowed_statuses = ["pending", "completed", "in_progress"]
-			if status not in allowed_statuses:
-				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
-
-		if "target_date" in attrs:
-			target_date = attrs["target_date"]
-			if target_date < date.today():
-				errors["target_date"] = "Target date cannot be earlier than today"
-
-			activity = self.context.get("activity")
-			if activity and target_date > activity.due_date:
-				errors["target_date"] = (
-					f"Target date cannot be later than the activity due date ({activity.due_date})"
-				)
-
-		if "estimated_hours" in attrs:
-			estimated_hours = attrs["estimated_hours"]
-			if estimated_hours <= 0:
-				errors["estimated_hours"] = "Estimated hours must be a positive number"
-
-		if errors:
-			raise serializers.ValidationError({"errors": errors})
-
-		return attrs
+# Note: a single SubtaskSerializer is defined above for nested use in ActivitySerializer.
