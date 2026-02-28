@@ -9,6 +9,7 @@ import {
 	Layers,
 	AlertCircle,
 	AlertTriangle,
+	Loader2,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import "./CreateActivityModal.css";
@@ -36,7 +37,7 @@ interface NewActivityPayload {
 interface Props {
 	open: boolean;
 	onClose: () => void;
-	onCreate: (payload: NewActivityPayload) => void;
+	onCreate: (payload: NewActivityPayload) => Promise<void>;
 }
 
 /* ---- Helpers ---- */
@@ -156,6 +157,9 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 	/* Missing fields summary for footer */
 	const missingCount = (subjectError ? 1 : 0) + (titleError ? 1 : 0) + (dueDateError ? 1 : 0);
 
+	/* Submitting state */
+	const [submitting, setSubmitting] = useState(false);
+
 	/* ---- Subtask actions ---- */
 	function handleAddSubtask() {
 		setStSubmitted(true);
@@ -203,12 +207,14 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 	}
 
 	/* ---- Submit ---- */
-	function handleSubmit(e?: React.FormEvent) {
+	async function handleSubmit(e?: React.FormEvent) {
 		e?.preventDefault();
 		setSubmitted(true);
 		if (!mainValid) return;
+		// require at least one subtask to create an activity
+		if (subtasks.length === 0) return;
 
-		onCreate({
+		const payload: NewActivityPayload = {
 			subject: subject.trim(), // 👈 Enviamos el texto de la materia
 			title: title.trim(),
 			description: description.trim(),
@@ -219,12 +225,26 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 				target_date,
 				estimated_hours,
 			})),
-		});
-		onClose();
-		clearAll();
+		};
+
+		try {
+			setSubmitting(true);
+			await onCreate(payload);
+			// onCreate (Dashboard) will usually close modal via parent state; ensure cleanup
+			clearAll();
+			// allow parent to close; if parent didn't, still close
+			onClose();
+		} catch (err) {
+			// keep modal open; Dashboard shows a toast on error
+			console.error("Create failed in modal:", err);
+		} finally {
+			setSubmitting(false);
+		}
 	}
 
 	const atMax = subtasks.length >= MAX_SUBTASKS;
+
+	const subtaskError = submitted && subtasks.length === 0 ? "Añade al menos una subtarea" : "";
 
 	if (!open) return null;
 
@@ -515,12 +535,37 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 										: `Faltan ${missingCount} campos obligatorios`}
 								</span>
 							)}
+							{subtaskError && (
+								<span
+									className="ca-footer-hint"
+									style={{ marginLeft: submitted && missingCount > 0 ? 12 : 0 }}
+								>
+									<AlertTriangle size={13} />
+									{subtaskError}
+								</span>
+							)}
 							<div className="ca-footer-actions">
-								<button type="button" className="btn btn-ghost" onClick={onClose}>
+								<button
+									type="button"
+									className="btn btn-ghost"
+									onClick={onClose}
+									disabled={submitting}
+								>
 									Cancelar
 								</button>
-								<button type="button" className="btn btn-primary" onClick={handleSubmit}>
-									Crear actividad
+								<button
+									type="button"
+									className="btn btn-primary"
+									onClick={handleSubmit}
+									disabled={submitting}
+								>
+									{submitting ? (
+										<>
+											<Loader2 size={14} className="spin" /> Procesando...
+										</>
+									) : (
+										"Crear actividad"
+									)}
 								</button>
 							</div>
 						</div>
