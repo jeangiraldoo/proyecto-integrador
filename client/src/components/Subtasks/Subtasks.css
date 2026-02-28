@@ -1,0 +1,215 @@
+/* src/components/Subtasks/Subtasks.css */
+
+.subtask-manager-container {
+	margin-top: 2rem;
+	padding: 1.5rem;
+	background: rgba(30, 25, 55, 0.4);
+	border: 1px solid rgba(124, 108, 235, 0.12);
+	border-radius: 16px;
+	color: #e8e4f0;
+}
+
+.subtask-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+}
+
+.subtask-header h3 {
+	font-size: 1.2rem;
+	font-weight: 600;
+	margin: 0;
+	color: #f4f0ff;
+}
+
+.btn-add-subtask {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	background: transparent;
+	color: #9b8dff;
+	border: 1px dashed #9b8dff;
+	padding: 0.5rem 1rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.btn-add-subtask:hover {
+	background: rgba(155, 141, 255, 0.1);
+}
+
+/* List Styles */
+.subtask-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+}
+
+.subtask-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: rgba(22, 19, 46, 0.6);
+	padding: 1rem;
+	border-radius: 12px;
+	border: 1px solid rgba(196, 181, 253, 0.05);
+	transition: transform 0.2s ease;
+}
+
+.subtask-item:hover {
+	transform: translateX(4px);
+	border-color: rgba(124, 108, 235, 0.2);
+}
+
+.subtask-info {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.status-indicator {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+.status-pending {
+	background: #ffb86c;
+}
+.status-in_progress {
+	background: #8be9fd;
+}
+.status-completed {
+	background: #50fa7b;
+}
+
+.subtask-name {
+	font-weight: 500;
+}
+
+.subtask-meta {
+	display: flex;
+	gap: 1.5rem;
+	font-size: 0.85rem;
+	color: #8880a6;
+}
+
+/* States (Empty, Loading, Error) */
+.state-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1rem;
+	text-align: center;
+	color: #8880a6;
+	gap: 1rem;
+}
+
+.spinner-large {
+	width: 32px;
+	height: 32px;
+	border: 3px solid rgba(124, 108, 235, 0.2);
+	border-top-color: #9b8dff;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+.empty-state svg {
+	color: #5c5480;
+}
+.error-state svg {
+	color: #ff5555;
+}
+
+/* Modal Styles */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(14, 11, 32, 0.8);
+	backdrop-filter: blur(8px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 50;
+}
+
+.glass-card-modal {
+	background: linear-gradient(180deg, #1e1937 0%, #16132e 100%);
+	border: 1px solid rgba(196, 181, 253, 0.15);
+	border-radius: 20px;
+	padding: 2.5rem;
+	width: 100%;
+	max-width: 500px;
+	position: relative;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-close-btn {
+	position: absolute;
+	top: 1.5rem;
+	right: 1.5rem;
+	background: none;
+	border: none;
+	color: #8880a6;
+	cursor: pointer;
+	transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+	color: #f4f0ff;
+}
+
+.modal-title {
+	margin: 0 0 1.5rem 0;
+	font-size: 1.5rem;
+	color: #f4f0ff;
+}
+
+.form-row {
+	display: flex;
+	gap: 1rem;
+}
+
+.input-error {
+	border-color: #ff5555 !important;
+	box-shadow: 0 0 0 2px rgba(255, 85, 85, 0.1) !important;
+}
+
+.error-message {
+	color: #ff5555;
+	font-size: 0.75rem;
+	margin-top: 0.4rem;
+	display: block;
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	margin-top: 2rem;
+}
+
+.btn-secondary {
+	background: rgba(124, 108, 235, 0.1);
+	color: #e8e4f0;
+	border: none;
+	padding: 0.9rem 1.5rem;
+	border-radius: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+	background: rgba(124, 108, 235, 0.2);
+}
+
+.mt-2 {
+	margin-top: 0.5rem;
+}
