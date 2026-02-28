@@ -1,7 +1,10 @@
 import axios from "axios";
 
+// URL del despliegue en Render proporcionada por el Scrum Master
+const BASE_URL = "https://proyecto-integrador-as97.onrender.com";
+
 const client = axios.create({
-	baseURL: "http://localhost:8000",
+	baseURL: BASE_URL,
 	headers: {
 		"Content-Type": "application/json",
 	},
@@ -32,7 +35,8 @@ client.interceptors.response.use(
 
 			if (refreshToken) {
 				try {
-					const response = await axios.post("http://localhost:8000/api/token/refresh/", {
+					// Actualizamos también la URL de refresco para apuntar a Render
+					const response = await axios.post(`${BASE_URL}/api/token/refresh/`, {
 						refresh: refreshToken,
 					});
 
