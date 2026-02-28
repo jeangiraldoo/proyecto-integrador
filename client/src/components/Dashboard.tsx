@@ -11,8 +11,7 @@ import {
 	Sunrise,
 	CloudSun,
 	MoonStar,
-	SunDim,
-	CloudMoon,
+	User2,
 	BarChart3,
 	Users,
 	LogOut,
@@ -23,83 +22,96 @@ import {
 	Clock,
 	Tag,
 	ArrowUpDown,
+	Loader2,
+	Inbox,
 } from "lucide-react";
 import lumaLogo from "../assets/luma.png";
+import { fetchMe, fetchActivities, type User, type Activity } from "../api/dashboard";
 import "./Dashboard.css";
 
-/* ============ MOCK DATA ============ */
-interface Subtask {
-	id: number;
-	name: string;
-	done: boolean;
-}
-
-interface Activity {
-	id: number;
-	name: string;
-	estimatedDuration: string;
-	dueDate: string;
-	subtaskCount: number;
-	subtasks: Subtask[];
-	status: "overdue" | "today" | "upcoming";
-}
+/* ============ MOCK DATA (fallback) ============ */
+const MOCK_USER: User = {
+	id: 1,
+	username: "juanr",
+	email: "juanr@luma.com",
+	name: "Juan Rodríguez",
+	max_daily_hours: 8,
+	date_joined: new Date().toISOString(),
+};
 
 const MOCK_ACTIVITIES: Activity[] = [
 	{
 		id: 1,
-		name: "Actividad No.1",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 2,
-		subtasks: [],
-		status: "overdue",
+		user: 1,
+		title: "Revisión de diseño",
+		description: "Revisar pantallas Figma y comentarios",
+		due_date: "2026-02-25",
+		status: "pending",
+		subtask_count: 3,
+		total_estimated_hours: 2,
 	},
 	{
 		id: 2,
-		name: "Actividad No.2",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 3,
-		subtasks: [],
-		status: "overdue",
+		user: 1,
+		title: "Implementar autenticación",
+		description: "Agregar login con JWT y refresco de token",
+		due_date: "2026-02-27",
+		status: "in_progress",
+		subtask_count: 5,
+		total_estimated_hours: 4,
 	},
 	{
 		id: 3,
-		name: "Actividad No.3",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 2,
-		subtasks: [],
-		status: "today",
+		user: 1,
+		title: "Testing E2E",
+		description: "Escribir pruebas Cypress para flujo de login",
+		due_date: "2026-02-27",
+		status: "pending",
+		subtask_count: 2,
+		total_estimated_hours: 1,
 	},
 	{
 		id: 4,
-		name: "Actividad No.4",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 3,
-		subtasks: [],
-		status: "today",
+		user: 1,
+		title: "Deploy a staging",
+		description: "Actualizar imagen Docker y desplegar a staging",
+		due_date: "2026-03-02",
+		status: "pending",
+		subtask_count: 1,
+		total_estimated_hours: 2,
 	},
 	{
 		id: 5,
-		name: "Actividad No.5",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 2,
-		subtasks: [],
-		status: "upcoming",
-	},
-	{
-		id: 6,
-		name: "Actividad No.6",
-		estimatedDuration: "1H",
-		dueDate: "17/09/2026",
-		subtaskCount: 3,
-		subtasks: [],
-		status: "upcoming",
+		user: 1,
+		title: "Documentación API",
+		description: "Añadir ejemplos de endpoints y respuestas",
+		due_date: "2026-03-05",
+		status: "pending",
+		subtask_count: 4,
+		total_estimated_hours: 3,
 	},
 ];
+
+/* ============ HELPERS ============ */
+function formatDate(iso: string): string {
+	const [y, m, d] = iso.split("-");
+	return `${d}/${m}/${y}`;
+}
+
+function formatHours(h: number): string {
+	return h === 1 ? "1H" : `${h}H`;
+}
+
+type SectionVariant = "overdue" | "today" | "upcoming";
+
+function classifyActivity(dueDateIso: string): SectionVariant {
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const due = new Date(dueDateIso + "T00:00:00");
+	if (due < today) return "overdue";
+	if (due.getTime() === today.getTime()) return "today";
+	return "upcoming";
+}
 
 /* ============ COMPONENT ============ */
 interface DashboardProps {
@@ -109,11 +121,36 @@ interface DashboardProps {
 export default function Dashboard({ onLogout }: DashboardProps) {
 	const [activeNav, setActiveNav] = useState("today");
 	const [searchOpen, setSearchOpen] = useState(false);
-	const [showWave, setShowWave] = useState(true);
-	const [theme, setTheme] = useState<"dark" | "light">("dark");
+	const [showWave, setShowWave] = useState(false);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [activeFilters, setActiveFilters] = useState<string[]>(["urgency"]);
 	const filterRef = useRef<HTMLDivElement>(null);
+
+	/* ---- Mock data state (will be replaced with real API) ---- */
+	const [user, setUser] = useState<User>(MOCK_USER);
+	const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		let cancelled = false;
+		async function load() {
+			try {
+				const [me, acts] = await Promise.all([fetchMe(), fetchActivities()]);
+				if (!cancelled) {
+					setUser(me);
+					setActivities(acts);
+				}
+			} catch (err) {
+				console.warn("Using mock data — failed to fetch real data:", err);
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		}
+		load();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	const { greeting, GreetingIcon } = useMemo(() => {
 		const hour = new Date().getHours();
@@ -124,11 +161,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 
-	// Wave animation — only on first mount
+	// Wave animation — triggers after data loads
 	useEffect(() => {
-		const timer = setTimeout(() => setShowWave(false), 2200);
-		return () => clearTimeout(timer);
-	}, []);
+		if (!loading) {
+			const start = setTimeout(() => setShowWave(true), 0);
+			const stop = setTimeout(() => setShowWave(false), 2200);
+			return () => {
+				clearTimeout(start);
+				clearTimeout(stop);
+			};
+		}
+	}, [loading]);
 
 	useEffect(() => {
 		if (searchOpen && searchInputRef.current) {
@@ -151,59 +194,85 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		setActiveFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
 	}, []);
 
-	const overdue = MOCK_ACTIVITIES.filter((a) => a.status === "overdue");
-	const today = MOCK_ACTIVITIES.filter((a) => a.status === "today");
-	const upcoming = MOCK_ACTIVITIES.filter((a) => a.status === "upcoming");
+	const overdue = useMemo(
+		() => activities.filter((a) => classifyActivity(a.due_date) === "overdue"),
+		[activities],
+	);
+	const today = useMemo(
+		() => activities.filter((a) => classifyActivity(a.due_date) === "today"),
+		[activities],
+	);
+	const upcoming = useMemo(
+		() => activities.filter((a) => classifyActivity(a.due_date) === "upcoming"),
+		[activities],
+	);
 
-	const capacityUsed = 6;
-	const capacityTotal = 12;
-	const capacityPercent = (capacityUsed / capacityTotal) * 100;
+	const capacityUsed = useMemo(
+		() => today.reduce((sum, a) => sum + a.total_estimated_hours, 0),
+		[today],
+	);
+	const capacityTotal = user.max_daily_hours;
+	const capacityPercent =
+		capacityTotal > 0 ? Math.min((capacityUsed / capacityTotal) * 100, 100) : 0;
 
 	return (
-		<div className={`dashboard ${theme}`}>
+		<div className="dashboard">
 			{/* ======= SIDEBAR ======= */}
 			<aside className="sidebar">
-				{/* Theme toggle */}
-				<div className="theme-toggle-wrap">
-					<button
-						className="theme-toggle"
-						onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-						aria-label="Cambiar tema"
-					>
-						<span className={`toggle-track ${theme}`}>
-							<SunDim size={13} className="toggle-icon toggle-icon-sun" />
-							<CloudMoon size={13} className="toggle-icon toggle-icon-moon" />
-							<span className="toggle-thumb" />
-						</span>
-					</button>
-				</div>
-
 				{/* User profile */}
 				<div className="sidebar-profile">
-					<div className="profile-avatar">
-						<div className="avatar-placeholder">
-							<MoonStar size={24} />
+					{loading ? (
+						<div className="sidebar-profile-skeleton">
+							<div className="skeleton-avatar" />
+							<div className="skeleton-lines">
+								<div className="skeleton-line skeleton-line-name" />
+								<div className="skeleton-line skeleton-line-email" />
+							</div>
 						</div>
-						<div className="avatar-status" />
-					</div>
-					<div className="profile-info">
-						<span className="profile-name">Camila Cifuentes</span>
-						<span className="profile-role">3er Semestre</span>
-					</div>
-					<button className="profile-menu-btn" aria-label="Menu">
-						<MoreVertical size={18} />
-					</button>
+					) : (
+						<>
+							<div className="profile-avatar">
+								<div className="avatar-placeholder">
+									{user.name ? (
+										<span className="avatar-initials">
+											{user.name
+												.split(" ")
+												.slice(0, 2)
+												.map((w) => w[0])
+												.join("")
+												.toUpperCase()}
+										</span>
+									) : (
+										<User2 size={22} />
+									)}
+								</div>
+								<div className="avatar-status" />
+							</div>
+							<div className="profile-info">
+								<span className="profile-name">{user.name || user.username}</span>
+								<span className="profile-role">{user.email}</span>
+							</div>
+							<button className="profile-menu-btn" aria-label="Menu">
+								<MoreVertical size={18} />
+							</button>
+						</>
+					)}
 				</div>
 
 				{/* Greeting */}
-				<p className="sidebar-greeting">
-					{showWave ? (
-						<Hand size={22} className="wave-icon" />
-					) : (
-						<GreetingIcon size={20} className="greeting-icon" />
-					)}
-					{greeting}.
-				</p>
+				{!loading && (
+					<div className="sidebar-greeting-block fade-in" style={{ animationDelay: "0.1s" }}>
+						<p className="sidebar-greeting">
+							{showWave ? (
+								<Hand size={22} className="wave-icon" />
+							) : (
+								<GreetingIcon size={20} className="greeting-icon" />
+							)}
+							{greeting}.
+						</p>
+						<p className="sidebar-subtitle">¿Qué haremos hoy?</p>
+					</div>
+				)}
 
 				{/* Navigation */}
 				<nav className="sidebar-nav">
@@ -262,144 +331,148 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 			{/* ======= MAIN CONTENT ======= */}
 			<main className="main-content">
-				{/* Tip banner */}
-				<div className="tip-banner">
-					<Sparkles size={18} className="tip-icon" />
-					<p>
-						Ordenamos por urgencia y luego por las actividades más cortas para que avances rápido.
-					</p>
-				</div>
-
-				{/* Header toolbar */}
-				<div className="content-header">
-					<div className="header-left">
-						<h1 className="page-title">
-							<CalendarCheck size={22} className="title-icon" />
-							Actividades
-						</h1>
-						<button className="btn-add">
-							<Plus size={16} />
-							<span>Añadir actividad</span>
-						</button>
+				{loading ? (
+					<div className="loading-state">
+						<Loader2 size={32} className="spinner" />
+						<p>Cargando actividades...</p>
 					</div>
-					<div className="header-right">
-						<div className="filter-wrapper" ref={filterRef}>
-							<button
-								className={`btn-filter ${filtersOpen ? "active" : ""}`}
-								onClick={() => setFiltersOpen(!filtersOpen)}
-							>
-								<SlidersHorizontal size={15} />
-								<span>Filtros</span>
-								{activeFilters.length > 0 && (
-									<span className="filter-badge">{activeFilters.length}</span>
-								)}
-							</button>
+				) : (
+					<>
+						{/* Tip banner */}
+						<div className="tip-banner fade-in" style={{ animationDelay: "0.05s" }}>
+							<Sparkles size={18} className="tip-icon" />
+							<p>
+								Ordenamos por urgencia y luego por las actividades más cortas para que avances
+								rápido.
+							</p>
+						</div>
 
-							{/* Filter panel */}
-							<div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
-								<div className="filter-panel-header">
-									<span>Filtrar por</span>
-									<button className="filter-close" onClick={() => setFiltersOpen(false)}>
-										<X size={14} />
+						{/* Header toolbar */}
+						<div className="content-header fade-in" style={{ animationDelay: "0.12s" }}>
+							<div className="header-left">
+								<h1 className="page-title">
+									<CalendarCheck size={22} className="title-icon" />
+									Actividades
+								</h1>
+								<button className="btn-add">
+									<Plus size={16} />
+									<span>Añadir actividad</span>
+								</button>
+							</div>
+							<div className="header-right">
+								<div className="filter-wrapper" ref={filterRef}>
+									<button
+										className={`btn-filter ${filtersOpen ? "active" : ""}`}
+										onClick={() => setFiltersOpen(!filtersOpen)}
+									>
+										<SlidersHorizontal size={15} />
+										<span>Filtros</span>
+										{activeFilters.length > 0 && (
+											<span className="filter-badge">{activeFilters.length}</span>
+										)}
 									</button>
+
+									{/* Filter panel */}
+									<div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
+										<div className="filter-panel-header">
+											<span>Filtrar por</span>
+											<button className="filter-close" onClick={() => setFiltersOpen(false)}>
+												<X size={14} />
+											</button>
+										</div>
+										<div className="filter-options">
+											<button
+												className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
+												onClick={() => toggleFilter("urgency")}
+											>
+												<AlertTriangle size={13} />
+												Urgencia
+											</button>
+											<button
+												className={`filter-chip ${activeFilters.includes("duration") ? "on" : ""}`}
+												onClick={() => toggleFilter("duration")}
+											>
+												<Clock size={13} />
+												Duración
+											</button>
+											<button
+												className={`filter-chip ${activeFilters.includes("date") ? "on" : ""}`}
+												onClick={() => toggleFilter("date")}
+											>
+												<CalendarCheck size={13} />
+												Fecha límite
+											</button>
+											<button
+												className={`filter-chip ${activeFilters.includes("category") ? "on" : ""}`}
+												onClick={() => toggleFilter("category")}
+											>
+												<Tag size={13} />
+												Categoría
+											</button>
+											<button
+												className={`filter-chip ${activeFilters.includes("alphabetical") ? "on" : ""}`}
+												onClick={() => toggleFilter("alphabetical")}
+											>
+												<ArrowUpDown size={13} />
+												Alfabético
+											</button>
+										</div>
+										{activeFilters.length > 0 && (
+											<button className="filter-clear" onClick={() => setActiveFilters([])}>
+												Limpiar filtros
+											</button>
+										)}
+									</div>
 								</div>
-								<div className="filter-options">
-									<button
-										className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
-										onClick={() => toggleFilter("urgency")}
-									>
-										<AlertTriangle size={13} />
-										Urgencia
+
+								<div className={`search-wrapper ${searchOpen ? "open" : ""}`}>
+									<button className="btn-search" onClick={() => setSearchOpen(!searchOpen)}>
+										<Search size={15} />
+										<span>Buscar</span>
 									</button>
-									<button
-										className={`filter-chip ${activeFilters.includes("duration") ? "on" : ""}`}
-										onClick={() => toggleFilter("duration")}
-									>
-										<Clock size={13} />
-										Duración
-									</button>
-									<button
-										className={`filter-chip ${activeFilters.includes("date") ? "on" : ""}`}
-										onClick={() => toggleFilter("date")}
-									>
-										<CalendarCheck size={13} />
-										Fecha límite
-									</button>
-									<button
-										className={`filter-chip ${activeFilters.includes("category") ? "on" : ""}`}
-										onClick={() => toggleFilter("category")}
-									>
-										<Tag size={13} />
-										Categoría
-									</button>
-									<button
-										className={`filter-chip ${activeFilters.includes("alphabetical") ? "on" : ""}`}
-										onClick={() => toggleFilter("alphabetical")}
-									>
-										<ArrowUpDown size={13} />
-										Alfabético
-									</button>
+									<div className="search-expand">
+										<input
+											ref={searchInputRef}
+											type="text"
+											placeholder="Buscar actividades..."
+											className="search-input"
+										/>
+									</div>
 								</div>
-								{activeFilters.length > 0 && (
-									<button className="filter-clear" onClick={() => setActiveFilters([])}>
-										Limpiar filtros
-									</button>
-								)}
 							</div>
 						</div>
 
-						<div className={`search-wrapper ${searchOpen ? "open" : ""}`}>
-							<button className="btn-search" onClick={() => setSearchOpen(!searchOpen)}>
-								<Search size={15} />
-								<span>Buscar</span>
-							</button>
-							<div className="search-expand">
-								<input
-									ref={searchInputRef}
-									type="text"
-									placeholder="Buscar actividades..."
-									className="search-input"
-								/>
-							</div>
+						{/* Activity sections */}
+						<div className="activity-sections fade-in" style={{ animationDelay: "0.2s" }}>
+							{/* OVERDUE */}
+							<ActivitySection
+								title="Vencidas"
+								icon={<AlertTriangle size={18} />}
+								count={overdue.length}
+								activities={overdue}
+								variant="overdue"
+							/>
+
+							{/* TODAY */}
+							<ActivitySection
+								title="Para hoy"
+								icon={<CalendarClock size={18} />}
+								count={today.length}
+								activities={today}
+								variant="today"
+							/>
+
+							{/* UPCOMING */}
+							<ActivitySection
+								title="Próximas"
+								icon={<CalendarClock size={18} />}
+								count={upcoming.length}
+								activities={upcoming}
+								variant="upcoming"
+							/>
 						</div>
-					</div>
-				</div>
-
-				{/* Activity sections */}
-				<div className="activity-sections">
-					{/* OVERDUE */}
-					{overdue.length > 0 && (
-						<ActivitySection
-							title="Vencidas"
-							icon={<AlertTriangle size={18} />}
-							count={overdue.length}
-							activities={overdue}
-							variant="overdue"
-						/>
-					)}
-
-					{/* TODAY */}
-					{today.length > 0 && (
-						<ActivitySection
-							title="Para hoy"
-							icon={<CalendarClock size={18} />}
-							count={today.length}
-							activities={today}
-							variant="today"
-						/>
-					)}
-
-					{/* UPCOMING */}
-					{upcoming.length > 0 && (
-						<ActivitySection
-							title="Próximas"
-							icon={<CalendarClock size={18} />}
-							count={upcoming.length}
-							activities={upcoming}
-							variant="upcoming"
-						/>
-					)}
-				</div>
+					</>
+				)}
 			</main>
 		</div>
 	);
@@ -412,11 +485,12 @@ interface ActivitySectionProps {
 	icon: React.ReactNode;
 	count: number;
 	activities: Activity[];
-	variant: "overdue" | "today" | "upcoming";
+	variant: SectionVariant;
 }
 
 function ActivitySection({ title, icon, count, activities, variant }: ActivitySectionProps) {
 	const [collapsed, setCollapsed] = useState(false);
+	const isEmpty = activities.length === 0;
 
 	return (
 		<section className={`activity-section section-${variant}`}>
@@ -431,38 +505,49 @@ function ActivitySection({ title, icon, count, activities, variant }: ActivitySe
 
 			<div className={`section-collapsible ${collapsed ? "collapsed" : ""}`}>
 				<div className="section-collapsible-inner">
-					<div className="table-header">
-						<span className="col-activity">Actividad</span>
-						<span className="col-duration">Duración estimada</span>
-						<span className="col-date">Fecha de finalización</span>
-						<span className="col-subtasks"># de subtareas</span>
-						<span className="col-action" />
-					</div>
-					<div className="table-body">
-						{activities.map((activity) => (
-							<div key={activity.id} className="table-row">
-								<div className="col-activity">
-									<span className={`activity-tag tag-${variant}`}>{activity.name}</span>
-								</div>
-								<div className="col-duration">
-									<span className="badge badge-duration">{activity.estimatedDuration}</span>
-								</div>
-								<div className="col-date">
-									<span className={`badge badge-date badge-date-${variant}`}>
-										{activity.dueDate}
-									</span>
-								</div>
-								<div className="col-subtasks">
-									<span className="badge badge-subtask">{activity.subtaskCount}</span>
-								</div>
-								<div className="col-action">
-									<button className="btn-row-action" aria-label="Ver detalles">
-										<ArrowRight size={18} />
-									</button>
-								</div>
+					{isEmpty ? (
+						<div className="section-empty">
+							<Inbox size={28} strokeWidth={1.5} />
+							<p>Aún no hay nada por aquí</p>
+						</div>
+					) : (
+						<>
+							<div className="table-header">
+								<span className="col-activity">Actividad</span>
+								<span className="col-duration">Duración estimada</span>
+								<span className="col-date">Fecha de finalización</span>
+								<span className="col-subtasks"># de subtareas</span>
+								<span className="col-action" />
 							</div>
-						))}
-					</div>
+							<div className="table-body">
+								{activities.map((activity) => (
+									<div key={activity.id} className="table-row">
+										<div className="col-activity">
+											<span className={`activity-tag tag-${variant}`}>{activity.title}</span>
+										</div>
+										<div className="col-duration">
+											<span className="badge badge-duration">
+												{formatHours(activity.total_estimated_hours)}
+											</span>
+										</div>
+										<div className="col-date">
+											<span className={`badge badge-date badge-date-${variant}`}>
+												{formatDate(activity.due_date)}
+											</span>
+										</div>
+										<div className="col-subtasks">
+											<span className="badge badge-subtask">{activity.subtask_count}</span>
+										</div>
+										<div className="col-action">
+											<button className="btn-row-action" aria-label="Ver detalles">
+												<ArrowRight size={18} />
+											</button>
+										</div>
+									</div>
+								))}
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 		</section>
