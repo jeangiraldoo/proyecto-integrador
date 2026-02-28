@@ -8,7 +8,8 @@ from .models import Activity, Subtask, User
 class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
-		fields = ["id", "username", "email", "first_name", "last_name", "date_joined"]
+		# include readable name and the user's max daily hours
+		fields = ["id", "username", "email", "name", "max_daily_hours", "date_joined"]
 
 
 class ActivitySerializer(serializers.ModelSerializer):
