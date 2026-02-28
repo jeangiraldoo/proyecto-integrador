@@ -10,6 +10,7 @@ class User(AbstractUser):
 class Activity(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activities")
 	title = models.CharField(max_length=200)
+	course_name = models.CharField(max_length=200)
 	description = models.TextField()
 	due_date = models.DateField()
 	status = models.CharField(max_length=50)

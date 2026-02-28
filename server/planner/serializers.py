@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ActivitySerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Activity
-		fields = ["id", "user", "title", "description", "due_date", "status"]
+		fields = ["id", "user", "title", "course_name", "description", "due_date", "status"]
 		read_only_fields = ["id", "user"]
 
 	def validate(self, attrs):
@@ -25,6 +25,11 @@ class ActivitySerializer(serializers.ModelSerializer):
 			title = attrs.get("title", "").strip()
 			if not title:
 				errors["title"] = "Title is required"
+
+		if "course_name" in attrs:
+			title = attrs.get("curse_name", "").strip()
+			if not title:
+				errors["course_name"] = "Course name is required"
 
 		if "status" in attrs:
 			status = attrs.get("status")
