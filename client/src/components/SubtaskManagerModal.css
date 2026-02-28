@@ -1,0 +1,285 @@
+/* src/components/SubtaskManagerModal.css */
+
+/* ============================================================
+   MODAL BACKDROP & SHELL (Luma Glassmorphism)
+   ============================================================ */
+.stm-backdrop {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(4, 3, 12, 0.78);
+	backdrop-filter: blur(18px) saturate(160%);
+	z-index: 3000;
+	padding: 24px;
+}
+
+.stm-modal {
+	width: 600px;
+	max-width: calc(100vw - 48px);
+	max-height: calc(100vh - 48px);
+	border-radius: 24px;
+	display: flex;
+	flex-direction: column;
+	background: radial-gradient(ellipse 50% 40% at 50% 0%, rgba(124, 92, 255, 0.08) 0%, transparent 70%),
+		linear-gradient(155deg, #15122b 0%, #0f0d1f 45%, #09071a 100%);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.1), 0 40px 100px rgba(0, 0, 0, 0.8);
+	animation: stm-appear 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	overflow: hidden;
+}
+
+@keyframes stm-appear {
+	from { opacity: 0; transform: translateY(20px) scale(0.96); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.stm-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 24px 30px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	position: relative;
+}
+
+.stm-header::before {
+	content: "";
+	position: absolute;
+	top: 0; left: 0; right: 0; height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(124, 92, 255, 0.6), rgba(34, 197, 94, 0.4), transparent);
+}
+
+.stm-title-group {
+	display: flex;
+	flex-direction: column;
+}
+
+.stm-title {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #ede9ff;
+}
+
+.stm-subtitle {
+	margin: 4px 0 0 0;
+	font-size: 0.8rem;
+	color: rgba(255, 255, 255, 0.4);
+}
+
+.stm-close-btn {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	color: rgba(255, 255, 255, 0.4);
+	padding: 8px;
+	border-radius: 11px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.stm-close-btn:hover {
+	background: rgba(248, 113, 113, 0.1);
+	border-color: rgba(248, 113, 113, 0.2);
+	color: #f87171;
+	transform: rotate(90deg);
+}
+
+/* ============================================================
+   BODY & SUBFORM (Formulario de Subtareas)
+   ============================================================ */
+.stm-body {
+	padding: 24px 30px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	overflow-y: auto;
+}
+
+/* Copiado del diseño original de CreateActivityModal (.ca-subform) */
+.stm-subform {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 14px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	position: relative;
+}
+
+.stm-subform::before {
+	content: "";
+	position: absolute;
+	top: 0; left: 0; width: 80px; height: 40px;
+	background: radial-gradient(ellipse at top left, rgba(34, 197, 94, 0.08), transparent);
+	pointer-events: none;
+}
+
+.stm-subform-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+
+.stm-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.stm-field.full { grid-column: 1 / -1; }
+
+.stm-field label {
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.22);
+}
+
+.stm-field input {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	color: rgba(255, 255, 255, 0.9);
+	padding: 10px 14px;
+	border-radius: 10px;
+	font-size: 0.85rem;
+	outline: none;
+	transition: all 0.2s ease;
+}
+
+.stm-field input:focus {
+	border-color: rgba(34, 197, 94, 0.4);
+	background: rgba(34, 197, 94, 0.04);
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+}
+
+.stm-field input.input-error {
+	border-color: rgba(248, 113, 113, 0.45);
+	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08);
+}
+
+.stm-btn-add {
+	width: 100%;
+	height: 40px;
+	background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+	border: none;
+	border-radius: 10px;
+	color: white;
+	font-size: 0.85rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	cursor: pointer;
+	box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+	transition: all 0.2s ease;
+}
+
+.stm-btn-add:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.stm-btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   TABLE (Listado de Subtareas)
+   ============================================================ */
+.stm-table-wrap {
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	border-radius: 13px;
+	background: rgba(255, 255, 255, 0.01);
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.stm-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.stm-table thead tr {
+	background: rgba(15, 13, 31, 0.98);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+
+.stm-table th {
+	padding: 10px 12px;
+	text-align: left;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.22);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stm-table td {
+	padding: 12px;
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.75);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.stm-table tbody tr:hover { background: rgba(124, 92, 255, 0.04); }
+
+.stm-pill {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 7px;
+	padding: 4px 10px;
+	font-size: 0.75rem;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.stm-badge-order {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px; height: 22px;
+	background: rgba(124, 92, 255, 0.12);
+	border: 1px solid rgba(124, 92, 255, 0.2);
+	border-radius: 6px;
+	font-size: 0.65rem;
+	font-weight: 800;
+	color: rgba(167, 139, 250, 0.8);
+}
+
+.stm-btn-delete {
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.2);
+	cursor: pointer;
+	padding: 6px;
+	border-radius: 8px;
+	transition: all 0.2s ease;
+}
+
+.stm-btn-delete:hover {
+	background: rgba(248, 113, 113, 0.1);
+	color: #f87171;
+}
+
+.stm-empty {
+	padding: 30px;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.3);
+	font-size: 0.85rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Spinner */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
