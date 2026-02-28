@@ -6,7 +6,6 @@ import {
 	Plus,
 	SlidersHorizontal,
 	Search,
-	ArrowRight,
 	ChevronDown,
 	Sunrise,
 	CloudSun,
@@ -25,6 +24,7 @@ import {
 	Loader2,
 	Inbox,
 	Trash2,
+	Layers, // Icono para las subtareas
 } from "lucide-react";
 import lumaLogo from "../assets/luma.png";
 import {
@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import "./Dashboard.css";
 import CreateActivityModal from "./CreateActivityModal";
+import SubtaskManagerModal from "./SubtaskManagerModal"; 
 
 // Local type matching the modal's payload (keeps Dashboard free of `any` casts)
 type NewActivityPayloadFromModal = {
@@ -169,12 +170,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		let cancelled = false;
 		async function load() {
 			// Avoid firing API requests if there's no access token available yet
-			// This prevents repeated 401s when the app mounts before login.
 			const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 			if (!token) {
-				// no token — nothing to fetch. initial `loading` was derived from localStorage,
-				// so avoid calling setState synchronously inside the effect to prevent
-				// cascading renders. Just exit early.
 				return;
 			}
 			try {
@@ -491,9 +488,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onClose={() => setCreateOpen(false)}
 								onCreate={async (payload: NewActivityPayloadFromModal) => {
 									try {
-										// send only activity-level fields to API (subtasks are handled elsewhere)
-										// Build payload for backend — include subtasks (convert to backend field names)
-										// Send only activity-level fields for now (skip subtasks)
 										const apiPayload = {
 											course_name: payload.subject,
 											title: payload.title,
@@ -514,11 +508,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													: 0),
 										};
 
-										console.debug("[createActivity] payload:", apiPayload);
 										const resp = await createActivity(apiPayload);
-										console.debug("[createActivity] response:", resp);
 
-										// ensure UI shows subtask count and estimated hours that were provided in the modal
 										const totalHoursFromPayload =
 											payload.total_estimated_hours ??
 											(payload.subtasks
@@ -540,25 +531,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 										};
 										setActivities((prev) => [created, ...prev]);
 
-										// Open and scroll to the section where the activity belongs
 										const section = classifyActivity(created.due_date);
 										setOpenSection((prev) => ({ name: section, key: prev.key + 1 }));
 
 										setCreateOpen(false);
 										toast.success("Actividad creada");
 									} catch (err) {
-										// log full axios error payload if present
 										console.error("Failed to create activity:", err);
-										try {
-											// eslint-disable-next-line @typescript-eslint/no-explicit-any
-											const serverErr = err as any;
-											if (serverErr && serverErr.response && serverErr.response.data) {
-												console.debug("[createActivity] server response:", serverErr.response.data);
-											}
-										} catch {
-											/* ignore logging errors */
-										}
-										// keep modal open so user can retry; show toast error
 										toast.error("Error creando la actividad. Intenta de nuevo.");
 									}
 								}}
@@ -585,7 +564,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											</button>
 										</div>
 
-										{/* Create activity modal moved to top-level to avoid z-index/overflow issues */}
 										<div className="filter-options">
 											<button
 												className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
@@ -650,7 +628,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 						{/* Activity sections */}
 						<div className="activity-sections fade-in" style={{ animationDelay: "0.2s" }}>
-							{/* OVERDUE */}
 							<ActivitySection
 								title="Vencidas"
 								icon={<AlertTriangle size={18} />}
@@ -661,7 +638,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onDelete={requestDeleteActivity}
 							/>
 
-							{/* TODAY */}
 							<ActivitySection
 								title="Para hoy"
 								icon={<CalendarClock size={18} />}
@@ -672,7 +648,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onDelete={requestDeleteActivity}
 							/>
 
-							{/* UPCOMING */}
 							<ActivitySection
 								title="Próximas"
 								icon={<CalendarClock size={18} />}
@@ -716,13 +691,14 @@ function ActivitySection({
 	const prevTrigger = useRef<number | undefined>(undefined);
 	const isEmpty = activities.length === 0;
 
+	// <--- 2. Estado local para controlar el modal de subtareas
+	const [activeSubtaskManager, setActiveSubtaskManager] = useState<Activity | null>(null);
+
 	useEffect(() => {
 		if (openTrigger === undefined) return;
 		if (prevTrigger.current === openTrigger) return;
 		prevTrigger.current = openTrigger;
 
-		// Schedule collapse + scroll on a microtask to avoid synchronous setState
-		// inside the effect body which can trigger cascading renders.
 		let cancelled = false;
 		Promise.resolve().then(() => {
 			if (cancelled) return;
@@ -788,9 +764,16 @@ function ActivitySection({
 											<span className="badge badge-subtask">{activity.subtask_count}</span>
 										</div>
 										<div className="col-action">
-											<button className="btn-row-action" aria-label="Ver detalles">
-												<ArrowRight size={18} />
+											{/* <--- 3. Botón para abrir el Modal de Subtareas */}
+											<button
+												className="btn-row-action"
+												aria-label="Gestionar subtareas"
+												onClick={() => setActiveSubtaskManager(activity)}
+												title="Ver subtareas"
+											>
+												<Layers size={18} />
 											</button>
+
 											<button
 												type="button"
 												className="btn-row-action btn-row-delete"
@@ -807,12 +790,16 @@ function ActivitySection({
 					)}
 				</div>
 			</div>
+
+			{/* <--- 4. Renderizado del Modal de Subtareas */}
+			{activeSubtaskManager && (
+				<SubtaskManagerModal
+					activityId={activeSubtaskManager.id}
+					activityTitle={activeSubtaskManager.title}
+					open={true}
+					onClose={() => setActiveSubtaskManager(null)}
+				/>
+			)}
 		</section>
 	);
 }
-
-// Hook to react to openTrigger prop changes inside ActivitySection
-// We implement this via a small effect attached to the ActivitySection function scope
-// by reading the injected openTrigger (passed via arguments) and reacting to changes.
-// Note: this keeps the component self-contained and avoids prop-type churn.
-// The effect is implemented above using the `openTrigger` local variable.
