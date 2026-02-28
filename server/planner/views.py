@@ -3,6 +3,8 @@ from datetime import timedelta
 
 from django.http import Http404
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound, ValidationError
@@ -12,8 +14,6 @@ from rest_framework.views import APIView
 
 from .models import Activity, Subtask
 from .serializers import ActivitySerializer, SubtaskSerializer, UserSerializer
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
 
 logger = logging.getLogger(__name__)
 
@@ -60,22 +60,39 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	"""
 	Activities endpoints (authenticated user only).
 
-	- GET /activities/  -> list activities
-	  Ejemplo response: [ {"id":1, "title":"Study", "description":"...", "estimated_hours":2, "course_name":"Math", "user":1} ]
+	- GET /activities/ -> list activities (example abridged)
+
+		[
+			{
+				"id": 1,
+				"title": "Study",
+				"description": "...",
+				"estimated_hours": 2,
+				"course_name": "Math",
+				"user": 1,
+			}
+		]
 
 	- POST /activities/ -> create activity
-	  Ejemplo request: {"title":"Study","description":"Read chapters","estimated_hours":2,"course_name":"Math"}
-	  Ejemplo response: {"id":1, "title":"Study","description":"Read chapters","estimated_hours":2,"course_name":"Math","user":1}
+
+		Request example:
+		{
+			"title": "Study",
+			"description": "Read chapters",
+			"estimated_hours": 2,
+			"course_name": "Math",
+		}
 
 	- GET /activities/{id}/ -> retrieve activity
-	  Ejemplo response: {"id":1, "title":"Study","description":"Read chapters","estimated_hours":2,"course_name":"Math","user":1}
 
 	- PATCH /activities/{id}/ -> partial update
-	  Ejemplo request: {"title":"Study session","estimated_hours":3}
-	  Ejemplo response: {"id":1, "title":"Study session","description":"Read chapters","estimated_hours":3,"course_name":"Math","user":1}
+
+		Request example: {"title": "Study session", "estimated_hours": 3}
 
 	- DELETE /activities/{id}/ -> delete activity
-	  Ejemplo response: 204 No Content
+
+		Response: 204 No Content
+
 	"""
 
 	serializer_class = ActivitySerializer
@@ -130,7 +147,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		summary="Delete activity",
 		description="Delete an activity owned by the authenticated user.",
 		responses={204: None},
-		parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 	)
 	def destroy(self, request, *args, **kwargs):
 		try:
@@ -153,7 +177,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		description="Partially update fields of an activity.",
 		request=ActivitySerializer,
 		responses={201: ActivitySerializer},
-		parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 		examples=[
 			OpenApiExample(
 				"Patch request",
@@ -218,23 +249,40 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	def list(self, request, *args, **kwargs):
 		return super().list(request, *args, **kwargs)
 
-
-
 	@extend_schema(
 		summary="Update activity",
 		description="Replace an activity's fields (PUT).",
 		request=ActivitySerializer,
 		responses=ActivitySerializer,
-		parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 		examples=[
 			OpenApiExample(
 				"Update request",
-				value={"title": "Study full", "description": "Full replace", "estimated_hours": 4, "course_name": "Math"},
+				value={
+					"title": "Study full",
+					"description": "Full replace",
+					"estimated_hours": 4,
+					"course_name": "Math",
+				},
 				request_only=True,
 			),
 			OpenApiExample(
 				"Update response",
-				value={"id": 1, "title": "Study full", "description": "Full replace", "estimated_hours": 4, "course_name": "Math", "user": 1},
+				value={
+					"id": 1,
+					"title": "Study full",
+					"description": "Full replace",
+					"estimated_hours": 4,
+					"course_name": "Math",
+					"user": 1,
+				},
 				response_only=True,
 			),
 		],
@@ -246,7 +294,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		summary="Retrieve activity",
 		description="Get a single activity by id.",
 		responses=ActivitySerializer,
-		parameters=[OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 		examples=[
 			OpenApiExample(
 				"Retrieve example",
@@ -292,11 +347,27 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		summary="List subtasks",
 		description="List subtasks for a given activity id.",
 		responses=SubtaskSerializer(many=True),
-		parameters=[OpenApiParameter("activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 		examples=[
 			OpenApiExample(
 				"List subtasks example",
-				value=[{"id": 1, "name": "Do exercises", "estimated_hours": 2, "target_date": "2026-03-01", "status": "pending", "ordering": 1}],
+				value=[
+					{
+						"id": 1,
+						"name": "Do exercises",
+						"estimated_hours": 2,
+						"target_date": "2026-03-01",
+						"status": "pending",
+						"ordering": 1,
+					}
+				],
 				response_only=True,
 			),
 		],
@@ -309,16 +380,35 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		description="Create a subtask for the specified activity",
 		request=SubtaskSerializer,
 		responses={201: SubtaskSerializer},
-		parameters=[OpenApiParameter("activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id")],
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
 		examples=[
 			OpenApiExample(
 				"Create subtask request",
-				value={"name": "Do exercises", "estimated_hours": 2, "target_date": "2026-03-01", "status": "pending"},
+				value={
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "pending",
+				},
 				request_only=True,
 			),
 			OpenApiExample(
 				"Create subtask response",
-				value={"id": 1, "name": "Do exercises", "estimated_hours": 2, "target_date": "2026-03-01", "status": "pending", "ordering": 1},
+				value={
+					"id": 1,
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "pending",
+					"ordering": 1,
+				},
 				response_only=True,
 			),
 		],
@@ -348,8 +438,18 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		description="Delete a subtask of the given activity.",
 		responses={204: None},
 		parameters=[
-			OpenApiParameter("activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id"),
-			OpenApiParameter("subtask_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subtask id"),
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+			OpenApiParameter(
+				"subtask_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Subtask id",
+			),
 		],
 	)
 	def destroy(self, request, activity_id=None, subtask_id=None):
@@ -376,8 +476,18 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		request=SubtaskSerializer,
 		responses={201: SubtaskSerializer},
 		parameters=[
-			OpenApiParameter("activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id"),
-			OpenApiParameter("subtask_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subtask id"),
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+			OpenApiParameter(
+				"subtask_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Subtask id",
+			),
 		],
 	)
 	def partial_update(self, request, activity_id=None, subtask_id=None):
@@ -416,7 +526,10 @@ class TodayView(APIView):
 
 	@extend_schema(
 		summary="Today view",
-		description="Return overdue, today and upcoming subtasks for the authenticated user. Optional query param `n_days` (non-negative integer).",
+		description=(
+			"Return overdue, today and upcoming subtasks. "
+			"Optional query param `n_days`."
+		),
 		responses=OpenApiTypes.OBJECT,
 		examples=[
 			OpenApiExample(

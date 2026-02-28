@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiExample
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # add schema examples for token endpoints

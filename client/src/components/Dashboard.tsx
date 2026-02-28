@@ -38,7 +38,7 @@ import {
 import { toast } from "sonner";
 import "./Dashboard.css";
 import CreateActivityModal from "./CreateActivityModal";
-import SubtaskManagerModal from "./SubtaskManagerModal"; 
+import SubtaskManagerModal from "./SubtaskManagerModal";
 
 // Local type matching the modal's payload (keeps Dashboard free of `any` casts)
 type NewActivityPayloadFromModal = {
