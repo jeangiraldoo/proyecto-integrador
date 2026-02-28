@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Toaster } from "sonner";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
@@ -31,10 +32,13 @@ function App() {
 	};
 
 	const handleLogout = () => {
+		// clear tokens and auth header
 		localStorage.removeItem("access_token");
 		localStorage.removeItem("refresh_token");
 		delete client.defaults.headers.common["Authorization"];
 		setIsAuthenticated(false);
+		// show confirmation toast
+		toast.success("Sesión cerrada correctamente");
 	};
 
 	if (!isAuthenticated) {
