@@ -28,6 +28,16 @@ import {
 import lumaLogo from "../assets/luma.png";
 import { fetchMe, fetchActivities, type User, type Activity } from "../api/dashboard";
 import "./Dashboard.css";
+import CreateActivityModal from "./CreateActivityModal";
+
+// Local type matching the modal's payload (keeps Dashboard free of `any` casts)
+type NewActivityPayloadFromModal = {
+	title: string;
+	description?: string;
+	due_date: string;
+	total_estimated_hours?: number;
+	subtasks: { title: string; target_date: string; estimated_hours: number | string }[];
+};
 
 /* ============ MOCK DATA (fallback) ============ */
 const MOCK_USER: User = {
@@ -130,6 +140,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const [user, setUser] = useState<User>(MOCK_USER);
 	const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
 	const [loading, setLoading] = useState(true);
+	const [createOpen, setCreateOpen] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -354,11 +365,33 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									<CalendarCheck size={22} className="title-icon" />
 									Actividades
 								</h1>
-								<button className="btn-add">
+								<button className="btn-add" onClick={() => setCreateOpen(true)}>
 									<Plus size={16} />
 									<span>Añadir actividad</span>
 								</button>
 							</div>
+
+							{/* Create activity modal (top-level) */}
+							<CreateActivityModal
+								open={createOpen}
+								onClose={() => setCreateOpen(false)}
+								onCreate={(payload: NewActivityPayloadFromModal) => {
+									const newAct: Activity = {
+										id: Date.now(),
+										user: user.id,
+										title: payload.title,
+										description: payload.description || "",
+										due_date: payload.due_date,
+										status: "pending",
+										// derive subtask_count safely from typed payload
+										subtask_count: payload.subtasks?.length ?? 0,
+										total_estimated_hours: payload.total_estimated_hours || 0,
+									};
+									setActivities((prev) => [newAct, ...prev]);
+									setCreateOpen(false);
+									setActiveNav("today");
+								}}
+							/>
 							<div className="header-right">
 								<div className="filter-wrapper" ref={filterRef}>
 									<button
@@ -380,6 +413,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												<X size={14} />
 											</button>
 										</div>
+
+										{/* Create activity modal moved to top-level to avoid z-index/overflow issues */}
 										<div className="filter-options">
 											<button
 												className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
