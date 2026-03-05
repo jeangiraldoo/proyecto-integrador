@@ -24,7 +24,7 @@ import {
 	Loader2,
 	Inbox,
 	Trash2,
-	Layers, // Icono para las subtareas
+	Edit3,
 } from "lucide-react";
 import lumaLogo from "../assets/luma.png";
 import {
@@ -32,8 +32,12 @@ import {
 	fetchActivities,
 	createActivity,
 	deleteActivity,
+	fetchSubtasks,
+	updateSubtask,
+	deleteSubtask,
 	type User,
 	type Activity,
+	type Subtask,
 } from "../api/dashboard";
 import { toast } from "sonner";
 import "./Dashboard.css";
@@ -118,9 +122,45 @@ const MOCK_ACTIVITIES: Activity[] = [
 	},
 ];
 
+const MOCK_SUBTASKS_FOR_DROPDOWN: Subtask[] = [
+	{
+		id: 1,
+		name: "Ingresar a la cuenta de la universidad",
+		estimated_hours: 1,
+		target_date: "2026-02-27",
+		status: "completed",
+		ordering: 1,
+		created_at: new Date().toISOString(),
+		updated_at: new Date().toISOString(),
+	},
+	{
+		id: 2,
+		name: "Cambiar los wireframes de Manuel",
+		estimated_hours: 1.5,
+		target_date: "2026-02-27",
+		status: "completed",
+		ordering: 2,
+		created_at: new Date().toISOString(),
+		updated_at: new Date().toISOString(),
+	},
+	{
+		id: 3,
+		name: "Enviar cambios a equipo de UI",
+		estimated_hours: 1,
+		target_date: "2026-02-28",
+		status: "pending",
+		ordering: 3,
+		created_at: new Date().toISOString(),
+		updated_at: new Date().toISOString(),
+	},
+];
+
 /* ============ HELPERS ============ */
-function formatDate(iso: string): string {
-	const [y, m, d] = iso.split("-");
+function formatDate(iso: string | null | undefined): string {
+	if (iso == null || typeof iso !== "string") return "—";
+	const parts = iso.split("-");
+	if (parts.length < 3) return iso;
+	const [y, m, d] = parts;
 	return `${d}/${m}/${y}`;
 }
 
@@ -169,19 +209,25 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	useEffect(() => {
 		let cancelled = false;
 		async function load() {
-			// Avoid firing API requests if there's no access token available yet
 			const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+
 			if (!token) {
+				if (!cancelled) setLoading(false);
 				return;
 			}
+
 			try {
 				const [me, acts] = await Promise.all([fetchMe(), fetchActivities()]);
 				if (!cancelled) {
-					setUser(me);
-					setActivities(acts);
+					setUser(me || MOCK_USER);
+					setActivities(Array.isArray(acts) ? acts : MOCK_ACTIVITIES);
 				}
-			} catch (err) {
-				console.warn("Using mock data — failed to fetch real data:", err);
+			} catch {
+				console.warn("Error al traer datos reales, usando datos de prueba:", err);
+				if (!cancelled) {
+					setUser(MOCK_USER);
+					setActivities(MOCK_ACTIVITIES);
+				}
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
@@ -235,15 +281,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	}, []);
 
 	const overdue = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "overdue"),
+		() => (activities || []).filter((a) => classifyActivity(a.due_date) === "overdue"),
 		[activities],
 	);
 	const today = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "today"),
+		() => (activities || []).filter((a) => classifyActivity(a.due_date) === "today"),
 		[activities],
 	);
 	const upcoming = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "upcoming"),
+		() => (activities || []).filter((a) => classifyActivity(a.due_date) === "upcoming"),
 		[activities],
 	);
 
@@ -276,7 +322,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			setActivities((prev) => prev.filter((a) => a.id !== id));
 			toast.success("Actividad eliminada");
 			setConfirmDelete(null);
-		} catch (err) {
+		} catch {
 			console.error("Error deleting activity:", err);
 			toast.error("No se pudo eliminar la actividad");
 		} finally {
@@ -536,7 +582,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 										setCreateOpen(false);
 										toast.success("Actividad creada");
-									} catch (err) {
+									} catch {
 										console.error("Failed to create activity:", err);
 										toast.error("Error creando la actividad. Intenta de nuevo.");
 									}
@@ -674,7 +720,7 @@ interface ActivitySectionProps {
 	activities: Activity[];
 	variant: SectionVariant;
 	openTrigger?: number;
-	onDelete?: (id: number) => void;
+	onDelete?: (id: number, title: string) => void;
 }
 
 function ActivitySection({
@@ -691,8 +737,20 @@ function ActivitySection({
 	const prevTrigger = useRef<number | undefined>(undefined);
 	const isEmpty = activities.length === 0;
 
-	// <--- 2. Estado local para controlar el modal de subtareas
 	const [activeSubtaskManager, setActiveSubtaskManager] = useState<Activity | null>(null);
+	const [expandedActivityId, setExpandedActivityId] = useState<number | null>(null);
+	const [confirmDeleteSubtask, setConfirmDeleteSubtask] = useState<{
+		activityId: number;
+		subtaskId: number;
+		name: string;
+	} | null>(null);
+	const [deletingSubtask, setDeletingSubtask] = useState(false);
+	const [subtaskStateByActivity, setSubtaskStateByActivity] = useState<
+		Record<number, { loading: boolean; error: string | null; items: Subtask[] }>
+	>({});
+	const [optimisticSubtaskSnapshots, setOptimisticSubtaskSnapshots] = useState<
+		Record<number, Subtask[]>
+	>({});
 
 	useEffect(() => {
 		if (openTrigger === undefined) return;
@@ -713,12 +771,212 @@ function ActivitySection({
 		};
 	}, [openTrigger]);
 
+	async function handleToggleSubtasks(activity: Activity) {
+		if (expandedActivityId === activity.id) {
+			setExpandedActivityId(null);
+			return;
+		}
+		setExpandedActivityId(activity.id);
+		setSubtaskStateByActivity((prev) => ({
+			...prev,
+			[activity.id]: {
+				loading: true,
+				error: null,
+				items: prev[activity.id]?.items ?? [],
+			},
+		}));
+		try {
+			const items = await fetchSubtasks(activity.id);
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activity.id]: { loading: false, error: null, items },
+			}));
+		} catch {
+			console.error("Failed to load subtasks, using mock data:", err);
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activity.id]: {
+					loading: false,
+					error: null,
+					items: MOCK_SUBTASKS_FOR_DROPDOWN,
+				},
+			}));
+		}
+	}
+
+	async function handleToggleSubtaskStatus(activityId: number, subtask: Subtask) {
+		const nextStatus: Subtask["status"] = subtask.status === "completed" ? "pending" : "completed";
+		setOptimisticSubtaskSnapshots((prev) => ({
+			...prev,
+			[activityId]: subtaskStateByActivity[activityId]?.items ?? [],
+		}));
+		setSubtaskStateByActivity((prev) => ({
+			...prev,
+			[activityId]: {
+				...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+				items: (prev[activityId]?.items ?? []).map((item) =>
+					item.id === subtask.id ? { ...item, status: nextStatus } : item,
+				),
+			},
+		}));
+		try {
+			const updated = await updateSubtask(activityId, subtask.id, { status: nextStatus });
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activityId]: {
+					...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+					items: (prev[activityId]?.items ?? []).map((item) =>
+						item.id === subtask.id ? updated : item,
+					),
+				},
+			}));
+		} catch {
+			toast.error("No se pudo actualizar el estado de la subtarea.");
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activityId]: {
+					...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+					items: optimisticSubtaskSnapshots[activityId] ?? prev[activityId]?.items ?? [],
+				},
+			}));
+		}
+	}
+
+	function requestDeleteSubtask(activityId: number, subtask: Subtask) {
+		setConfirmDeleteSubtask({ activityId, subtaskId: subtask.id, name: subtask.name });
+	}
+
+	async function performDeleteSubtask() {
+		if (!confirmDeleteSubtask) return;
+		const { activityId, subtaskId } = confirmDeleteSubtask;
+
+		setDeletingSubtask(true);
+
+		setOptimisticSubtaskSnapshots((prev) => ({
+			...prev,
+			[activityId]: subtaskStateByActivity[activityId]?.items ?? [],
+		}));
+		setSubtaskStateByActivity((prev) => ({
+			...prev,
+			[activityId]: {
+				...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+				items: (prev[activityId]?.items ?? []).filter((item) => item.id !== subtaskId),
+			},
+		}));
+
+		try {
+			await deleteSubtask(activityId, subtaskId);
+			toast.success("Subtarea eliminada.");
+			setConfirmDeleteSubtask(null); // Cierra el modal si hay éxito
+		} catch (err) {
+			console.error(err);
+			toast.error("No se pudo eliminar la subtarea.");
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activityId]: {
+					...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+					items: optimisticSubtaskSnapshots[activityId] ?? prev[activityId]?.items ?? [],
+				},
+			}));
+		} finally {
+			setDeletingSubtask(false);
+		}
+	}
+
+	async function handleEditSubtaskName(activityId: number, subtask: Subtask) {
+		const nextName = window.prompt("Editar subtarea", subtask.name)?.trim();
+		if (!nextName || nextName === subtask.name) return;
+		setOptimisticSubtaskSnapshots((prev) => ({
+			...prev,
+			[activityId]: subtaskStateByActivity[activityId]?.items ?? [],
+		}));
+		setSubtaskStateByActivity((prev) => ({
+			...prev,
+			[activityId]: {
+				...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+				items: (prev[activityId]?.items ?? []).map((item) =>
+					item.id === subtask.id ? { ...item, name: nextName } : item,
+				),
+			},
+		}));
+		try {
+			const updated = await updateSubtask(activityId, subtask.id, { name: nextName });
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activityId]: {
+					...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+					items: (prev[activityId]?.items ?? []).map((item) =>
+						item.id === subtask.id ? updated : item,
+					),
+				},
+			}));
+		} catch {
+			toast.error("No se pudo actualizar la subtarea.");
+			setSubtaskStateByActivity((prev) => ({
+				...prev,
+				[activityId]: {
+					...(prev[activityId] ?? { loading: false, error: null, items: [] }),
+					items: optimisticSubtaskSnapshots[activityId] ?? prev[activityId]?.items ?? [],
+				},
+			}));
+		}
+	}
+
 	return (
 		<section
 			ref={sectionRef}
 			className={`activity-section section-${variant}`}
 			id={`section-${variant}`}
 		>
+			{confirmDeleteSubtask && (
+				<div
+					className="ca-backdrop"
+					role="dialog"
+					aria-modal="true"
+					onMouseDown={(e) => {
+						if (e.target === e.currentTarget) setConfirmDeleteSubtask(null);
+					}}
+					style={{ zIndex: 3000 }}
+				>
+					<div className="ca-modal ca-modal-compact">
+						<div className="ca-header">
+							<div className="ca-header-left">
+								<div className="ca-header-icon">
+									<AlertTriangle size={20} />
+								</div>
+								<div className="ca-header-text">
+									<h3>Confirmar eliminación</h3>
+									<p className="ca-subtitle">Vas a eliminar: {confirmDeleteSubtask.name}</p>
+								</div>
+							</div>
+							<button className="ca-close" onClick={() => setConfirmDeleteSubtask(null)}>
+								<X size={15} />
+							</button>
+						</div>
+						<div className="ca-body">
+							<p>
+								¿Estás seguro que deseas eliminar esta subtarea? Esta acción no se puede deshacer.
+							</p>
+							<div className="ca-actions">
+								<button
+									className="btn btn-ghost"
+									onClick={() => setConfirmDeleteSubtask(null)}
+									disabled={deletingSubtask}
+								>
+									Cancelar
+								</button>
+								<button
+									className="btn btn-primary"
+									onClick={performDeleteSubtask}
+									disabled={deletingSubtask}
+								>
+									{deletingSubtask ? "Eliminando..." : "Eliminar"}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 			<div className="section-header" onClick={() => setCollapsed(!collapsed)}>
 				<div className="section-title-group">
 					<ChevronDown size={16} className={`collapse-icon ${collapsed ? "collapsed" : ""}`} />
@@ -742,62 +1000,208 @@ function ActivitySection({
 								<span className="col-duration">Duración estimada</span>
 								<span className="col-date">Fecha de finalización</span>
 								<span className="col-subtasks"># de subtareas</span>
-								<span className="col-action" />
+								<span className="col-action">Ver subtareas</span>
 							</div>
 							<div className="table-body">
-								{activities.map((activity) => (
-									<div key={activity.id} className="table-row">
-										<div className="col-activity">
-											<span className={`activity-tag tag-${variant}`}>{activity.title}</span>
-										</div>
-										<div className="col-duration">
-											<span className="badge badge-duration">
-												{formatHours(activity.total_estimated_hours)}
-											</span>
-										</div>
-										<div className="col-date">
-											<span className={`badge badge-date badge-date-${variant}`}>
-												{formatDate(activity.due_date)}
-											</span>
-										</div>
-										<div className="col-subtasks">
-											<span className="badge badge-subtask">{activity.subtask_count}</span>
-										</div>
-										<div className="col-action">
-											{/* <--- 3. Botón para abrir el Modal de Subtareas */}
-											<button
-												className="btn-row-action"
-												aria-label="Gestionar subtareas"
-												onClick={() => setActiveSubtaskManager(activity)}
-												title="Ver subtareas"
-											>
-												<Layers size={18} />
-											</button>
+								{activities.map((activity) => {
+									const subtaskState = subtaskStateByActivity[activity.id];
+									const isExpanded = expandedActivityId === activity.id;
+									const items = subtaskState?.items ?? [];
+									const completedCount = items.filter((s) => s.status === "completed").length;
+									const totalCount = items.length || activity.subtask_count || 0;
+									const progressPercent =
+										totalCount > 0 ? Math.min((completedCount / totalCount) * 100, 100) : 0;
 
-											<button
-												type="button"
-												className="btn-row-action btn-row-delete"
-												aria-label="Eliminar actividad"
-												onClick={() => onDelete?.(activity.id)}
-											>
-												<Trash2 size={14} />
-											</button>
+									return (
+										<div key={activity.id} className="table-row-group">
+											<div className={`table-row ${isExpanded ? "table-row-active" : ""}`}>
+												<div className="col-activity">
+													<span className={`activity-tag tag-${variant}`}>{activity.title}</span>
+												</div>
+												<div className="col-duration">
+													<span className="badge badge-duration">
+														{formatHours(activity.total_estimated_hours)}
+													</span>
+												</div>
+												<div className="col-date">
+													<span className={`badge badge-date badge-date-${variant}`}>
+														{formatDate(activity.due_date)}
+													</span>
+												</div>
+												<div className="col-subtasks">
+													<div className="subtask-progress">
+														<div className="subtask-progress-bar">
+															<div
+																className="subtask-progress-fill"
+																style={{ width: `${progressPercent}%` }}
+															/>
+														</div>
+														<span className="subtask-progress-text">
+															{completedCount}/{totalCount}
+														</span>
+													</div>
+												</div>
+												<div className="col-action">
+													<button
+														type="button"
+														className={`btn-subtasks-toggle ${
+															isExpanded ? "btn-subtasks-toggle-open" : ""
+														}`}
+														aria-label="Ver subtareas"
+														onClick={() => void handleToggleSubtasks(activity)}
+														title={isExpanded ? "Ocultar subtareas" : "Ver subtareas"}
+													>
+														<span className="btn-subtasks-label">Ver subtareas</span>
+														<span
+															className={`btn-subtasks-caret ${
+																isExpanded ? "btn-subtasks-caret-open" : ""
+															}`}
+														>
+															▼
+														</span>
+													</button>
+													<button
+														type="button"
+														className="btn-row-action btn-row-delete"
+														aria-label="Eliminar actividad"
+														onClick={() => onDelete?.(activity.id, activity.title)}
+													>
+														<Trash2 size={14} />
+													</button>
+												</div>
+											</div>
+
+											{isExpanded && (
+												<div className="subtask-dropdown">
+													<div className="subtask-dropdown-toolbar">
+														{/* Solo mostramos el botón si NO es una sección de vencidas */}
+														{variant !== "overdue" && (
+															<button
+																type="button"
+																className="subtask-add-btn"
+																onClick={() => setActiveSubtaskManager(activity)}
+															>
+																<Plus size={14} />
+																Añadir subtarea
+															</button>
+														)}
+													</div>
+													{subtaskState?.loading && (
+														<div className="subtask-dropdown-loading">
+															<span className="subtask-spinner" />
+															<span>Cargando subtareas...</span>
+														</div>
+													)}
+													{!subtaskState?.loading && items.length === 0 && (
+														<div className="subtask-dropdown-empty">
+															<p>
+																{variant === "overdue"
+																	? "Esta actividad aún no tenía subtareas asignadas."
+																	: "Esta actividad aún no tiene subtareas asignadas."}
+															</p>
+														</div>
+													)}
+													{!subtaskState?.loading && items.length > 0 && (
+														<div className="subtask-rows">
+															{items.map((subtask) => {
+																const statusLabel =
+																	subtask.status === "completed"
+																		? "Completada"
+																		: subtask.status === "pending"
+																			? "Pendiente"
+																			: "En progreso";
+																return (
+																	<div
+																		key={subtask.id}
+																		className={`subtask-row subtask-row-${subtask.status}`}
+																	>
+																		<div className="subtask-main">
+																			<div className="subtask-checkbox">
+																				<input
+																					type="checkbox"
+																					checked={subtask.status === "completed"}
+																					onChange={() =>
+																						void handleToggleSubtaskStatus(activity.id, subtask)
+																					}
+																				/>
+																			</div>
+																			<span className="subtask-title">{subtask.name}</span>
+																		</div>
+																		<div className="subtask-icons">
+																			<button
+																				type="button"
+																				className="subtask-icon-button"
+																				onClick={() =>
+																					void handleEditSubtaskName(activity.id, subtask)
+																				}
+																				aria-label="Editar subtarea"
+																			>
+																				<Edit3 size={14} />
+																			</button>
+																			<button
+																				type="button"
+																				className="subtask-icon-button"
+																				onClick={() => requestDeleteSubtask(activity.id, subtask)}
+																				aria-label="Eliminar subtarea"
+																			>
+																				<Trash2 size={14} />
+																			</button>
+																		</div>
+																		<div className="subtask-status">
+																			<span
+																				className={`subtask-status-chip subtask-status-${subtask.status}`}
+																			>
+																				{statusLabel}
+																			</span>
+																		</div>
+																	</div>
+																);
+															})}
+														</div>
+													)}
+												</div>
+											)}
 										</div>
-									</div>
-								))}
+									);
+								})}
 							</div>
 						</>
 					)}
 				</div>
 			</div>
 
-			{/* <--- 4. Renderizado del Modal de Subtareas */}
 			{activeSubtaskManager && (
 				<SubtaskManagerModal
 					activityId={activeSubtaskManager.id}
 					activityTitle={activeSubtaskManager.title}
 					open={true}
-					onClose={() => setActiveSubtaskManager(null)}
+					onClose={() => {
+						const id = activeSubtaskManager.id;
+						setActiveSubtaskManager(null);
+						setSubtaskStateByActivity((prev) => ({
+							...prev,
+							[id]: prev[id]
+								? { ...prev[id], loading: true }
+								: { loading: true, error: null, items: [] },
+						}));
+						fetchSubtasks(id)
+							.then((items) => {
+								setSubtaskStateByActivity((prev) => ({
+									...prev,
+									[id]: { loading: false, error: null, items },
+								}));
+							})
+							.catch(() => {
+								setSubtaskStateByActivity((prev) => ({
+									...prev,
+									[id]: {
+										loading: false,
+										error: null,
+										items: prev[id]?.items ?? [],
+									},
+								}));
+							});
+					}}
 				/>
 			)}
 		</section>

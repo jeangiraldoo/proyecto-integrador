@@ -1,4 +1,4 @@
-﻿/* ============================
+/* ============================
    Dashboard — Luma Palette
    ============================ */
 
@@ -977,10 +977,15 @@
 /* Table header */
 .table-header {
 	display: grid;
-	grid-template-columns: 2fr 1.2fr 1.3fr 1fr 50px;
+	grid-template-columns: 2fr 1.2fr 1.3fr 1fr 180px;
 	padding: 0.55rem 1.25rem;
 	border-top: 1px solid var(--card-border);
 	background: var(--card-bg);
+}
+
+.table-header .col-action {
+	justify-content: center;
+	padding-right: 36px;
 }
 
 .table-header span {
@@ -1005,7 +1010,7 @@
 
 .table-row {
 	display: grid;
-	grid-template-columns: 2fr 1.2fr 1.3fr 1fr 50px;
+	grid-template-columns: 2fr 1.2fr 1.3fr 1fr 180px;
 	align-items: center;
 	padding: 0.7rem 1.25rem;
 	border-top: 1px solid var(--card-bg);
@@ -1014,6 +1019,251 @@
 
 .table-row:hover {
 	background: var(--row-hover);
+}
+
+.table-row-group {
+	border-top: 1px solid var(--card-bg);
+}
+
+.table-row-group:first-child {
+	border-top: none;
+}
+
+.table-row-active {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+.subtask-dropdown {
+	padding: 0.5rem 1.25rem 0.85rem;
+	background: #4b4b55;
+	border-top: 1px solid #3e3e46;
+}
+
+.subtask-dropdown-toolbar {
+	margin-bottom: 0.5rem;
+}
+
+.subtask-add-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.25rem 0.6rem;
+	border-radius: 6px;
+	border: 1px solid rgba(124, 108, 235, 0.5);
+	background: rgba(124, 108, 235, 0.12);
+	color: var(--accent-soft);
+	font-size: 0.75rem;
+	font-weight: 500;
+	cursor: pointer;
+	font-family: inherit;
+	transition:
+		background 0.2s,
+		border-color 0.2s;
+}
+
+.subtask-add-btn:hover {
+	background: rgba(124, 108, 235, 0.2);
+	border-color: var(--accent);
+}
+
+.subtask-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.subtask-dropdown-actions-label {
+	text-align: right;
+}
+
+.subtask-row {
+	padding: 0.3rem 0.6rem;
+	border-radius: 4px;
+}
+
+.subtask-row:hover {
+	background: rgba(124, 108, 235, 0.08);
+}
+
+.subtask-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.subtask-checkbox {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.subtask-checkbox input {
+	width: 14px;
+	height: 14px;
+	accent-color: var(--accent);
+}
+
+.subtask-title {
+	font-size: 0.82rem;
+	color: #f9fafb;
+}
+
+.subtask-main {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex: 1;
+}
+
+.subtask-icons {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.subtask-status {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	min-width: 120px;
+}
+
+.subtask-icon-button {
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	border: none;
+	background: rgba(0, 0, 0, 0.18);
+	color: #f3f4f6;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition:
+		background 0.15s ease,
+		transform 0.1s ease;
+}
+
+.subtask-icon-button:hover {
+	background: rgba(0, 0, 0, 0.32);
+	transform: translateY(-1px);
+}
+
+.subtask-status-chip {
+	padding: 0.25rem 0.75rem;
+	border-radius: 999px;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	border: none;
+	cursor: default;
+}
+
+.subtask-row-completed {
+	background: rgba(0, 0, 0, 0.24);
+}
+
+.subtask-row-completed .subtask-title {
+	color: rgba(249, 250, 251, 0.68);
+	text-decoration: line-through;
+}
+
+.subtask-row-pending {
+	background: rgba(127, 29, 29, 0.5);
+}
+
+.subtask-row-in_progress {
+	background: rgba(30, 64, 175, 0.55);
+}
+
+.subtask-status-completed {
+	background: #4b5563;
+	color: #e5e7eb;
+}
+
+.subtask-status-pending {
+	background: #b91c1c;
+	color: #fef2f2;
+}
+
+.subtask-status-in_progress {
+	background: #1d4ed8;
+	color: #eff6ff;
+}
+
+.subtask-dropdown-empty,
+.subtask-dropdown-error,
+.subtask-dropdown-loading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.35rem 0;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+/* Button that matches the wireframe “VER SUBTAREAS” style */
+.btn-subtasks-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	padding: 0.35rem 0.85rem;
+	min-width: 120px;
+	border-radius: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.05);
+	color: var(--text-primary);
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	cursor: pointer;
+	font-family: inherit;
+	transition:
+		background 0.2s ease,
+		border-color 0.2s ease,
+		color 0.2s ease,
+		transform 0.12s ease;
+}
+
+.btn-subtasks-toggle:hover {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.18);
+	transform: translateY(-1px);
+}
+
+.btn-subtasks-toggle-open {
+	background: rgba(124, 108, 235, 0.22);
+	border-color: rgba(124, 108, 235, 0.8);
+	color: #f9fafb;
+}
+
+.btn-subtasks-label {
+	white-space: nowrap;
+}
+
+.btn-subtasks-caret {
+	font-size: 0.62rem;
+	display: inline-block;
+	transform: translateY(-1px);
+	transition: transform 0.18s ease;
+}
+
+.btn-subtasks-caret-open {
+	transform: translateY(-1px) rotate(180deg);
+}
+
+.subtask-spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid rgba(124, 108, 235, 0.25);
+	border-top-color: var(--accent);
+	animation: spin 0.8s linear infinite;
 }
 
 /* Tags & badges */
@@ -1079,6 +1329,45 @@
 .badge-subtask {
 	background: var(--accent-bg);
 	color: var(--text-secondary);
+}
+
+.col-subtasks {
+	min-width: 0;
+	overflow: hidden;
+}
+
+.subtask-progress {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.subtask-progress-bar {
+	width: 56px;
+	max-width: 45%;
+	flex-shrink: 1;
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.06);
+	overflow: hidden;
+}
+
+.subtask-progress-fill {
+	height: 100%;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #38bdf8 0%, #3b82f6 60%, #1d4ed8 100%);
+	transition: width 0.2s ease;
+}
+
+.subtask-progress-text {
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--text-secondary);
+	flex-shrink: 0;
+	min-width: 28px;
+	text-align: right;
 }
 
 /* Row action button */
@@ -1394,6 +1683,11 @@
 
 	.table-header,
 	.table-row {
-		grid-template-columns: 2fr 1fr 1fr 0.7fr 40px;
+		grid-template-columns: 2fr 1fr 1fr 0.7fr 140px;
+	}
+
+	.subtask-dropdown-header,
+	.subtask-row {
+		grid-template-columns: 20px 2fr 1fr 0.7fr 90px;
 	}
 }
