@@ -188,7 +188,9 @@ function SubjectCombobox({
 						setActiveIdx(-1);
 						setOpen(true);
 					}}
-					onFocus={() => { if (value.trim()) setOpen(true); }}
+					onFocus={() => {
+						if (value.trim()) setOpen(true);
+					}}
 					onKeyDown={handleKeyDown}
 					placeholder="Ej. Cálculo III, Redes, Bases de Datos..."
 					autoComplete="off"
@@ -232,8 +234,9 @@ function SubjectCombobox({
 						<li
 							role="option"
 							aria-selected={activeIdx === filtered.length}
-							className={`ca-combobox-option ca-combobox-add ${activeIdx === filtered.length ? "highlighted" : ""
-								}`}
+							className={`ca-combobox-option ca-combobox-add ${
+								activeIdx === filtered.length ? "highlighted" : ""
+							}`}
 							onMouseDown={(e) => {
 								e.preventDefault();
 								select(value.trim());
@@ -275,7 +278,12 @@ function WizardStepper({ step }: { step: 1 | 2 }) {
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
-export default function CreateActivityModal({ open, onClose, onCreate, knownSubjects = [] }: Props) {
+export default function CreateActivityModal({
+	open,
+	onClose,
+	onCreate,
+	knownSubjects = [],
+}: Props) {
 	/* Wizard */
 	const [step, setStep] = useState<1 | 2>(1);
 	const [slideDir, setSlideDir] = useState<"forward" | "back">("forward");
@@ -477,14 +485,11 @@ export default function CreateActivityModal({ open, onClose, onCreate, knownSubj
 				{/* ====== STEP CONTENT ====== */}
 				<div className="ca-wizard-body">
 					<div key={animKey} className={`ca-step-content ${slideClass}`}>
-
 						{/* --z-- STEP 1: General Info ---- */}
 						{step === 1 && (
 							<div className="ca-step-panel">
 								<div className="ca-row">
-									<label
-										className={step1Submitted && subjectError ? "label-error" : ""}
-									>
+									<label className={step1Submitted && subjectError ? "label-error" : ""}>
 										Materia {step1Submitted && subjectError ? "·" : "*"}
 									</label>
 									<SubjectCombobox
@@ -539,9 +544,7 @@ export default function CreateActivityModal({ open, onClose, onCreate, knownSubj
 											step={0.5}
 											value={estimatedHours}
 											onChange={(e) =>
-												setEstimatedHours(
-													e.target.value === "" ? "" : Number(e.target.value),
-												)
+												setEstimatedHours(e.target.value === "" ? "" : Number(e.target.value))
 											}
 											placeholder="0"
 										/>
@@ -574,9 +577,7 @@ export default function CreateActivityModal({ open, onClose, onCreate, knownSubj
 													marginLeft: "auto",
 													fontSize: "11px",
 													fontWeight: 700,
-													color: atMax
-														? "rgba(251,146,60,0.8)"
-														: "rgba(255,255,255,0.25)",
+													color: atMax ? "rgba(251,146,60,0.8)" : "rgba(255,255,255,0.25)",
 												}}
 											>
 												{subtasks.length}/{MAX_SUBTASKS}
@@ -618,9 +619,7 @@ export default function CreateActivityModal({ open, onClose, onCreate, knownSubj
 												step={0.5}
 												value={stHours}
 												onChange={(e) =>
-													setStHours(
-														e.target.value === "" ? "" : Number(e.target.value),
-													)
+													setStHours(e.target.value === "" ? "" : Number(e.target.value))
 												}
 												placeholder="0"
 												disabled={atMax}
@@ -699,15 +698,11 @@ export default function CreateActivityModal({ open, onClose, onCreate, knownSubj
 														</td>
 														<td className="col-title">{st.title}</td>
 														<td className="col-date">
-															<span className="ca-pill">
-																{formatDate(st.target_date)}
-															</span>
+															<span className="ca-pill">{formatDate(st.target_date)}</span>
 														</td>
 														<td className="col-hours">
 															{st.estimated_hours !== "" && (
-																<span className="ca-pill">
-																	{st.estimated_hours}h
-																</span>
+																<span className="ca-pill">{st.estimated_hours}h</span>
 															)}
 														</td>
 														<td className="col-delete">

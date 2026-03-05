@@ -504,13 +504,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												payload.total_estimated_hours ??
 												(payload.subtasks
 													? payload.subtasks.reduce(
-														(acc, s) =>
-															acc +
-															(typeof s.estimated_hours === "number"
-																? s.estimated_hours
-																: Number(s.estimated_hours || 0)),
-														0,
-													)
+															(acc, s) =>
+																acc +
+																(typeof s.estimated_hours === "number"
+																	? s.estimated_hours
+																	: Number(s.estimated_hours || 0)),
+															0,
+														)
 													: 0),
 										};
 
@@ -520,13 +520,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											payload.total_estimated_hours ??
 											(payload.subtasks
 												? payload.subtasks.reduce(
-													(acc, s) =>
-														acc +
-														(typeof s.estimated_hours === "number"
-															? s.estimated_hours
-															: Number(s.estimated_hours || 0)),
-													0,
-												)
+														(acc, s) =>
+															acc +
+															(typeof s.estimated_hours === "number"
+																? s.estimated_hours
+																: Number(s.estimated_hours || 0)),
+														0,
+													)
 												: 0);
 
 										const created: Activity = {
