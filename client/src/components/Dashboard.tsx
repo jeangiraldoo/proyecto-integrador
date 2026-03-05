@@ -257,6 +257,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		() => today.reduce((sum, a) => sum + a.total_estimated_hours, 0),
 		[today],
 	);
+
+	const knownSubjects = useMemo(
+		() => [...new Set(activities.map((a) => a.course_name).filter(Boolean))].sort(),
+		[activities],
+	);
 	const capacityTotal = user.max_daily_hours;
 	const capacityPercent =
 		capacityTotal > 0 ? Math.min((capacityUsed / capacityTotal) * 100, 100) : 0;
@@ -486,6 +491,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 							<CreateActivityModal
 								open={createOpen}
 								onClose={() => setCreateOpen(false)}
+								knownSubjects={knownSubjects}
 								onCreate={async (payload: NewActivityPayloadFromModal) => {
 									try {
 										const apiPayload = {

@@ -376,23 +376,23 @@
 	gap: 0.6rem;
 	padding: 0.6rem 0.85rem;
 	margin-bottom: 1rem;
-	border: 1px solid rgba(239, 68, 68, 0.15);
+	border: 1px solid transparent;
 	border-radius: 12px;
-	background: rgba(239, 68, 68, 0.06);
-	color: #e87c7c;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.28);
 	font-size: 0.85rem;
 	font-weight: 500;
 	cursor: pointer;
 	font-family: inherit;
 	transition:
-		background 0.25s,
-		border-color 0.25s,
-		color 0.25s;
+		background 0.2s,
+		border-color 0.2s,
+		color 0.2s;
 }
 
 .logout-btn:hover {
-	background: rgba(239, 68, 68, 0.12);
-	border-color: rgba(239, 68, 68, 0.25);
+	background: rgba(239, 68, 68, 0.1);
+	border-color: rgba(239, 68, 68, 0.2);
 	color: #f87171;
 }
 

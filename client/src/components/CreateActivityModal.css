@@ -31,9 +31,8 @@
    MODAL SHELL
    ============================================================ */
 .ca-modal {
-	width: 900px;
+	width: 560px;
 	max-width: calc(100vw - 48px);
-	height: 620px;
 	max-height: calc(100vh - 48px);
 	border-radius: 24px;
 	overflow: hidden;
@@ -174,59 +173,153 @@
 }
 
 /* ============================================================
-   BODY — TWO-COLUMN LAYOUT
+   STEPPER
    ============================================================ */
-.ca-body {
+.ca-stepper {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	padding: 18px 30px 16px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ca-step-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+}
+
+.ca-step-circle {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: 800;
+	flex-shrink: 0;
+	transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, color 0.25s;
+}
+
+.ca-step-item.active .ca-step-circle {
+	background: linear-gradient(135deg, var(--ca-purple), var(--ca-purple-light));
+	border: none;
+	color: #fff;
+	box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2), 0 4px 14px rgba(124, 92, 255, 0.35);
+}
+
+.ca-step-item.done .ca-step-circle {
+	background: linear-gradient(135deg, var(--ca-green), var(--ca-green-dark));
+	border: none;
+	color: #fff;
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+
+.ca-step-item.idle .ca-step-circle {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: var(--ca-text-dim);
+	box-shadow: none;
+}
+
+.ca-step-label {
+	font-size: 12.5px;
+	font-weight: 600;
+	white-space: nowrap;
+	transition: color 0.25s;
+}
+
+.ca-step-item.active .ca-step-label { color: rgba(255, 255, 255, 0.9); }
+.ca-step-item.done .ca-step-label { color: rgba(34, 197, 94, 0.8); }
+.ca-step-item.idle .ca-step-label { color: var(--ca-text-dim); }
+
+.ca-step-connector {
 	flex: 1;
-	min-height: 0;
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 0;
+	height: 1px;
+	margin: 0 12px;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 1px;
+	position: relative;
 	overflow: hidden;
 }
 
-.ca-body::-webkit-scrollbar {
-	width: 4px;
+.ca-step-connector::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, var(--ca-green), var(--ca-green-dark));
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.ca-body::-webkit-scrollbar-track {
-	background: transparent;
+
+.ca-step-connector.done::after {
+	transform: scaleX(1);
 }
-.ca-body::-webkit-scrollbar-thumb {
+
+/* ============================================================
+   WIZARD BODY
+   ============================================================ */
+.ca-wizard-body {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	position: relative;
+}
+
+.ca-step-content {
+	height: 100%;
+	overflow-y: auto;
+}
+
+.ca-step-content::-webkit-scrollbar { width: 4px; }
+.ca-step-content::-webkit-scrollbar-track { background: transparent; }
+.ca-step-content::-webkit-scrollbar-thumb {
 	background: rgba(124, 92, 255, 0.2);
 	border-radius: 4px;
 }
 
-/* Left column */
-.ca-col-left {
-	padding: 24px 28px 24px 30px;
+@keyframes slide-in-forward {
+	from { opacity: 0; transform: translateX(40px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-back {
+	from { opacity: 0; transform: translateX(-40px); }
+	to { opacity: 1; transform: translateX(0); }
+}
+.ca-step-slide-forward {
+	animation: slide-in-forward 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.ca-step-slide-back {
+	animation: slide-in-back 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ca-step-panel {
+	padding: 26px 30px 20px;
 	display: flex;
 	flex-direction: column;
 	gap: 18px;
-	border-right: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-/* Right column */
-.ca-col-right {
-	padding: 24px 30px 24px 28px;
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-	overflow-y: auto;
-	border-left: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* ============================================================
-   COLUMN ACTIONS (buttons at bottom of right column)
+   WIZARD FOOTER
    ============================================================ */
-.ca-col-actions {
-	margin-top: auto;
-	padding: 16px 0 4px; /* bottom padding so box-shadow isn't clipped by overflow-y */
+.ca-wizard-footer {
+	flex-shrink: 0;
+	padding: 14px 30px 22px;
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.ca-footer-hints {
+	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 12px;
-	flex-shrink: 0; /* never shrink — always visible at bottom */
+	gap: 8px;
+	min-height: 18px;
 }
 
 .ca-footer-hint {
@@ -254,12 +347,17 @@
 
 .ca-footer-actions {
 	display: flex;
-	flex-direction: row;
-	align-items: stretch;
-	justify-content: center;
+	align-items: center;
+	justify-content: space-between;
 	gap: 12px;
-	width: 100%;
 	height: 44px;
+}
+
+.ca-footer-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 100%;
 }
 
 /* ============================================================
@@ -501,6 +599,140 @@
 }
 
 /* ============================================================
+   SUBJECT COMBOBOX
+   ============================================================ */
+.ca-combobox-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.ca-combobox-input-row {
+	display: flex;
+	align-items: center;
+	background-color: rgba(255, 255, 255, 0.03);
+	border: 1px solid var(--ca-border);
+	border-radius: 12px;
+	transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+	overflow: hidden;
+}
+
+.ca-combobox-input-row:focus-within {
+	border-color: rgba(124, 92, 255, 0.5);
+	background-color: rgba(124, 92, 255, 0.04);
+	box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ca-combobox-input-row.input-error {
+	border-color: rgba(248, 113, 113, 0.45) !important;
+	background-color: rgba(248, 113, 113, 0.04) !important;
+	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08) !important;
+}
+
+.ca-combobox-input {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--ca-text);
+	padding: 11px 14px;
+	font-size: 14px;
+	font-family: inherit;
+}
+
+.ca-combobox-input::placeholder {
+	color: var(--ca-text-dim);
+}
+
+.ca-combobox-chevron {
+	flex-shrink: 0;
+	background: transparent;
+	border: none;
+	color: var(--ca-text-dim);
+	padding: 0 12px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	height: 100%;
+	transition: color 0.15s, transform 0.2s;
+}
+
+.ca-combobox-chevron svg {
+	transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ca-combobox-chevron.open svg {
+	transform: rotate(180deg);
+}
+
+.ca-combobox-chevron:hover {
+	color: var(--ca-purple-light);
+}
+
+.ca-combobox-dropdown {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	z-index: 100;
+	background: linear-gradient(160deg, #1a1730 0%, #110f22 100%);
+	border: 1px solid rgba(124, 92, 255, 0.2);
+	border-radius: 13px;
+	padding: 5px;
+	margin: 0;
+	list-style: none;
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(124, 92, 255, 0.08);
+	animation: dropdown-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	max-height: 220px;
+	overflow-y: auto;
+}
+
+.ca-combobox-dropdown::-webkit-scrollbar { width: 3px; }
+.ca-combobox-dropdown::-webkit-scrollbar-track { background: transparent; }
+.ca-combobox-dropdown::-webkit-scrollbar-thumb {
+	background: rgba(124, 92, 255, 0.25);
+	border-radius: 4px;
+}
+
+@keyframes dropdown-in {
+	from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+	to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ca-combobox-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 12px;
+	border-radius: 9px;
+	font-size: 13.5px;
+	color: rgba(255, 255, 255, 0.75);
+	cursor: pointer;
+	user-select: none;
+	transition: background 0.1s, color 0.1s;
+}
+
+.ca-combobox-option:hover,
+.ca-combobox-option.highlighted {
+	background: rgba(124, 92, 255, 0.12);
+	color: rgba(255, 255, 255, 0.95);
+}
+
+.ca-combobox-add {
+	color: rgba(34, 197, 94, 0.85);
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
+	margin-top: 3px;
+	padding-top: 10px;
+	font-weight: 600;
+}
+
+.ca-combobox-add:hover,
+.ca-combobox-add.highlighted {
+	background: rgba(34, 197, 94, 0.1);
+	color: var(--ca-green);
+}
+
+/* ============================================================
    SUBTASK SUBFORM
    ============================================================ */
 .ca-subform {
@@ -699,8 +931,7 @@
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	border-radius: 13px;
 	background: rgba(255, 255, 255, 0.01);
-	/* thead ~29px + 2 rows × ~40px = ~109px, scroll from row 3 */
-	max-height: 112px;
+	max-height: 200px;
 	overflow-y: auto;
 }
 
@@ -898,9 +1129,9 @@
    BUTTONS BASE
    ============================================================ */
 .btn {
-	height: 100%; /* 👈 3. Heredan exactamente los 44px del padre */
+	height: 44px;
 	margin: 0;
-	padding: 0 28px;
+	padding: 0 24px;
 	border-radius: 13px;
 	cursor: pointer;
 	font-size: 14px;
@@ -908,18 +1139,13 @@
 	font-family: inherit;
 	line-height: normal;
 	box-sizing: border-box;
-
-	border: 1px solid transparent; /* Volvemos al borde transparente normal */
+	border: 1px solid transparent;
 	white-space: nowrap;
-
 	display: flex;
 	align-items: center;
 	justify-content: center;
-
-	flex: 1;
-	max-width: 180px;
-
-	overflow: hidden; /* 🚨 4. LA MAGIA: Ambos deben tener esto para que Flexbox los mida igual */
+	flex-shrink: 0;
+	overflow: hidden;
 	-webkit-appearance: none;
 	appearance: none;
 }
@@ -936,6 +1162,10 @@
 	background: rgba(255, 255, 255, 0.08);
 	color: rgba(255, 255, 255, 0.9);
 }
+.btn-ghost:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
 
 /* ============================================================
    BOTÓN PRIMARIO
@@ -945,7 +1175,7 @@
 	color: #fff;
 	border-color: transparent;
 	position: relative;
-	/* overflow: hidden; -> Ya no hace falta aquí porque lo pusimos en .btn */
+	min-width: 130px;
 }
 .btn-primary::before {
 	content: "";
@@ -981,30 +1211,22 @@
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width: 720px) {
+@media (max-width: 600px) {
 	.ca-modal {
 		border-radius: 18px;
+		width: 100%;
 	}
-
-	.ca-body {
-		grid-template-columns: 1fr;
-		overflow-y: auto;
+	.ca-stepper {
+		padding: 14px 20px 12px;
 	}
-	.ca-col-left {
-		border-right: none;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+	.ca-step-label {
+		display: none;
+	}
+	.ca-step-panel {
 		padding: 20px;
 	}
-	.ca-col-right {
-		padding: 20px;
-	}
-	.ca-footer-spacer {
-		grid-column: 1;
-		height: 0;
-	}
-
-	.ca-footer {
-		flex-wrap: wrap;
+	.ca-wizard-footer {
+		padding: 12px 20px 18px;
 	}
 	.ca-row.split {
 		flex-direction: column;
