@@ -1,21 +1,22 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import {
 	User,
 	Lock,
 	Loader2,
 	ArrowRight,
-	Zap,
-	GitBranch,
-	BarChart3,
-	Activity,
 	Eye,
 	EyeOff,
+	Sun,
+	CloudSun,
+	Moon,
+	CalendarDays,
+	TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import client from "../api/client";
 import "./Login.css";
-import lumaLogoFull from "../assets/luma.png"; // Usando el logo completo con texto
-import lumaIcon from "../assets/luma_2.png"; // Usando solo el icono para el hero
+import lumaLogoFull from "../assets/luma.png";
+import heroIllustration from "../assets/login.png";
 
 interface LoginProps {
 	onLoginSuccess: (token: string) => void;
@@ -26,13 +27,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
+	const [cardState, setCardState] = useState<"idle" | "success" | "error">("idle");
 
-	// Saludo dinámico según la hora
 	const greeting = useMemo(() => {
 		const hour = new Date().getHours();
-		if (hour >= 5 && hour < 12) return { text: "Buenos d\u00edas", emoji: "\u2600\ufe0f" };
-		if (hour >= 12 && hour < 19) return { text: "Buenas tardes", emoji: "\ud83c\udf24\ufe0f" };
-		return { text: "Buenas noches", emoji: "\ud83c\udf19" };
+		if (hour >= 5 && hour < 12) return { text: "Buenos días", Icon: Sun };
+		if (hour >= 12 && hour < 19) return { text: "Buenas tardes", Icon: CloudSun };
+		return { text: "Buenas noches", Icon: Moon };
 	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -45,179 +46,197 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
 		setIsLoading(true);
 		try {
-			const response = await client.post("/api/token/", {
-				username,
-				password,
-			});
+			const response = await client.post("/api/token/", { username, password });
+			const { access, refresh } = response.data as { access: string; refresh: string };
 
-			const { access, refresh } = response.data;
 			localStorage.setItem("access_token", access);
 			localStorage.setItem("refresh_token", refresh);
-
-			toast.success("¡Bienvenido de nuevo!");
-
 			client.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
-			// Silently fetch user info
-			client.get("/me/").catch(console.error);
-
-			onLoginSuccess(access);
+			setCardState("success");
+			setIsLoading(false);
+			toast.success("Bienvenido de nuevo.");
+			setTimeout(() => onLoginSuccess(access), 700);
 		} catch (error: unknown) {
-			console.error("Login error:", error);
-			if (
-				typeof error === "object" &&
-				error !== null &&
-				"response" in error &&
-				(error as { response: { status: number } }).response.status === 401
-			) {
+			const status =
+				typeof error === "object" && error !== null && "response" in error
+					? (error as { response?: { status?: number } }).response?.status
+					: undefined;
+
+			if (status === 401) {
 				toast.error("Usuario o contraseña incorrectos.");
 			} else {
 				toast.error("Error de conexión. Intenta más tarde.");
 			}
-		} finally {
+			setCardState("error");
 			setIsLoading(false);
 		}
 	};
 
+	const { Icon: GreetingIcon } = greeting;
+
 	return (
-		<div className="login-container">
-			{/* Lado Izquierdo: Formulario */}
-			<div className="login-left">
-				<div className="brand-row">
-					<img src={lumaLogoFull} alt="Luma" className="brand-logo-full" />
+		<div className="lp-scene">
+			{/* ── Background atmospheric layer ── */}
+			<div className="lp-bg" aria-hidden="true">
+				<div className="lp-orb lp-orb--purple" />
+				<div className="lp-orb lp-orb--indigo" />
+				<div className="lp-orb lp-orb--violet" />
+				<div className="lp-orb lp-orb--pink" />
+				<div className="lp-stars" />
+				<div className="lp-ring lp-ring--1" />
+				<div className="lp-ring lp-ring--2" />
+				<img src={heroIllustration} className="lp-bg__illustration" alt="" draggable={false} />
+				<div className="lp-bg__vignette" />
+			</div>
+
+			{/* ── Corner pills ── */}
+			<div className="lp-pill lp-pill--tr" aria-hidden="true">
+				<span className="lp-pill__dot" />
+				Actividades organizadas
+			</div>
+			<div className="lp-pill lp-pill--br" aria-hidden="true">
+				<span className="lp-pill__dot lp-pill__dot--green" />
+				Progreso en tiempo real
+			</div>
+			<div className="lp-pill lp-pill--tl" aria-hidden="true">
+				<span className="lp-pill__dot lp-pill__dot--blue" />
+				Planificación inteligente
+			</div>
+			<div className="lp-pill lp-pill--bl" aria-hidden="true">
+				<span className="lp-pill__dot lp-pill__dot--yellow" />
+				Metas alcanzadas
+			</div>
+
+			{/* ── Feature cards ── */}
+			<div className="lp-feat-card lp-feat-card--left" aria-hidden="true">
+				<div className="lp-feat-card__icon">
+					<CalendarDays size={18} strokeWidth={1.5} />
 				</div>
-
-				<div className="login-form-wrapper">
-					<div className="login-header">
-						<p className="greeting-line">
-							<span className="greeting-emoji">{greeting.emoji}</span> {greeting.text}
-						</p>
-						<h1>Nos alegra verte de nuevo</h1>
-						<p className="login-subtitle">Ingresa tus datos y retoma donde lo dejaste.</p>
-					</div>
-
-					<form onSubmit={handleSubmit} className="login-form">
-						<div className="modern-input-group">
-							<label htmlFor="username">Usuario</label>
-							<div className="input-field-wrapper">
-								<input
-									id="username"
-									type="text"
-									className="modern-input"
-									placeholder="tu@correo.com"
-									value={username}
-									onChange={(e) => setUsername(e.target.value)}
-									disabled={isLoading}
-									autoComplete="username"
-								/>
-								<User className="input-icon" strokeWidth={1.5} />
-							</div>
-						</div>
-
-						<div className="modern-input-group">
-							<label htmlFor="password">Contraseña</label>
-							<div className="input-field-wrapper">
-								<input
-									id="password"
-									type={showPassword ? "text" : "password"}
-									className="modern-input modern-input--password"
-									placeholder="••••••••"
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									disabled={isLoading}
-									autoComplete="current-password"
-								/>
-								<Lock className="input-icon" strokeWidth={1.5} />
-								<button
-									type="button"
-									className={`password-toggle ${showPassword ? "is-visible" : ""}`}
-									onClick={() => setShowPassword(!showPassword)}
-									tabIndex={-1}
-									aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-								>
-									<Eye className="eye-icon eye-open" size={18} strokeWidth={1.5} />
-									<EyeOff className="eye-icon eye-closed" size={18} strokeWidth={1.5} />
-								</button>
-							</div>
-							<div style={{ textAlign: "right", marginTop: "0.4rem" }}>
-								<a href="#" className="forgot-password">
-									¿Olvidaste tu contraseña?
-								</a>
-							</div>
-						</div>
-
-						<button type="submit" className="btn-primary" disabled={isLoading}>
-							{isLoading ? (
-								<Loader2 className="spinner" size={18} />
-							) : (
-								<div className="btn-content">
-									<span>Iniciar sesión</span>
-									<ArrowRight size={16} />
-								</div>
-							)}
-						</button>
-					</form>
-
-					<div className="form-footer">
-						<span>¿Primera vez por aqui?</span>
-						<a href="#" className="highlight-link">
-							Crea una cuenta
-						</a>
-					</div>
+				<div className="lp-feat-card__body">
+					<strong>Organiza tu semana</strong>
+					<span>Actividades con fechas y prioridades</span>
+				</div>
+			</div>
+			<div className="lp-feat-card lp-feat-card--right" aria-hidden="true">
+				<div className="lp-feat-card__icon lp-feat-card__icon--alt">
+					<TrendingUp size={18} strokeWidth={1.5} />
+				</div>
+				<div className="lp-feat-card__body">
+					<strong>Avanza con claridad</strong>
+					<span>Seguimiento en tiempo real</span>
 				</div>
 			</div>
 
-			{/* Lado Derecho: Visual decorativo */}
-			<div className="login-right">
-				{/* Gradient orbs background */}
-				<div className="right-bg">
-					<div className="gradient-orb orb-1" />
-					<div className="gradient-orb orb-2" />
-					<div className="gradient-orb orb-3" />
-				</div>
+			{/* ── Login card ── */}
+			<div
+				className={`lp-card${cardState !== "idle" ? ` lp-card--${cardState}` : ""}`}
+				onAnimationEnd={() => {
+					if (cardState === "error") setCardState("idle");
+				}}
+				role="main"
+			>
+				<div className="lp-card__shine" />
+				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo" />
 
-				{/* Floating stat pills */}
-				<div className="floating-card card-1">
-					<div className="floating-icon">
-						<BarChart3 size={18} color="#c4b5fd" />
-					</div>
-					<div className="floating-text">
-						<span>Progreso</span>
-						<strong>En tiempo real</strong>
-					</div>
-				</div>
-
-				<div className="floating-card card-2">
-					<div className="floating-icon">
-						<Activity size={18} color="#a78bfa" />
-					</div>
-					<div className="floating-text">
-						<span>Actividades</span>
-						<strong>Organizadas</strong>
-					</div>
-				</div>
-
-				{/* Glass card */}
-				<div className="glass-card">
-					<img src={lumaIcon} alt="Luma" className="hero-main-logo" />
-					<h2>
-						Organiza tu <span className="text-gradient">agenda.</span>
-					</h2>
-					<p className="glass-subtitle">
-						La plataforma inteligente para gestionar tu tiempo y alcanzar tus metas.
+				<header className="lp-card__header">
+					<p className="lp-greeting">
+						<GreetingIcon
+							className="lp-greeting__icon"
+							size={14}
+							strokeWidth={1.5}
+							aria-hidden="true"
+						/>
+						{greeting.text}
 					</p>
-					<div className="glass-features">
-						<div className="glass-pill">
-							<Zap size={14} /> Automático
-						</div>
-						<div className="glass-pill">
-							<Zap size={14} /> Rápido
-						</div>
-						<div className="glass-pill">
-							<GitBranch size={14} /> Trazabilidad
+					<h1 className="lp-card__title">
+						Nos alegra verte
+						<br />
+						de nuevo
+					</h1>
+					<p className="lp-card__subtitle">Ingresa tus datos y retoma donde lo dejaste.</p>
+				</header>
+
+				<form onSubmit={handleSubmit} className="lp-form" noValidate>
+					<div className="lp-field">
+						<label className="lp-field__label" htmlFor="username">
+							Usuario
+						</label>
+						<div className="lp-field__wrap">
+							<User className="lp-field__icon" size={16} strokeWidth={1.5} aria-hidden="true" />
+							<input
+								id="username"
+								type="text"
+								className="lp-field__input"
+								placeholder="tu usuario"
+								value={username}
+								onChange={(e) => setUsername(e.target.value)}
+								disabled={isLoading}
+								autoComplete="username"
+							/>
 						</div>
 					</div>
-				</div>
+
+					<div className="lp-field">
+						<div className="lp-field__label-row">
+							<label className="lp-field__label" htmlFor="password">
+								Contraseña
+							</label>
+							<a href="#" className="lp-field__forgot">
+								¿Olvidaste tu contraseña?
+							</a>
+						</div>
+						<div className="lp-field__wrap">
+							<Lock className="lp-field__icon" size={16} strokeWidth={1.5} aria-hidden="true" />
+							<input
+								id="password"
+								type={showPassword ? "text" : "password"}
+								className="lp-field__input lp-field__input--pw"
+								placeholder="••••••••"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								disabled={isLoading}
+								autoComplete="current-password"
+							/>
+							<button
+								type="button"
+								className={`lp-pw-toggle${showPassword ? " lp-pw-toggle--on" : ""}`}
+								onClick={() => setShowPassword((v) => !v)}
+								tabIndex={-1}
+								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+							>
+								<Eye
+									className="lp-pw-toggle__icon lp-pw-toggle__icon--show"
+									size={16}
+									strokeWidth={1.5}
+								/>
+								<EyeOff
+									className="lp-pw-toggle__icon lp-pw-toggle__icon--hide"
+									size={16}
+									strokeWidth={1.5}
+								/>
+							</button>
+						</div>
+					</div>
+
+					<button type="submit" className="lp-btn" disabled={isLoading}>
+						{isLoading ? (
+							<Loader2 className="lp-btn__spinner" size={18} aria-label="Cargando" />
+						) : (
+							<>
+								<span>Iniciar sesión</span>
+								<ArrowRight size={15} aria-hidden="true" />
+							</>
+						)}
+					</button>
+				</form>
+
+				<footer className="lp-card__footer">
+					¿Primera vez por aquí?{" "}
+					<a href="#" className="lp-card__signup">
+						Crea una cuenta
+					</a>
+				</footer>
 			</div>
 		</div>
 	);
