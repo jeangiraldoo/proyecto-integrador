@@ -52,7 +52,9 @@ class SubtaskSerializer(serializers.ModelSerializer):
 				errors["target_date"] = "Target date cannot be earlier than today"
 
 			activity = self.context.get("activity")
-			if activity and target_date > activity.due_date:
+			# Only enforce the due-date ceiling when the activity itself is not already overdue.
+			# If the activity is past-due, allow subtasks with any future target_date.
+			if activity and target_date > activity.due_date and activity.due_date >= date.today():
 				errors["target_date"] = (
 					f"Target date cannot be later than the activity due date ({activity.due_date})"
 				)
@@ -134,6 +136,22 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 	def get_subtask_count(self, obj) -> int:
 		return obj.subtasks.count()
+
+
+# Serializer used by TodayView — adds activity context to each subtask
+class TodaySubtaskSerializer(SubtaskSerializer):
+	activity = serializers.SerializerMethodField()
+	course_name = serializers.SerializerMethodField()
+
+	class Meta(SubtaskSerializer.Meta):
+		fields = [*SubtaskSerializer.Meta.fields, "activity", "course_name"]
+
+	def get_activity(self, obj) -> dict:
+		act = obj.activity_id  # ForeignKey named activity_id → related Activity object
+		return {"id": act.pk, "title": act.title}
+
+	def get_course_name(self, obj) -> str:
+		return obj.activity_id.course_name
 
 	def create(self, validated_data):
 		# Handle nested subtasks if provided

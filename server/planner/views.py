@@ -13,7 +13,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Activity, Subtask
-from .serializers import ActivitySerializer, SubtaskSerializer, UserSerializer
+from .serializers import (
+	ActivitySerializer,
+	SubtaskSerializer,
+	TodaySubtaskSerializer,
+	UserSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -582,9 +587,9 @@ class TodayView(APIView):
 
 			return Response(
 				{
-					"overdue": SubtaskSerializer(overdue, many=True).data,
-					"today": SubtaskSerializer(today_tasks, many=True).data,
-					"upcoming": SubtaskSerializer(upcoming, many=True).data,
+					"overdue": TodaySubtaskSerializer(overdue, many=True).data,
+					"today": TodaySubtaskSerializer(today_tasks, many=True).data,
+					"upcoming": TodaySubtaskSerializer(upcoming, many=True).data,
 					"meta": {"n_days": n_days},
 				}
 			)
