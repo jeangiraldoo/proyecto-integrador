@@ -210,28 +210,28 @@ export default function TodayKanban({
 		accent: string;
 		icon: React.JSX.Element;
 	}[] = [
-			{
-				group: "overdue" as KanbanGroup,
-				label: "Vencidas",
-				items: kanban.overdue,
-				accent: "#f87171",
-				icon: <AlertTriangle size={13} />,
-			},
-			{
-				group: "today" as KanbanGroup,
-				label: "Para hoy",
-				items: kanban.today,
-				accent: "#c084fc",
-				icon: <CalendarCheck size={13} />,
-			},
-			{
-				group: "upcoming" as KanbanGroup,
-				label: "Próximas",
-				items: kanban.upcoming,
-				accent: "#60a5fa",
-				icon: <CalendarClock size={13} />,
-			},
-		];
+		{
+			group: "overdue" as KanbanGroup,
+			label: "Vencidas",
+			items: kanban.overdue,
+			accent: "#f87171",
+			icon: <AlertTriangle size={13} />,
+		},
+		{
+			group: "today" as KanbanGroup,
+			label: "Para hoy",
+			items: kanban.today,
+			accent: "#c084fc",
+			icon: <CalendarCheck size={13} />,
+		},
+		{
+			group: "upcoming" as KanbanGroup,
+			label: "Próximas",
+			items: kanban.upcoming,
+			accent: "#60a5fa",
+			icon: <CalendarClock size={13} />,
+		},
+	];
 
 	return (
 		<>
@@ -582,9 +582,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-															group,
-														},
+																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+																group,
+															},
 												)
 											}
 											onKeyDown={(e) => {

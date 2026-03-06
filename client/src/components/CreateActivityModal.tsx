@@ -235,8 +235,9 @@ function SubjectCombobox({
 						<li
 							role="option"
 							aria-selected={activeIdx === filtered.length}
-							className={`ca-combobox-option ca-combobox-add ${activeIdx === filtered.length ? "highlighted" : ""
-								}`}
+							className={`ca-combobox-option ca-combobox-add ${
+								activeIdx === filtered.length ? "highlighted" : ""
+							}`}
 							onMouseDown={(e) => {
 								e.preventDefault();
 								select(value.trim());
@@ -615,7 +616,6 @@ export default function CreateActivityModal({
 											/>
 										</div>
 									</div>
-
 
 									{atMax ? (
 										<div className="ca-subform-max">
