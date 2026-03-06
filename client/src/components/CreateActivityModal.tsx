@@ -39,6 +39,7 @@ interface NewActivityPayload {
 
 interface Props {
 	open: boolean;
+	initialSubject?: string;
 	onClose: () => void;
 	onCreate: (payload: NewActivityPayload) => Promise<void>;
 	knownSubjects?: string[];
@@ -317,8 +318,12 @@ export default function CreateActivityModal({
 	const [submitting, setSubmitting] = useState(false);
 
 	useEffect(() => {
-		if (!open) clearAll();
-	}, [open]);
+		if (!open) {
+			clearAll();
+		} else if (initialSubject) {
+			setSubject(initialSubject);
+		}
+	}, [open, initialSubject]);
 
 	function clearAll() {
 		setStep(1);

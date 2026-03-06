@@ -2,7 +2,7 @@ from datetime import date
 
 from rest_framework import serializers
 
-from .models import Activity, Subtask, User
+from .models import Activity, Subject, Subtask, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -52,7 +52,9 @@ class SubtaskSerializer(serializers.ModelSerializer):
 				errors["target_date"] = "Target date cannot be earlier than today"
 
 			activity = self.context.get("activity")
-			if activity and target_date > activity.due_date:
+			# Only enforce the due-date ceiling when the activity itself is not already overdue.
+			# If the activity is past-due, allow subtasks with any future target_date.
+			if activity and target_date > activity.due_date and activity.due_date >= date.today():
 				errors["target_date"] = (
 					f"Target date cannot be later than the activity due date ({activity.due_date})"
 				)
@@ -135,6 +137,22 @@ class ActivitySerializer(serializers.ModelSerializer):
 	def get_subtask_count(self, obj) -> int:
 		return obj.subtasks.count()
 
+
+# Serializer used by TodayView — adds activity context to each subtask
+class TodaySubtaskSerializer(SubtaskSerializer):
+	activity = serializers.SerializerMethodField()
+	course_name = serializers.SerializerMethodField()
+
+	class Meta(SubtaskSerializer.Meta):
+		fields = [*SubtaskSerializer.Meta.fields, "activity", "course_name"]
+
+	def get_activity(self, obj) -> dict:
+		act = obj.activity_id  # ForeignKey named activity_id → related Activity object
+		return {"id": act.pk, "title": act.title}
+
+	def get_course_name(self, obj) -> str:
+		return obj.activity_id.course_name
+
 	def create(self, validated_data):
 		# Handle nested subtasks if provided
 		subtasks_data = validated_data.pop("subtasks", [])
@@ -169,3 +187,15 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 
 # Note: a single SubtaskSerializer is defined above for nested use in ActivitySerializer.
+
+
+class SubjectSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = Subject
+		fields = ["id", "name", "creation_date"]
+		read_only_fields = ["id", "creation_date"]
+
+	def validate_name(self, value):
+		if not value.strip():
+			raise serializers.ValidationError("Subject name cannot be empty.")
+		return value.strip()

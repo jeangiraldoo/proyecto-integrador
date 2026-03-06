@@ -21,6 +21,7 @@ export interface Activity {
 	status: "pending" | "completed" | "in_progress";
 	subtask_count: number;
 	total_estimated_hours: number;
+	subtasks?: Subtask[];
 }
 
 export interface Subtask {
@@ -32,6 +33,9 @@ export interface Subtask {
 	ordering: number;
 	created_at: string;
 	updated_at: string;
+	// Populated by TodayView endpoint (TodaySubtaskSerializer)
+	activity?: { id: number; title: string };
+	course_name?: string;
 }
 
 export interface TodayViewResponse {
@@ -69,7 +73,7 @@ export async function createActivity(payload: CreateActivityPayload): Promise<Ac
 
 export async function updateActivity(
 	id: number,
-	payload: Partial<Pick<Activity, "title" | "description" | "due_date" | "status">>,
+	payload: Partial<Pick<Activity, "title" | "description" | "due_date" | "status" | "course_name">>,
 ): Promise<Activity> {
 	const { data } = await client.patch<Activity>(`/activities/${id}/`, payload);
 	return data;
