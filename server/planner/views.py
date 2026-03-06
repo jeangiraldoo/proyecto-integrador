@@ -640,3 +640,22 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
 		serializer.save()
 		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+	@extend_schema(
+		summary="Update subject",
+		description="Partially update a subject's fields (e.g. name).",
+		request=SubjectSerializer,
+		responses={200: SubjectSerializer},
+	)
+	def partial_update(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+
+		serializer = self.get_serializer(subject, data=request.data, partial=True)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		return Response(serializer.data, status=status.HTTP_200_OK)
