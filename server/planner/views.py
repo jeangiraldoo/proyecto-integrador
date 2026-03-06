@@ -12,13 +12,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Activity, Subtask, Subject
+from .models import Activity, Subject, Subtask
 from .serializers import (
 	ActivitySerializer,
+	SubjectSerializer,
 	SubtaskSerializer,
 	TodaySubtaskSerializer,
 	UserSerializer,
-  SubjectSerializer,
 )
 
 logger = logging.getLogger(__name__)
