@@ -36,6 +36,7 @@ interface NewActivityPayload {
 
 interface Props {
 	open: boolean;
+	initialSubject?: string;
 	onClose: () => void;
 	onCreate: (payload: NewActivityPayload) => Promise<void>;
 }
@@ -98,7 +99,7 @@ function FieldError({ msg }: { msg: string }) {
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
-export default function CreateActivityModal({ open, onClose, onCreate }: Props) {
+export default function CreateActivityModal({ open, initialSubject, onClose, onCreate }: Props) {
 	/* Main form */
 	const [subject, setSubject] = useState(""); // 👈 Texto de la materia
 	const [title, setTitle] = useState("");
@@ -123,8 +124,12 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
 	useEffect(() => {
-		if (!open) clearAll();
-	}, [open]);
+		if (!open) {
+			clearAll();
+		} else if (initialSubject) {
+			setSubject(initialSubject);
+		}
+	}, [open, initialSubject]);
 
 	function clearAll() {
 		setSubject("");
