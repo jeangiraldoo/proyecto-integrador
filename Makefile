@@ -17,4 +17,7 @@ run-front:
 run-back:
 	$(BACKEND_DIR) && uv run manage.py runserver
 
+test-back:
+	$(BACKEND_DIR)/tests && uv run pytest
+
 run: run-front run-back

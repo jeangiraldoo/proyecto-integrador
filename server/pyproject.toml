@@ -17,6 +17,8 @@ dependencies = [
     "go-task-bin>=3.45.5",
     "gunicorn",
     "psycopg[binary]>=3.3.2",
+    "pytest",
+    "pytest-django",
 ]
 readme = "README.md"
 authors = [
