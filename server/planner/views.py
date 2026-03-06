@@ -12,12 +12,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Activity, Subtask
+from .models import Activity, Subtask, Subject
 from .serializers import (
 	ActivitySerializer,
 	SubtaskSerializer,
 	TodaySubtaskSerializer,
 	UserSerializer,
+  SubjectSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -599,6 +600,86 @@ class TodayView(APIView):
 
 		except Exception:
 			logger.exception("Unexpected error generating today view")
+			return Response(
+				{"errors": {"server": "Internal server error"}},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+class SubjectViewSet(viewsets.ModelViewSet):
+	"""
+	CRUD Endpoints for Academic Subjects.
+	"""
+
+	serializer_class = SubjectSerializer
+	permission_classes = [IsAuthenticated]
+
+	def get_queryset(self):
+		return Subject.objects.all().order_by("-creation_date")
+
+	@extend_schema(
+		summary="List subjects",
+		description="Retrieve a list of all academic subjects.",
+		responses=SubjectSerializer(many=True),
+	)
+	def list(self, request, *args, **kwargs):
+		return super().list(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Retrieve subject",
+		description="Get details of a specific subject by ID.",
+		responses=SubjectSerializer,
+	)
+	def retrieve(self, request, *args, **kwargs):
+		return super().retrieve(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Create subject",
+		description="Create a new academic subject.",
+		request=SubjectSerializer,
+		responses={201: SubjectSerializer},
+	)
+	def create(self, request, *args, **kwargs):
+		serializer = self.get_serializer(data=request.data)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+	@extend_schema(
+		summary="Update subject",
+		description="Partially update a subject's fields (e.g. name).",
+		request=SubjectSerializer,
+		responses={200: SubjectSerializer},
+	)
+	def partial_update(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+
+		serializer = self.get_serializer(subject, data=request.data, partial=True)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		return Response(serializer.data, status=status.HTTP_200_OK)
+
+	@extend_schema(
+		summary="Delete subject",
+		description="Permanently delete a subject.",
+		responses={204: None},
+	)
+	def destroy(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+			subject.delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+		except Exception:
+			logger.exception("Unexpected error deleting subject")
 			return Response(
 				{"errors": {"server": "Internal server error"}},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,

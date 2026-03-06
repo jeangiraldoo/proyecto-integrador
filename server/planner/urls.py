@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import ActivityViewSet, MeView, SubtaskViewSet, TodayView, health_check
+from .views import ActivityViewSet, MeView, SubjectViewSet, SubtaskViewSet, TodayView, health_check
 
 router = DefaultRouter()
 router.register("activities", ActivityViewSet, basename="activity")
+router.register("subjects", SubjectViewSet, basename="subject")
 
 subtask_list = SubtaskViewSet.as_view(
 	{

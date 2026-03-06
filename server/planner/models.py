@@ -70,3 +70,24 @@ class ConflictResolution(models.Model):
 
 	def __str__(self):
 		return f"Resolution for conflict {self.conflict.id}"
+
+
+class Subject(models.Model):
+	"""
+	Represents an academic subject or category for activities.
+	Required by the Coordinator for database normalization.
+	"""
+
+	# Django automatically creates an 'id' primary key field.
+	name = models.CharField(max_length=100, help_text="The name of the subject")
+	creation_date = models.DateTimeField(
+		auto_now_add=True, help_text="Timestamp when the subject was created"
+	)
+
+	class Meta:
+		verbose_name = "Subject"
+		verbose_name_plural = "Subjects"
+		ordering = ["-creation_date"]
+
+	def __str__(self):
+		return self.name
