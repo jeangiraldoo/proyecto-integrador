@@ -252,16 +252,6 @@
 	flex-shrink: 0;
 }
 
-.ca-footer-actions {
-	display: flex;
-	flex-direction: row;
-	align-items: stretch;
-	justify-content: center;
-	gap: 12px;
-	width: 100%;
-	height: 44px;
-}
-
 /* ============================================================
    COLUMN HEADINGS
    ============================================================ */
@@ -470,8 +460,8 @@
 		0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .ca-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
-	opacity: 0.75;
-	filter: brightness(10) saturate(0.5) hue-rotate(220deg);
+	filter: invert(1);
+	opacity: 0.5;
 	cursor: pointer;
 	padding: 0;
 	margin: 0;
@@ -612,8 +602,8 @@
 	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
 }
 .ca-subform-date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
-	opacity: 0.75;
-	filter: brightness(10) saturate(1) hue-rotate(100deg);
+	filter: invert(1);
+	opacity: 0.5;
 	cursor: pointer;
 	width: 14px;
 	height: 14px;
@@ -898,7 +888,7 @@
    BUTTONS BASE
    ============================================================ */
 .btn {
-	height: 100%; /* 👈 3. Heredan exactamente los 44px del padre */
+	height: 44px;
 	margin: 0;
 	padding: 0 28px;
 	border-radius: 13px;
@@ -908,18 +898,16 @@
 	font-family: inherit;
 	line-height: normal;
 	box-sizing: border-box;
+	min-width: 120px;
 
-	border: 1px solid transparent; /* Volvemos al borde transparente normal */
+	border: 1px solid transparent;
 	white-space: nowrap;
 
 	display: flex;
 	align-items: center;
 	justify-content: center;
 
-	flex: 1;
-	max-width: 180px;
-
-	overflow: hidden; /* 🚨 4. LA MAGIA: Ambos deben tener esto para que Flexbox los mida igual */
+	overflow: hidden;
 	-webkit-appearance: none;
 	appearance: none;
 }
@@ -976,6 +964,342 @@
 }
 .btn-primary:disabled::before {
 	display: none;
+}
+
+/* ============================================================
+   SUBJECT COMBOBOX
+   ============================================================ */
+.ca-combobox-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.ca-combobox-input-row {
+	display: flex;
+	align-items: center;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid var(--ca-border);
+	border-radius: 12px;
+	overflow: hidden;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s,
+		background-color 0.15s;
+}
+
+.ca-combobox-input-row:focus-within {
+	border-color: rgba(124, 92, 255, 0.5);
+	background-color: rgba(124, 92, 255, 0.04);
+	box-shadow:
+		0 0 0 3px rgba(124, 92, 255, 0.1),
+		0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ca-combobox-input-row.input-error {
+	border-color: rgba(248, 113, 113, 0.45) !important;
+	background-color: rgba(248, 113, 113, 0.04) !important;
+	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08) !important;
+}
+
+.ca-combobox-input {
+	flex: 1;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--ca-text);
+	padding: 11px 14px;
+	font-size: 14px;
+	font-family: inherit;
+	min-width: 0;
+}
+
+.ca-combobox-input::placeholder {
+	color: var(--ca-text-dim);
+}
+
+.ca-combobox-chevron {
+	flex-shrink: 0;
+	background: transparent;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	padding: 0 12px;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ca-text-muted);
+	transition:
+		color 0.15s,
+		transform 0.2s;
+}
+
+.ca-combobox-chevron:hover {
+	color: var(--ca-purple-light);
+}
+
+.ca-combobox-chevron.open {
+	color: var(--ca-purple-light);
+	transform: rotate(180deg);
+}
+
+.ca-combobox-dropdown {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	z-index: 10000;
+	list-style: none;
+	margin: 0;
+	padding: 6px;
+	background: #15122b;
+	border: 1px solid rgba(124, 92, 255, 0.2);
+	border-radius: 13px;
+	box-shadow:
+		0 16px 48px rgba(0, 0, 0, 0.6),
+		0 0 0 1px rgba(124, 92, 255, 0.08);
+	max-height: 200px;
+	overflow-y: auto;
+	animation: ca-appear 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ca-combobox-dropdown::-webkit-scrollbar {
+	width: 4px;
+}
+.ca-combobox-dropdown::-webkit-scrollbar-track {
+	background: transparent;
+}
+.ca-combobox-dropdown::-webkit-scrollbar-thumb {
+	background: rgba(124, 92, 255, 0.25);
+	border-radius: 4px;
+}
+
+.ca-combobox-option {
+	padding: 9px 12px;
+	border-radius: 8px;
+	font-size: 13.5px;
+	color: rgba(255, 255, 255, 0.75);
+	cursor: pointer;
+	transition:
+		background 0.1s,
+		color 0.1s;
+	user-select: none;
+}
+
+.ca-combobox-option:hover,
+.ca-combobox-option.highlighted {
+	background: rgba(124, 92, 255, 0.12);
+	color: var(--ca-text);
+}
+
+.ca-combobox-add {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	color: rgba(124, 92, 255, 0.85);
+	font-weight: 600;
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
+	margin-top: 4px;
+	padding-top: 10px;
+}
+
+.ca-combobox-add:hover,
+.ca-combobox-add.highlighted {
+	background: rgba(124, 92, 255, 0.12);
+	color: var(--ca-purple-light);
+}
+
+/* ============================================================
+   WIZARD STEPPER
+   ============================================================ */
+.ca-stepper {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	padding: 14px 30px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ca-step-item {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	flex-shrink: 0;
+}
+
+.ca-step-circle {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: 800;
+	flex-shrink: 0;
+	transition:
+		background 0.2s,
+		border-color 0.2s,
+		color 0.2s,
+		box-shadow 0.2s;
+}
+
+.ca-step-item.idle .ca-step-circle {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1.5px solid rgba(255, 255, 255, 0.1);
+	color: var(--ca-text-dim);
+}
+
+.ca-step-item.active .ca-step-circle {
+	background: linear-gradient(135deg, rgba(124, 92, 255, 0.3), rgba(167, 139, 250, 0.15));
+	border: 1.5px solid rgba(124, 92, 255, 0.6);
+	color: var(--ca-purple-light);
+	box-shadow: 0 0 14px rgba(124, 92, 255, 0.25);
+}
+
+.ca-step-item.done .ca-step-circle {
+	background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.15));
+	border: 1.5px solid rgba(34, 197, 94, 0.5);
+	color: var(--ca-green);
+	box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+}
+
+.ca-step-label {
+	font-size: 12.5px;
+	font-weight: 600;
+	transition: color 0.2s;
+}
+
+.ca-step-item.idle .ca-step-label {
+	color: var(--ca-text-dim);
+}
+
+.ca-step-item.active .ca-step-label {
+	color: var(--ca-purple-light);
+}
+
+.ca-step-item.done .ca-step-label {
+	color: rgba(34, 197, 94, 0.85);
+}
+
+.ca-step-connector {
+	flex: 1;
+	height: 1.5px;
+	background: rgba(255, 255, 255, 0.07);
+	margin: 0 14px;
+	border-radius: 2px;
+	transition: background 0.3s;
+}
+
+.ca-step-connector.done {
+	background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), rgba(34, 197, 94, 0.2));
+}
+
+/* ============================================================
+   WIZARD BODY & PANELS
+   ============================================================ */
+.ca-wizard-body {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	position: relative;
+}
+
+.ca-step-content {
+	height: 100%;
+	overflow-y: auto;
+	padding: 24px 30px;
+	box-sizing: border-box;
+}
+
+.ca-step-content::-webkit-scrollbar {
+	width: 4px;
+}
+.ca-step-content::-webkit-scrollbar-track {
+	background: transparent;
+}
+.ca-step-content::-webkit-scrollbar-thumb {
+	background: rgba(124, 92, 255, 0.2);
+	border-radius: 4px;
+}
+
+.ca-step-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+@keyframes ca-slide-forward-in {
+	from {
+		opacity: 0;
+		transform: translateX(32px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes ca-slide-back-in {
+	from {
+		opacity: 0;
+		transform: translateX(-32px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+.ca-step-slide-forward {
+	animation: ca-slide-forward-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ca-step-slide-back {
+	animation: ca-slide-back-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ============================================================
+   WIZARD FOOTER
+   ============================================================ */
+.ca-wizard-footer {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 30px 20px;
+	border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ca-footer-hints {
+	min-height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ca-footer-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+/* Step 2: Volver on left, Cancelar+Crear on right */
+.ca-footer-actions:has(.btn-back) {
+	justify-content: space-between;
+}
+
+.ca-footer-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.btn-back {
+	flex: 0 0 auto;
+	width: 120px;
+	max-width: 120px;
 }
 
 /* ============================================================
