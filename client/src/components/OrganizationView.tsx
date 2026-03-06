@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import "./Dashboard.css";
 import { formatDate, daysUntil } from "./dashboardUtils";
 import { EditActivityForm, SubjectFormModal } from "./OrgModals";
+import SubtaskManagerModal from "./SubtaskManagerModal";
 
 interface OrgViewProps {
 	activities: Activity[];
@@ -57,6 +58,7 @@ export default function OrganizationView({
 	const [subtaskStateByActivity, setSubtaskStateByActivity] = useState<
 		Record<number, { loading: boolean; items: Subtask[] }>
 	>({});
+	const [subtaskModalActivity, setSubtaskModalActivity] = useState<Activity | null>(null);
 
 	const grouped = useMemo(() => {
 		const map: Record<string, Activity[]> = {};
@@ -98,8 +100,8 @@ export default function OrganizationView({
 		return map;
 	}, [activities, subjects, searchQuery, activeFilters]);
 
-	async function loadSubtasks(activityId: number) {
-		if (subtaskStateByActivity[activityId]?.items.length) return;
+	async function loadSubtasks(activityId: number, force = false) {
+		if (!force && subtaskStateByActivity[activityId]?.items.length) return;
 		setSubtaskStateByActivity((prev) => ({
 			...prev,
 			[activityId]: { loading: true, items: prev[activityId]?.items ?? [] },
@@ -871,7 +873,7 @@ export default function OrganizationView({
 																		gap: "4px",
 																		transition: "all 0.15s",
 																	}}
-																	onClick={() => onOpenCreate(act.course_name ?? undefined)}
+																	onClick={() => setSubtaskModalActivity(act)}
 																	onMouseOver={(e) => {
 																		e.currentTarget.style.borderColor = "#c084fc";
 																		e.currentTarget.style.color = "#c084fc";
@@ -881,7 +883,7 @@ export default function OrganizationView({
 																		e.currentTarget.style.color = "#334155";
 																	}}
 																>
-																	<Plus size={11} /> Agregar actividad
+																	<Plus size={11} /> Agregar subtarea
 																</button>
 															</div>
 														)}
@@ -924,6 +926,20 @@ export default function OrganizationView({
 					);
 				})}
 			</div>
+
+			{/* Subtask manager modal */}
+			{subtaskModalActivity && (
+				<SubtaskManagerModal
+					activityId={subtaskModalActivity.id}
+					activityTitle={subtaskModalActivity.title}
+					open={true}
+					onClose={() => {
+						const id = subtaskModalActivity.id;
+						setSubtaskModalActivity(null);
+						void loadSubtasks(id, true);
+					}}
+				/>
+			)}
 
 			{/* Subject name modal */}
 			{orgSubjectModal &&

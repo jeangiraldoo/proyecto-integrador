@@ -59,6 +59,7 @@ export async function fetchActivities(): Promise<Activity[]> {
 
 export type CreateActivityPayload = {
 	title: string;
+	course_name: string;
 	description?: string;
 	due_date: string;
 	status: Activity["status"];

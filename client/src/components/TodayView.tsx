@@ -210,28 +210,28 @@ export default function TodayKanban({
 		accent: string;
 		icon: React.JSX.Element;
 	}[] = [
-		{
-			group: "overdue" as KanbanGroup,
-			label: "Vencidas",
-			items: kanban.overdue,
-			accent: "#f87171",
-			icon: <AlertTriangle size={13} />,
-		},
-		{
-			group: "today" as KanbanGroup,
-			label: "Para hoy",
-			items: kanban.today,
-			accent: "#c084fc",
-			icon: <CalendarCheck size={13} />,
-		},
-		{
-			group: "upcoming" as KanbanGroup,
-			label: "Próximas",
-			items: kanban.upcoming,
-			accent: "#60a5fa",
-			icon: <CalendarClock size={13} />,
-		},
-	];
+			{
+				group: "overdue" as KanbanGroup,
+				label: "Vencidas",
+				items: kanban.overdue,
+				accent: "#f87171",
+				icon: <AlertTriangle size={13} />,
+			},
+			{
+				group: "today" as KanbanGroup,
+				label: "Para hoy",
+				items: kanban.today,
+				accent: "#c084fc",
+				icon: <CalendarCheck size={13} />,
+			},
+			{
+				group: "upcoming" as KanbanGroup,
+				label: "Próximas",
+				items: kanban.upcoming,
+				accent: "#60a5fa",
+				icon: <CalendarClock size={13} />,
+			},
+		];
 
 	return (
 		<>
@@ -339,7 +339,7 @@ export default function TodayKanban({
 									borderRadius: "20px",
 									border: active ? `1px solid ${accent}55` : "1px solid #1e293b",
 									background: active ? `${accent}18` : "rgba(15,27,45,0.6)",
-									color: active ? accent : "#475569",
+									color: active ? accent : "#64748b",
 									fontSize: "11px",
 									fontWeight: active ? 600 : 400,
 									cursor: "pointer",
@@ -444,7 +444,7 @@ export default function TodayKanban({
 										gap: "6px",
 										fontSize: "12px",
 										fontWeight: 700,
-										color: active ? accent : "#64748b",
+										color: active ? accent : "#7d8fa3",
 									}}
 								>
 									<span style={{ display: "flex" }}>{icon}</span>
@@ -582,9 +582,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-																group,
-															},
+															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+															group,
+														},
 												)
 											}
 											onKeyDown={(e) => {
