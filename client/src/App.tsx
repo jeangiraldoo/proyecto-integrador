@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
+import Proximamente from "./components/landing/ComingSoon";
 import client from "./api/client";
 import { isTokenValid, clearAuthStorage } from "./api/auth";
 import "./App.css";
@@ -49,8 +50,8 @@ function App() {
 		<>
 			<Toaster position="top-right" theme="dark" richColors />
 			<Routes>
-				{/* Landing – espacio reservado para la página principal */}
-				<Route path="/" element={<div>Landing (próximamente)</div>} />
+				{/* Landing – página en construcción */}
+				<Route path="/" element={<Proximamente />} />
 
 				<Route path="/login" element={<LoginPage />} />
 
