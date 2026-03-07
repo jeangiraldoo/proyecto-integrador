@@ -21,6 +21,7 @@ export interface Activity {
 	status: "pending" | "completed" | "in_progress";
 	subtask_count: number;
 	total_estimated_hours: number;
+	subtasks?: Subtask[];
 }
 
 export interface Subtask {
@@ -32,6 +33,9 @@ export interface Subtask {
 	ordering: number;
 	created_at: string;
 	updated_at: string;
+	// Populated by TodayView endpoint (TodaySubtaskSerializer)
+	activity?: { id: number; title: string };
+	course_name?: string;
 }
 
 export interface TodayViewResponse {
@@ -39,6 +43,12 @@ export interface TodayViewResponse {
 	today: Subtask[];
 	upcoming: Subtask[];
 	meta: { n_days: number };
+}
+
+export interface Subject {
+	id: number;
+	name: string;
+	creation_date: string;
 }
 
 /* ============ API CALLS ============ */
@@ -55,6 +65,7 @@ export async function fetchActivities(): Promise<Activity[]> {
 
 export type CreateActivityPayload = {
 	title: string;
+	course_name: string;
 	description?: string;
 	due_date: string;
 	status: Activity["status"];
@@ -69,7 +80,7 @@ export async function createActivity(payload: CreateActivityPayload): Promise<Ac
 
 export async function updateActivity(
 	id: number,
-	payload: Partial<Pick<Activity, "title" | "description" | "due_date" | "status">>,
+	payload: Partial<Pick<Activity, "title" | "description" | "due_date" | "status" | "course_name">>,
 ): Promise<Activity> {
 	const { data } = await client.patch<Activity>(`/activities/${id}/`, payload);
 	return data;
@@ -116,4 +127,25 @@ export async function updateSubtask(
 
 export async function deleteSubtask(activityId: number, subtaskId: number): Promise<void> {
 	await client.delete(`/activities/${activityId}/subtasks/${subtaskId}/`);
+}
+
+/* -- Subject endpoints -- */
+
+export async function fetchSubjects(): Promise<Subject[]> {
+	const { data } = await client.get<Subject[]>("/subjects/");
+	return data;
+}
+
+export async function createSubject(name: string): Promise<Subject> {
+	const { data } = await client.post<Subject>("/subjects/", { name });
+	return data;
+}
+
+export async function updateSubject(id: number, name: string): Promise<Subject> {
+	const { data } = await client.patch<Subject>(`/subjects/${id}/`, { name });
+	return data;
+}
+
+export async function deleteSubject(id: number): Promise<void> {
+	await client.delete(`/subjects/${id}/`);
 }

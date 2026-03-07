@@ -7,8 +7,57 @@ class User(AbstractUser):
 	name = models.CharField(max_length=100)
 
 
+class Subject(models.Model):
+	"""
+	Represents an academic subject or category for activities.
+	Required by the Coordinator for database normalization.
+	"""
+
+	# Django automatically creates an 'id' primary key field.
+	name = models.CharField(max_length=100, help_text="The name of the subject")
+	creation_date = models.DateTimeField(
+		auto_now_add=True, help_text="Timestamp when the subject was created"
+	)
+
+	class Meta:
+		verbose_name = "Subject"
+		verbose_name_plural = "Subjects"
+		ordering = ["-creation_date"]
+
+	def __str__(self):
+		return self.name
+
+
+class UserSubject(models.Model):
+	"""
+	Intermediate table mapping Users to Subjects (Many-to-Many).
+	Requested by the Coordinator to properly reference subjects per user.
+	"""
+
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_subjects")
+	subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="user_subjects")
+	assigned_at = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		# A user cannot have the same subject assigned twice
+		unique_together = ("user", "subject")
+		verbose_name = "User Subject"
+		verbose_name_plural = "User Subjects"
+
+	def __str__(self):
+		return f"{self.user.username} - {self.subject.name}"
+
+
 class Activity(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="activities")
+	subject = models.ForeignKey(
+		Subject,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name="activities",
+		help_text="Linked academic subject",
+	)
 	title = models.CharField(max_length=200)
 	course_name = models.CharField(max_length=200)
 	description = models.TextField()

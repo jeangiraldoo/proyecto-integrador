@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
 	X,
 	Plus,
@@ -10,6 +10,9 @@ import {
 	AlertCircle,
 	AlertTriangle,
 	Loader2,
+	Check,
+	ChevronDown,
+	PlusCircle,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import "./CreateActivityModal.css";
@@ -26,7 +29,7 @@ interface Subtask {
 }
 
 interface NewActivityPayload {
-	subject: string; // 👈 Ahora es un string de texto
+	subject: string;
 	title: string;
 	description?: string;
 	due_date: string;
@@ -36,8 +39,10 @@ interface NewActivityPayload {
 
 interface Props {
 	open: boolean;
+	initialSubject?: string;
 	onClose: () => void;
 	onCreate: (payload: NewActivityPayload) => Promise<void>;
+	knownSubjects?: string[];
 }
 
 /* ---- Helpers ---- */
@@ -47,9 +52,12 @@ function formatDate(iso: string): string {
 	return `${d}/${m}/${y}`;
 }
 
-// Today's date as YYYY-MM-DD for min validation
 function todayIso() {
-	return new Date().toISOString().split("T")[0];
+	const now = new Date();
+	const y = now.getFullYear();
+	const m = String(now.getMonth() + 1).padStart(2, "0");
+	const d = String(now.getDate()).padStart(2, "0");
+	return `${y}-${m}-${d}`;
 }
 
 let nextId = 1;
@@ -95,19 +103,207 @@ function FieldError({ msg }: { msg: string }) {
 	);
 }
 
+/* ---- Subject Combobox ---- */
+function SubjectCombobox({
+	value,
+	onChange,
+	knownSubjects,
+	hasError,
+}: {
+	value: string;
+	onChange: (v: string) => void;
+	knownSubjects: string[];
+	hasError: boolean;
+}) {
+	const [open, setOpen] = useState(false);
+	const [activeIdx, setActiveIdx] = useState(-1);
+	const wrapperRef = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	const query = value.trim().toLowerCase();
+	const filtered = knownSubjects.filter((s) => s.toLowerCase().includes(query));
+	const exactMatch = knownSubjects.some((s) => s.toLowerCase() === query);
+	const showAdd = query.length > 0 && !exactMatch;
+
+	// Close on outside click
+	useEffect(() => {
+		function handler(e: MouseEvent) {
+			if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+				setOpen(false);
+				setActiveIdx(-1);
+			}
+		}
+		if (open) document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, [open]);
+
+	// Reset active when query changes
+
+	const select = useCallback(
+		(val: string) => {
+			onChange(val);
+			setOpen(false);
+			setActiveIdx(-1);
+		},
+		[onChange],
+	);
+
+	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (!open) {
+			if (e.key === "ArrowDown") {
+				setOpen(true);
+				e.preventDefault();
+			}
+			return;
+		}
+		const totalItems = filtered.length + (showAdd ? 1 : 0);
+		if (e.key === "ArrowDown") {
+			setActiveIdx((i) => (i + 1) % totalItems);
+			e.preventDefault();
+		} else if (e.key === "ArrowUp") {
+			setActiveIdx((i) => (i - 1 + totalItems) % totalItems);
+			e.preventDefault();
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			if (activeIdx >= 0 && activeIdx < filtered.length) {
+				select(filtered[activeIdx]);
+			} else if (activeIdx === filtered.length && showAdd) {
+				// "Añadir" option selected via keyboard
+				select(value.trim());
+			} else if (value.trim()) {
+				select(value.trim());
+			}
+		} else if (e.key === "Escape") {
+			setOpen(false);
+			setActiveIdx(-1);
+		}
+	}
+
+	const dropdownVisible = open && (filtered.length > 0 || showAdd);
+
+	return (
+		<div className="ca-combobox-wrapper" ref={wrapperRef}>
+			<div className={`ca-combobox-input-row ${hasError ? "input-error" : ""}`}>
+				<input
+					ref={inputRef}
+					type="text"
+					value={value}
+					onChange={(e) => {
+						onChange(e.target.value);
+						setActiveIdx(-1);
+						setOpen(true);
+					}}
+					onFocus={() => {
+						if (value.trim()) setOpen(true);
+					}}
+					onKeyDown={handleKeyDown}
+					placeholder="Ej. Cálculo III, Redes, Bases de Datos..."
+					autoComplete="off"
+					className="ca-combobox-input"
+				/>
+				<button
+					type="button"
+					className={`ca-combobox-chevron ${open ? "open" : ""}`}
+					tabIndex={-1}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						if (open) {
+							setOpen(false);
+						} else {
+							inputRef.current?.focus();
+							setOpen(true);
+						}
+					}}
+				>
+					<ChevronDown size={14} />
+				</button>
+			</div>
+
+			{dropdownVisible && (
+				<ul className="ca-combobox-dropdown" role="listbox">
+					{filtered.map((s, idx) => (
+						<li
+							key={s}
+							role="option"
+							aria-selected={idx === activeIdx}
+							className={`ca-combobox-option ${idx === activeIdx ? "highlighted" : ""}`}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								select(s);
+							}}
+						>
+							{s}
+						</li>
+					))}
+					{showAdd && (
+						<li
+							role="option"
+							aria-selected={activeIdx === filtered.length}
+							className={`ca-combobox-option ca-combobox-add ${
+								activeIdx === filtered.length ? "highlighted" : ""
+							}`}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								select(value.trim());
+							}}
+						>
+							<PlusCircle size={13} />
+							<span>Añadir &ldquo;{value.trim()}&rdquo;</span>
+						</li>
+					)}
+				</ul>
+			)}
+		</div>
+	);
+}
+
+/* ---- Wizard Stepper ---- */
+function WizardStepper({ step }: { step: 1 | 2 }) {
+	return (
+		<div className="ca-stepper">
+			<div className={`ca-step-item ${step === 1 ? "active" : "done"}`}>
+				<div className="ca-step-circle">
+					{step > 1 ? <Check size={13} strokeWidth={3} /> : <span>1</span>}
+				</div>
+				<span className="ca-step-label">Información general</span>
+			</div>
+
+			<div className={`ca-step-connector ${step > 1 ? "done" : ""}`} />
+
+			<div className={`ca-step-item ${step === 2 ? "active" : "idle"}`}>
+				<div className="ca-step-circle">
+					<span>2</span>
+				</div>
+				<span className="ca-step-label">Subtareas (Opcional)</span>
+			</div>
+		</div>
+	);
+}
+
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
-export default function CreateActivityModal({ open, onClose, onCreate }: Props) {
+export default function CreateActivityModal({
+	open,
+	onClose,
+	onCreate,
+	knownSubjects = [],
+	initialSubject,
+}: Props) {
+	/* Wizard */
+	const [step, setStep] = useState<1 | 2>(1);
+	const [slideDir, setSlideDir] = useState<"forward" | "back">("forward");
+	const [animKey, setAnimKey] = useState(0);
+
 	/* Main form */
-	const [subject, setSubject] = useState(""); // 👈 Texto de la materia
+	const [subject, setSubject] = useState("");
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [dueDate, setDueDate] = useState("");
-	const [estimatedHours, setEstimatedHours] = useState<number | string>("");
 
-	/* Validation — only shown after first submit attempt */
-	const [submitted, setSubmitted] = useState(false);
+	/* Validation */
+	const [step1Submitted, setStep1Submitted] = useState(false);
+	const [step2Submitted, setStep2Submitted] = useState(false);
 
 	/* Subtask subform */
 	const [stTitle, setStTitle] = useState("");
@@ -122,21 +318,33 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 	const dragIndex = useRef<number | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+	/* Submitting */
+	const [submitting, setSubmitting] = useState(false);
+
 	useEffect(() => {
-		if (!open) clearAll();
+		if (!open) {
+			clearAll();
+		} else if (initialSubject) {
+			setSubject(initialSubject);
+		}
+		// initialSubject is intentionally read only when `open` changes (seed on open)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
 	function clearAll() {
+		setStep(1);
+		setSlideDir("forward");
+		setAnimKey(0);
 		setSubject("");
 		setTitle("");
 		setDescription("");
 		setDueDate("");
-		setEstimatedHours("");
 		setStTitle("");
 		setStDate("");
 		setStHours("");
 		setSubtasks([]);
-		setSubmitted(false);
+		setStep1Submitted(false);
+		setStep2Submitted(false);
 		setStSubmitted(false);
 		dragIndex.current = null;
 		setDragOverIndex(null);
@@ -152,13 +360,26 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 			: "";
 	const stTitleError = !stTitle.trim() ? "Ingresa un nombre para la subtarea" : "";
 
-	const mainValid = !titleError && !dueDateError && !subjectError;
-
-	/* Missing fields summary for footer */
+	const step1Valid = !subjectError && !titleError && !dueDateError;
 	const missingCount = (subjectError ? 1 : 0) + (titleError ? 1 : 0) + (dueDateError ? 1 : 0);
 
-	/* Submitting state */
-	const [submitting, setSubmitting] = useState(false);
+	/* suppress unused warning */
+	void step2Submitted;
+
+	/* ---- Navigation ---- */
+	function goNext() {
+		setStep1Submitted(true);
+		if (!step1Valid) return;
+		setSlideDir("forward");
+		setAnimKey((k) => k + 1);
+		setStep(2);
+	}
+
+	function goBack() {
+		setSlideDir("back");
+		setAnimKey((k) => k + 1);
+		setStep(1);
+	}
 
 	/* ---- Subtask actions ---- */
 	function handleAddSubtask() {
@@ -207,19 +428,14 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 	}
 
 	/* ---- Submit ---- */
-	async function handleSubmit(e?: React.FormEvent) {
-		e?.preventDefault();
-		setSubmitted(true);
-		if (!mainValid) return;
-		// require at least one subtask to create an activity
-		if (subtasks.length === 0) return;
+	async function handleSubmit() {
+		setStep2Submitted(true);
 
 		const payload: NewActivityPayload = {
-			subject: subject.trim(), // 👈 Enviamos el texto de la materia
+			subject: subject.trim(),
 			title: title.trim(),
 			description: description.trim(),
 			due_date: dueDate,
-			total_estimated_hours: estimatedHours === "" ? 0 : Number(estimatedHours),
 			subtasks: subtasks.map(({ title, target_date, estimated_hours }) => ({
 				title,
 				target_date,
@@ -230,12 +446,9 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 		try {
 			setSubmitting(true);
 			await onCreate(payload);
-			// onCreate (Dashboard) will usually close modal via parent state; ensure cleanup
 			clearAll();
-			// allow parent to close; if parent didn't, still close
 			onClose();
 		} catch (err) {
-			// keep modal open; Dashboard shows a toast on error
 			console.error("Create failed in modal:", err);
 		} finally {
 			setSubmitting(false);
@@ -244,9 +457,9 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 
 	const atMax = subtasks.length >= MAX_SUBTASKS;
 
-	const subtaskError = submitted && subtasks.length === 0 ? "Añade al menos una subtarea" : "";
-
 	if (!open) return null;
+
+	const slideClass = slideDir === "forward" ? "ca-step-slide-forward" : "ca-step-slide-back";
 
 	const modal = (
 		<div
@@ -275,276 +488,253 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 					</button>
 				</div>
 
-				{/* ====== BODY ====== */}
-				<form className="ca-body" onSubmit={handleSubmit} noValidate>
-					{/* ---- LEFT COLUMN ---- */}
-					<div className="ca-col-left">
-						<div className="ca-col-heading">
-							<span className="ca-col-heading-dot" />
-							<span>Información general</span>
-						</div>
+				{/* ====== STEPPER ====== */}
+				<WizardStepper step={step} />
 
-						{/* Subject (Materia) 👈 AHORA ES UN INPUT */}
-						<div className="ca-row">
-							<label
-								htmlFor="ca-subject"
-								className={submitted && subjectError ? "label-error" : ""}
-							>
-								Materia {submitted && subjectError ? "·" : "*"}
-							</label>
-							<input
-								id="ca-subject"
-								type="text"
-								value={subject}
-								onChange={(e) => setSubject(e.target.value)}
-								placeholder="Ej. Diseño de Interfaces..."
-								className={submitted && subjectError ? "input-error" : ""}
-								autoFocus
-							/>
-							{submitted && subjectError && <FieldError msg={subjectError} />}
-						</div>
+				{/* ====== STEP CONTENT ====== */}
+				<div className="ca-wizard-body">
+					<div key={animKey} className={`ca-step-content ${slideClass}`}>
+						{/* --z-- STEP 1: General Info ---- */}
+						{step === 1 && (
+							<div className="ca-step-panel">
+								<div className="ca-row">
+									<label className={step1Submitted && subjectError ? "label-error" : ""}>
+										Materia {step1Submitted && subjectError ? "·" : "*"}
+									</label>
+									<SubjectCombobox
+										value={subject}
+										onChange={setSubject}
+										knownSubjects={knownSubjects}
+										hasError={step1Submitted && !!subjectError}
+									/>
+									{step1Submitted && subjectError && <FieldError msg={subjectError} />}
+								</div>
 
-						{/* Title */}
-						<div className="ca-row">
-							<label htmlFor="ca-title" className={submitted && titleError ? "label-error" : ""}>
-								Título {submitted && titleError ? "·" : "*"}
-							</label>
-							<input
-								id="ca-title"
-								value={title}
-								onChange={(e) => setTitle(e.target.value)}
-								placeholder="¿Qué vas a hacer?"
-								className={submitted && titleError ? "input-error" : ""}
-							/>
-							{submitted && titleError && <FieldError msg={titleError} />}
-						</div>
+								<div className="ca-row split">
+									<div>
+										<label
+											htmlFor="ca-title"
+											className={step1Submitted && titleError ? "label-error" : ""}
+										>
+											Título {step1Submitted && titleError ? "·" : "*"}
+										</label>
+										<input
+											id="ca-title"
+											value={title}
+											onChange={(e) => setTitle(e.target.value)}
+											placeholder="¿Qué vas a hacer?"
+											className={step1Submitted && titleError ? "input-error" : ""}
+										/>
+										{step1Submitted && titleError && <FieldError msg={titleError} />}
+									</div>
+									<div>
+										<label
+											htmlFor="ca-due-date"
+											className={step1Submitted && dueDateError ? "label-error" : ""}
+										>
+											Fecha de entrega *
+										</label>
+										<DateInput
+											id="ca-due-date"
+											value={dueDate}
+											onChange={setDueDate}
+											variant="purple"
+											hasError={step1Submitted && !!dueDateError}
+										/>
+										{step1Submitted && dueDateError && <FieldError msg={dueDateError} />}
+									</div>
+								</div>
 
-						{/* Due date + Hours */}
-						<div className="ca-row split">
-							<div>
-								<label
-									htmlFor="ca-due-date"
-									className={submitted && dueDateError ? "label-error" : ""}
-								>
-									Fecha de entrega *
-								</label>
-								<DateInput
-									id="ca-due-date"
-									value={dueDate}
-									onChange={setDueDate}
-									variant="purple"
-									hasError={submitted && !!dueDateError}
-								/>
-								{submitted && dueDateError && <FieldError msg={dueDateError} />}
+								<div className="ca-row">
+									<label htmlFor="ca-desc">Descripción</label>
+									<textarea
+										id="ca-desc"
+										value={description}
+										onChange={(e) => setDescription(e.target.value)}
+										placeholder="Añade contexto o notas relevantes..."
+										rows={4}
+									/>
+								</div>
 							</div>
-							<div>
-								<label htmlFor="ca-hours">Horas estimadas</label>
-								<input
-									id="ca-hours"
-									type="number"
-									min={0}
-									step={0.5}
-									value={estimatedHours}
-									onChange={(e) =>
-										setEstimatedHours(e.target.value === "" ? "" : Number(e.target.value))
-									}
-									placeholder="0"
-								/>
-							</div>
-						</div>
+						)}
 
-						{/* Description */}
-						<div className="ca-row">
-							<label htmlFor="ca-desc">Descripción</label>
-							<textarea
-								id="ca-desc"
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								placeholder="Añade contexto o notas relevantes..."
-								rows={4}
-							/>
-						</div>
+						{/* ---- STEP 2: Subtasks ---- */}
+						{step === 2 && (
+							<div className="ca-step-panel">
+								<div className="ca-subform">
+									<div className="ca-col-heading" style={{ marginBottom: 4 }}>
+										<span className="ca-col-heading-dot green" />
+										<span>Añadir subtarea</span>
+										{subtasks.length > 0 && (
+											<span
+												style={{
+													marginLeft: "auto",
+													fontSize: "11px",
+													fontWeight: 700,
+													color: atMax ? "rgba(251,146,60,0.8)" : "rgba(255,255,255,0.25)",
+												}}
+											>
+												{subtasks.length}/{MAX_SUBTASKS}
+											</span>
+										)}
+									</div>
+
+									<div className="ca-subform-grid">
+										<div className="ca-subform-field full">
+											<label htmlFor="st-title">¿Qué debes hacer?</label>
+											<input
+												id="st-title"
+												value={stTitle}
+												onChange={(e) => setStTitle(e.target.value)}
+												placeholder="Nombre de la subtarea"
+												disabled={atMax}
+												autoFocus
+												onKeyDown={(e) => {
+													if (e.key === "Enter") {
+														e.preventDefault();
+														handleAddSubtask();
+													}
+												}}
+											/>
+											{stSubmitted && stTitleError && <FieldError msg={stTitleError} />}
+										</div>
+
+										<div className="ca-subform-field">
+											<label>Fecha objetivo</label>
+											<DateInput value={stDate} onChange={setStDate} variant="green" />
+										</div>
+
+										<div className="ca-subform-field">
+											<label htmlFor="st-hours">Horas estimadas</label>
+											<input
+												id="st-hours"
+												type="number"
+												min={0}
+												step={0.5}
+												value={stHours}
+												onChange={(e) =>
+													setStHours(e.target.value === "" ? "" : Number(e.target.value))
+												}
+												placeholder="0"
+												disabled={atMax}
+											/>
+										</div>
+									</div>
+
+									{atMax ? (
+										<div className="ca-subform-max">
+											<AlertTriangle size={13} />
+											Límite de {MAX_SUBTASKS} subtareas alcanzado
+										</div>
+									) : (
+										<button
+											type="button"
+											className="ca-subform-add-btn"
+											onClick={handleAddSubtask}
+											disabled={atMax}
+										>
+											<Plus size={14} />
+											Añadir subtarea
+										</button>
+									)}
+								</div>
+
+								<div className="ca-subtask-table-wrap">
+									{subtasks.length === 0 ? (
+										<div className="ca-subtask-empty">
+											<div className="ca-subtask-empty-icon">
+												<Layers size={16} />
+											</div>
+											<p>
+												Las subtareas que añadas
+												<br />
+												aparecerán aquí
+											</p>
+										</div>
+									) : (
+										<table className="ca-subtask-table">
+											<thead>
+												<tr>
+													<th style={{ width: 24 }} />
+													<th className="th-center" style={{ width: 36 }}>
+														#
+													</th>
+													<th>Título</th>
+													<th>Fecha</th>
+													<th>Horas</th>
+													<th style={{ width: 36 }} />
+												</tr>
+											</thead>
+											<tbody>
+												{subtasks.map((st, idx) => (
+													<tr
+														key={st.id}
+														draggable
+														onDragStart={(e) => handleDragStart(e, idx)}
+														onDragEnter={() => handleDragEnter(idx)}
+														onDragOver={(e) => e.preventDefault()}
+														onDrop={(e) => handleDrop(e, idx)}
+														onDragEnd={handleDragEnd}
+														className={[
+															dragIndex.current === idx ? "row-dragging" : "",
+															dragOverIndex === idx && dragIndex.current !== idx
+																? "row-drag-over"
+																: "",
+														]
+															.filter(Boolean)
+															.join(" ")}
+													>
+														<td className="col-drag" title="Arrastra para reordenar">
+															<GripVertical size={14} />
+														</td>
+														<td className="col-order">
+															<span className="ca-order-badge">{idx + 1}</span>
+														</td>
+														<td className="col-title">{st.title}</td>
+														<td className="col-date">
+															<span className="ca-pill">{formatDate(st.target_date)}</span>
+														</td>
+														<td className="col-hours">
+															{st.estimated_hours !== "" && (
+																<span className="ca-pill">{st.estimated_hours}h</span>
+															)}
+														</td>
+														<td className="col-delete">
+															<button
+																type="button"
+																onClick={() => handleDeleteSubtask(st.id)}
+																aria-label="Eliminar subtarea"
+															>
+																<Trash2 size={12} />
+															</button>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+
+				{/* ====== FOOTER ====== */}
+				<div className="ca-wizard-footer">
+					<div className="ca-footer-hints">
+						{step === 1 && step1Submitted && missingCount > 0 && (
+							<span className="ca-footer-hint">
+								<AlertTriangle size={13} />
+								{missingCount === 1
+									? "Falta 1 campo obligatorio"
+									: `Faltan ${missingCount} campos obligatorios`}
+							</span>
+						)}
 					</div>
 
-					{/* ---- RIGHT COLUMN ---- */}
-					<div className="ca-col-right">
-						<div className="ca-col-heading">
-							<span className="ca-col-heading-dot green" />
-							<span>Subtareas</span>
-							{subtasks.length > 0 && (
-								<span
-									style={{
-										marginLeft: "auto",
-										fontSize: "11px",
-										fontWeight: 700,
-										color: atMax ? "rgba(251,146,60,0.8)" : "rgba(255,255,255,0.25)",
-									}}
-								>
-									{subtasks.length}/{MAX_SUBTASKS}
-								</span>
-							)}
-						</div>
-
-						{/* Subform */}
-						<div className="ca-subform">
-							<div className="ca-subform-grid">
-								{/* Name — full width */}
-								<div className="ca-subform-field full">
-									<label htmlFor="st-title">¿Qué debes hacer?</label>
-									<input
-										id="st-title"
-										value={stTitle}
-										onChange={(e) => setStTitle(e.target.value)}
-										placeholder="Nombre de la subtarea"
-										disabled={atMax}
-										onKeyDown={(e) => {
-											if (e.key === "Enter") {
-												e.preventDefault();
-												handleAddSubtask();
-											}
-										}}
-									/>
-									{stSubmitted && stTitleError && <FieldError msg={stTitleError} />}
-								</div>
-
-								{/* Target date */}
-								<div className="ca-subform-field">
-									<label>Fecha objetivo</label>
-									<DateInput value={stDate} onChange={setStDate} variant="green" />
-								</div>
-
-								{/* Hours */}
-								<div className="ca-subform-field">
-									<label htmlFor="st-hours">Horas estimadas</label>
-									<input
-										id="st-hours"
-										type="number"
-										min={0}
-										step={0.5}
-										value={stHours}
-										onChange={(e) =>
-											setStHours(e.target.value === "" ? "" : Number(e.target.value))
-										}
-										placeholder="0"
-										disabled={atMax}
-									/>
-								</div>
-							</div>
-
-							{/* Add button or max notice */}
-							{atMax ? (
-								<div className="ca-subform-max">
-									<AlertTriangle size={13} />
-									Límite de {MAX_SUBTASKS} subtareas alcanzado
-								</div>
-							) : (
-								<button
-									type="button"
-									className="ca-subform-add-btn"
-									onClick={handleAddSubtask}
-									disabled={atMax}
-								>
-									<Plus size={14} />
-									Añadir subtarea
-								</button>
-							)}
-						</div>
-
-						{/* Table */}
-						<div className="ca-subtask-table-wrap">
-							{subtasks.length === 0 ? (
-								<div className="ca-subtask-empty">
-									<div className="ca-subtask-empty-icon">
-										<Layers size={16} />
-									</div>
-									<p>
-										Las subtareas que añadas
-										<br />
-										aparecerán aquí
-									</p>
-								</div>
-							) : (
-								<table className="ca-subtask-table">
-									<thead>
-										<tr>
-											<th style={{ width: 24 }} />
-											<th className="th-center" style={{ width: 36 }}>
-												#
-											</th>
-											<th>Título</th>
-											<th>Fecha</th>
-											<th>Horas</th>
-											<th style={{ width: 36 }} />
-										</tr>
-									</thead>
-									<tbody>
-										{subtasks.map((st, idx) => (
-											<tr
-												key={st.id}
-												draggable
-												onDragStart={(e) => handleDragStart(e, idx)}
-												onDragEnter={() => handleDragEnter(idx)}
-												onDragOver={(e) => e.preventDefault()}
-												onDrop={(e) => handleDrop(e, idx)}
-												onDragEnd={handleDragEnd}
-												className={[
-													dragIndex.current === idx ? "row-dragging" : "",
-													dragOverIndex === idx && dragIndex.current !== idx ? "row-drag-over" : "",
-												]
-													.filter(Boolean)
-													.join(" ")}
-											>
-												<td className="col-drag" title="Arrastra para reordenar">
-													<GripVertical size={14} />
-												</td>
-												<td className="col-order">
-													<span className="ca-order-badge">{idx + 1}</span>
-												</td>
-												<td className="col-title">{st.title}</td>
-												<td className="col-date">
-													<span className="ca-pill">{formatDate(st.target_date)}</span>
-												</td>
-												<td className="col-hours">
-													{st.estimated_hours !== "" && (
-														<span className="ca-pill">{st.estimated_hours}h</span>
-													)}
-												</td>
-												<td className="col-delete">
-													<button
-														type="button"
-														onClick={() => handleDeleteSubtask(st.id)}
-														aria-label="Eliminar subtarea"
-													>
-														<Trash2 size={12} />
-													</button>
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							)}
-						</div>
-
-						{/* Buttons — anchored inside right column */}
-						<div className="ca-col-actions">
-							{submitted && missingCount > 0 && (
-								<span className="ca-footer-hint">
-									<AlertTriangle size={13} />
-									{missingCount === 1
-										? "Falta 1 campo obligatorio"
-										: `Faltan ${missingCount} campos obligatorios`}
-								</span>
-							)}
-							{subtaskError && (
-								<span
-									className="ca-footer-hint"
-									style={{ marginLeft: submitted && missingCount > 0 ? 12 : 0 }}
-								>
-									<AlertTriangle size={13} />
-									{subtaskError}
-								</span>
-							)}
-							<div className="ca-footer-actions">
+					<div className="ca-footer-actions">
+						{step === 1 ? (
+							<>
 								<button
 									type="button"
 									className="btn btn-ghost"
@@ -553,24 +743,48 @@ export default function CreateActivityModal({ open, onClose, onCreate }: Props) 
 								>
 									Cancelar
 								</button>
+								<button type="button" className="btn btn-primary" onClick={goNext}>
+									Siguiente →
+								</button>
+							</>
+						) : (
+							<>
 								<button
 									type="button"
-									className="btn btn-primary"
-									onClick={handleSubmit}
+									className="btn btn-ghost btn-back"
+									onClick={goBack}
 									disabled={submitting}
 								>
-									{submitting ? (
-										<>
-											<Loader2 size={14} className="spin" /> Procesando...
-										</>
-									) : (
-										"Crear actividad"
-									)}
+									← Volver
 								</button>
-							</div>
-						</div>
+								<div className="ca-footer-right">
+									<button
+										type="button"
+										className="btn btn-ghost"
+										onClick={onClose}
+										disabled={submitting}
+									>
+										Cancelar
+									</button>
+									<button
+										type="button"
+										className="btn btn-primary"
+										onClick={handleSubmit}
+										disabled={submitting}
+									>
+										{submitting ? (
+											<>
+												<Loader2 size={14} className="spin" /> Procesando...
+											</>
+										) : (
+											"Crear actividad"
+										)}
+									</button>
+								</div>
+							</>
+						)}
 					</div>
-				</form>
+				</div>
 			</div>
 		</div>
 	);

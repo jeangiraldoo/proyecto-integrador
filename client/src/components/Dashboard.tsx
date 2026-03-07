@@ -1,13 +1,12 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
 	CalendarCheck,
-	CalendarClock,
 	AlertTriangle,
 	Plus,
 	SlidersHorizontal,
 	Search,
-	ArrowRight,
-	ChevronDown,
 	Sunrise,
 	CloudSun,
 	MoonStar,
@@ -23,121 +22,33 @@ import {
 	Tag,
 	ArrowUpDown,
 	Loader2,
-	Inbox,
 	Trash2,
+	Folder,
+	BookOpen,
 } from "lucide-react";
 import lumaLogo from "../assets/luma.png";
 import {
 	fetchMe,
 	fetchActivities,
+	fetchTodayView,
 	createActivity,
 	deleteActivity,
+	fetchSubjects,
+	createSubject,
+	updateSubject,
+	deleteSubject,
 	type User,
 	type Activity,
+	type Subtask,
+	type Subject,
 } from "../api/dashboard";
 import { toast } from "sonner";
 import "./Dashboard.css";
 import CreateActivityModal from "./CreateActivityModal";
-
-// Local type matching the modal's payload (keeps Dashboard free of `any` casts)
-type NewActivityPayloadFromModal = {
-	subject: string;
-	title: string;
-	description?: string;
-	due_date: string;
-	total_estimated_hours?: number;
-	subtasks: { title: string; target_date: string; estimated_hours: number | string }[];
-};
-
-/* ============ MOCK DATA (fallback) ============ */
-const MOCK_USER: User = {
-	id: 1,
-	username: "juanr",
-	email: "juanr@luma.com",
-	name: "Juan Rodríguez",
-	max_daily_hours: 8,
-	date_joined: new Date().toISOString(),
-};
-
-const MOCK_ACTIVITIES: Activity[] = [
-	{
-		id: 1,
-		user: 1,
-		title: "Revisión de diseño",
-		course_name: "Diseño",
-		description: "Revisar pantallas Figma y comentarios",
-		due_date: "2026-02-25",
-		status: "pending",
-		subtask_count: 3,
-		total_estimated_hours: 2,
-	},
-	{
-		id: 2,
-		user: 1,
-		title: "Implementar autenticación",
-		course_name: "Backend",
-		description: "Agregar login con JWT y refresco de token",
-		due_date: "2026-02-27",
-		status: "in_progress",
-		subtask_count: 5,
-		total_estimated_hours: 4,
-	},
-	{
-		id: 3,
-		user: 1,
-		title: "Testing E2E",
-		course_name: "QA",
-		description: "Escribir pruebas Cypress para flujo de login",
-		due_date: "2026-02-27",
-		status: "pending",
-		subtask_count: 2,
-		total_estimated_hours: 1,
-	},
-	{
-		id: 4,
-		user: 1,
-		title: "Deploy a staging",
-		course_name: "DevOps",
-		description: "Actualizar imagen Docker y desplegar a staging",
-		due_date: "2026-03-02",
-		status: "pending",
-		subtask_count: 1,
-		total_estimated_hours: 2,
-	},
-	{
-		id: 5,
-		user: 1,
-		title: "Documentación API",
-		course_name: "Docs",
-		description: "Añadir ejemplos de endpoints y respuestas",
-		due_date: "2026-03-05",
-		status: "pending",
-		subtask_count: 4,
-		total_estimated_hours: 3,
-	},
-];
-
-/* ============ HELPERS ============ */
-function formatDate(iso: string): string {
-	const [y, m, d] = iso.split("-");
-	return `${d}/${m}/${y}`;
-}
-
-function formatHours(h?: number): string {
-	if (h === undefined || h === null || Number.isNaN(h)) return "0H";
-	return h === 1 ? "1H" : `${h}H`;
-}
-
-type SectionVariant = "overdue" | "today" | "upcoming";
-
-function classifyActivity(dueDateIso: string): SectionVariant {
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const due = new Date(dueDateIso + "T00:00:00");
-	if (due < today) return "overdue";
-	if (due.getTime() === today.getTime()) return "today";
-	return "upcoming";
-}
+import { classifyActivity, type NewActivityPayloadFromModal } from "./dashboardUtils";
+import OrganizationView from "./OrganizationView";
+import TodayKanban from "./TodayView";
+import { SubjectFormModal } from "./OrganizationView";
 
 /* ============ COMPONENT ============ */
 interface DashboardProps {
@@ -145,16 +56,19 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onLogout }: DashboardProps) {
-	const [activeNav, setActiveNav] = useState("today");
+	const { pathname } = useLocation();
+	const navigate = useNavigate();
+	const activeNav =
+		pathname === "/organizacion" ? "org" : pathname === "/progreso" ? "progress" : "today";
 	const [searchOpen, setSearchOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
 	const [showWave, setShowWave] = useState(false);
 	const [filtersOpen, setFiltersOpen] = useState(false);
-	const [activeFilters, setActiveFilters] = useState<string[]>(["urgency"]);
+	const [activeFilters, setActiveFilters] = useState<string[]>([]);
 	const filterRef = useRef<HTMLDivElement>(null);
 
-	/* ---- Mock data state (will be replaced with real API) ---- */
-	const [user, setUser] = useState<User>(MOCK_USER);
-	const [activities, setActivities] = useState<Activity[]>(MOCK_ACTIVITIES);
+	const [user, setUser] = useState<User | null>(null);
+	const [activities, setActivities] = useState<Activity[]>([]);
 	const [loading, setLoading] = useState<boolean>(() => {
 		try {
 			if (typeof window === "undefined") return false;
@@ -163,28 +77,174 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			return false;
 		}
 	});
+	const [todayData, setTodayData] = useState<{
+		overdue: Subtask[];
+		today: Subtask[];
+		upcoming: Subtask[];
+	} | null>(null);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [prefilledSubject, setPrefilledSubject] = useState("");
+	const [pendingExpandSubject, setPendingExpandSubject] = useState<string | null>(null);
+	const [subjectModal, setSubjectModal] = useState<{
+		mode: "add" | "rename";
+		current?: string;
+	} | null>(null);
+	const [customSubjects, setCustomSubjects] = useState<string[]>(() => {
+		try {
+			return JSON.parse(localStorage.getItem("luma_subjects") ?? "[]") as string[];
+		} catch {
+			return [];
+		}
+	});
+	const [apiSubjects, setApiSubjects] = useState<Subject[]>([]);
+
+	const subjects = useMemo<string[]>(() => {
+		const fromActivities = activities.map((a) => a.course_name).filter(Boolean);
+		const fromApi = apiSubjects.map((s) => s.name);
+		return Array.from(new Set([...fromActivities, ...fromApi, ...customSubjects])).sort();
+	}, [activities, customSubjects, apiSubjects]);
+
+	function addCustomSubject(name: string) {
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		// Try to create via API; fall back to localStorage if API unavailable
+		createSubject(trimmed)
+			.then((created) => {
+				setApiSubjects((prev) =>
+					prev.some((s) => s.name === created.name) ? prev : [...prev, created],
+				);
+			})
+			.catch(() => {
+				// Fallback: localStorage only
+				setCustomSubjects((prev) => {
+					if (prev.includes(trimmed)) return prev;
+					const next = [...prev, trimmed];
+					try {
+						localStorage.setItem("luma_subjects", JSON.stringify(next));
+					} catch {
+						/* ignore */
+					}
+					return next;
+				});
+			});
+	}
+
+	async function removeCustomSubject(name: string): Promise<void> {
+		const subject = apiSubjects.find((s) => s.name === name);
+		if (subject) {
+			await deleteSubject(subject.id);
+			// Reload activities (cascade-deleted), subjects and today view
+			const [acts, subs, today] = await Promise.all([
+				fetchActivities(),
+				fetchSubjects(),
+				fetchTodayView(),
+			]);
+			setActivities(Array.isArray(acts) ? acts : []);
+			setApiSubjects(Array.isArray(subs) ? subs : []);
+			if (today)
+				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+		} else {
+			// Fallback: localStorage only
+			setCustomSubjects((prev) => {
+				const next = prev.filter((s) => s !== name);
+				try {
+					localStorage.setItem("luma_subjects", JSON.stringify(next));
+				} catch {
+					/* ignore */
+				}
+				return next;
+			});
+		}
+	}
+
+	async function renameCustomSubject(oldName: string, newName: string): Promise<void> {
+		const trimmed = newName.trim();
+		if (!trimmed || trimmed === oldName) return;
+		const subject = apiSubjects.find((s) => s.name === oldName);
+		if (subject) {
+			await updateSubject(subject.id, trimmed);
+			// Reload activities (course_name bulk-updated), subjects and today view
+			const [acts, subs, today] = await Promise.all([
+				fetchActivities(),
+				fetchSubjects(),
+				fetchTodayView(),
+			]);
+			setActivities(Array.isArray(acts) ? acts : []);
+			setApiSubjects(Array.isArray(subs) ? subs : []);
+			if (today)
+				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+		} else {
+			// Fallback: localStorage only
+			setCustomSubjects((prev) => {
+				const next = prev.includes(oldName)
+					? prev.map((s) => (s === oldName ? trimmed : s))
+					: [...prev, trimmed];
+				try {
+					localStorage.setItem("luma_subjects", JSON.stringify(next));
+				} catch {
+					/* ignore */
+				}
+				return next;
+			});
+		}
+	}
+
+	const headerInfo = useMemo(() => {
+		switch (activeNav) {
+			case "org":
+				return {
+					title: "Organización",
+					TitleIcon: Folder,
+					tipText: "Organiza tus actividades por materia y controla tu carga de trabajo.",
+				};
+			case "progress":
+				return {
+					title: "Mi progreso",
+					TitleIcon: BarChart3,
+					tipText: "Analiza tu desempeño, el tiempo invertido y tus estadísticas generales.",
+				};
+			default:
+				return {
+					title: "Hoy",
+					TitleIcon: CalendarCheck,
+					tipText:
+						"Tus subtareas más urgentes, ordenadas para que puedas avanzar rápido. Marca cada una al terminar.",
+				};
+		}
+	}, [activeNav]);
 
 	useEffect(() => {
 		let cancelled = false;
 		async function load() {
-			// Avoid firing API requests if there's no access token available yet
-			// This prevents repeated 401s when the app mounts before login.
 			const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+
 			if (!token) {
-				// no token — nothing to fetch. initial `loading` was derived from localStorage,
-				// so avoid calling setState synchronously inside the effect to prevent
-				// cascading renders. Just exit early.
+				if (!cancelled) setLoading(false);
 				return;
 			}
+
 			try {
-				const [me, acts] = await Promise.all([fetchMe(), fetchActivities()]);
+				const [me, acts, todayView, subs] = await Promise.all([
+					fetchMe(),
+					fetchActivities(),
+					fetchTodayView(),
+					fetchSubjects(),
+				]);
 				if (!cancelled) {
-					setUser(me);
-					setActivities(acts);
+					setUser(me ?? null);
+					setActivities(Array.isArray(acts) ? acts : []);
+					setTodayData({
+						overdue: todayView.overdue,
+						today: todayView.today,
+						upcoming: todayView.upcoming,
+					});
+					setApiSubjects(Array.isArray(subs) ? subs : []);
 				}
 			} catch (err) {
-				console.warn("Using mock data — failed to fetch real data:", err);
+				console.error("Error cargando datos:", err);
+				if (!cancelled) {
+					setActivities([]);
+				}
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
@@ -237,30 +297,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		setActiveFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
 	}, []);
 
-	const overdue = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "overdue"),
-		[activities],
-	);
 	const today = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "today"),
+		() => (activities || []).filter((a) => classifyActivity(a.due_date) === "today"),
 		[activities],
 	);
-	const upcoming = useMemo(
-		() => activities.filter((a) => classifyActivity(a.due_date) === "upcoming"),
-		[activities],
-	);
-
-	// Controls to programmatically open/scroll a section after creation
-	const [openSection, setOpenSection] = useState<{ name: SectionVariant | null; key: number }>({
-		name: null,
-		key: 0,
-	});
 
 	const capacityUsed = useMemo(
 		() => today.reduce((sum, a) => sum + a.total_estimated_hours, 0),
 		[today],
 	);
-	const capacityTotal = user.max_daily_hours;
+
+	const knownSubjects = useMemo(
+		() => [...new Set(activities.map((a) => a.course_name).filter(Boolean))].sort(),
+		[activities],
+	);
+	const capacityTotal = user?.max_daily_hours ?? 0;
 	const capacityPercent =
 		capacityTotal > 0 ? Math.min((capacityUsed / capacityTotal) * 100, 100) : 0;
 
@@ -290,58 +341,135 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	return (
 		<div className="dashboard">
 			{/* Confirm delete modal */}
-			{confirmDelete && (
-				<div
-					className="ca-backdrop"
-					role="dialog"
-					aria-modal="true"
-					onMouseDown={(e) => {
-						if (e.target === e.currentTarget) setConfirmDelete(null);
-					}}
-				>
-					<div className="ca-modal ca-modal-compact">
-						<div className="ca-header">
-							<div className="ca-header-left">
-								<div className="ca-header-icon">
-									<AlertTriangle size={20} />
-								</div>
-								<div className="ca-header-text">
-									<h3>Confirmar eliminación</h3>
-									<p className="ca-subtitle">Vas a eliminar: {confirmDelete.title}</p>
-								</div>
-							</div>
-							<button
-								className="ca-close"
-								onClick={() => setConfirmDelete(null)}
-								aria-label="Cerrar"
+			{confirmDelete &&
+				createPortal(
+					<>
+						<div
+							onClick={() => setConfirmDelete(null)}
+							style={{
+								position: "fixed",
+								inset: 0,
+								background: "rgba(4,3,12,0.72)",
+								backdropFilter: "blur(14px) saturate(150%)",
+								WebkitBackdropFilter: "blur(14px) saturate(150%)",
+								zIndex: 9999,
+								animation: "fadeInBackdrop 0.18s ease",
+							}}
+						/>
+						<div
+							style={{
+								position: "fixed",
+								inset: 0,
+								zIndex: 10000,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								padding: "20px",
+							}}
+						>
+							<div
+								onClick={(e) => e.stopPropagation()}
+								style={{
+									position: "relative",
+									background: "linear-gradient(155deg,#1a0e0e 0%,#110909 55%,#090404 100%)",
+									border: "1px solid rgba(248,113,113,0.2)",
+									borderRadius: "16px",
+									width: "100%",
+									maxWidth: "360px",
+									boxShadow: "0 25px 60px rgba(0,0,0,0.65), inset 0 0 60px rgba(239,68,68,0.03)",
+									animation: "fadeInScale 0.22s cubic-bezier(0.16,1,0.3,1)",
+									textAlign: "center",
+									padding: "32px 28px 24px",
+								}}
 							>
-								<X size={15} />
-							</button>
-						</div>
-						<div className="ca-body">
-							<p>
-								¿Estás seguro que deseas eliminar esta actividad? Esta acción no se puede deshacer.
-							</p>
-							<div className="ca-actions">
-								<button
-									className="btn btn-ghost"
-									onClick={() => setConfirmDelete(null)}
-									disabled={deleting}
+								<div
+									className="modal-glow-line"
+									style={{
+										background:
+											"linear-gradient(90deg, transparent, rgba(239,68,68,0.5) 28%, rgba(248,113,113,0.3) 62%, transparent)",
+									}}
+								/>
+								<div
+									style={{
+										width: "56px",
+										height: "56px",
+										borderRadius: "50%",
+										background: "rgba(248,113,113,0.12)",
+										border: "1px solid rgba(248,113,113,0.25)",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										margin: "0 auto 20px",
+									}}
 								>
-									Cancelar
-								</button>
-								<button
-									className="btn btn-primary"
-									onClick={() => performDeleteActivity(confirmDelete.id)}
-									disabled={deleting}
+									<Trash2 size={22} color="#f87171" />
+								</div>
+								<p
+									style={{ margin: "0 0 8px", fontSize: "17px", fontWeight: 700, color: "#f1f5f9" }}
 								>
-									{deleting ? "Eliminando..." : "Eliminar"}
-								</button>
+									Confirmar eliminación
+								</p>
+								<p
+									style={{
+										margin: "0 0 24px",
+										fontSize: "13px",
+										color: "#94a3b8",
+										lineHeight: 1.6,
+									}}
+								>
+									Se eliminará permanentemente{" "}
+									<strong style={{ color: "#e2e8f0" }}>"{confirmDelete.title}"</strong>. Esta acción
+									no se puede deshacer.
+								</p>
+								<div style={{ display: "flex", gap: "10px" }}>
+									<button
+										onClick={() => performDeleteActivity(confirmDelete.id)}
+										disabled={deleting}
+										className="modal-btn-danger"
+										style={{
+											flex: 1,
+											padding: "11px 14px",
+											borderRadius: "8px",
+											border: "none",
+											cursor: deleting ? "wait" : "pointer",
+											fontSize: "13px",
+											fontWeight: 700,
+											background: "#ef4444",
+											color: "#fff",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: "7px",
+											opacity: deleting ? 0.7 : 1,
+										}}
+									>
+										{deleting ? <Loader2 size={13} className="spinner" /> : <Trash2 size={13} />}
+										{deleting ? "Eliminando..." : "Sí, eliminar"}
+									</button>
+									<button
+										onClick={() => setConfirmDelete(null)}
+										disabled={deleting}
+										className="modal-btn-cancel"
+										style={{
+											flex: 1,
+											padding: "11px 14px",
+											borderRadius: "8px",
+											border: "1px solid #334155",
+											cursor: "pointer",
+											fontSize: "13px",
+											fontWeight: 600,
+											background: "transparent",
+											color: "#94a3b8",
+										}}
+									>
+										Cancelar
+									</button>
+								</div>
 							</div>
 						</div>
-					</div>
-				</div>
-			)}
+					</>,
+					document.body,
+				)}
 			{/* ======= SIDEBAR ======= */}
 			<aside className="sidebar">
 				{/* User profile */}
@@ -358,7 +486,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						<>
 							<div className="profile-avatar">
 								<div className="avatar-placeholder">
-									{user.name ? (
+									{user?.name ? (
 										<span className="avatar-initials">
 											{user.name
 												.split(" ")
@@ -374,8 +502,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								<div className="avatar-status" />
 							</div>
 							<div className="profile-info">
-								<span className="profile-name">{user.name || user.username}</span>
-								<span className="profile-role">{user.email}</span>
+								<span className="profile-name">{user?.name || user?.username}</span>
+								<span className="profile-role">{user?.email}</span>
 							</div>
 							<button className="profile-menu-btn" aria-label="Menu">
 								<MoreVertical size={18} />
@@ -403,21 +531,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				<nav className="sidebar-nav">
 					<button
 						className={`nav-item ${activeNav === "today" ? "active" : ""}`}
-						onClick={() => setActiveNav("today")}
+						onClick={() => navigate("/hoy")}
 					>
 						<CalendarCheck size={18} />
 						<span>Hoy</span>
 					</button>
 					<button
 						className={`nav-item ${activeNav === "progress" ? "active" : ""}`}
-						onClick={() => setActiveNav("progress")}
+						onClick={() => navigate("/progreso")}
 					>
 						<BarChart3 size={18} />
 						<span>Mi progreso</span>
 					</button>
 					<button
 						className={`nav-item ${activeNav === "org" ? "active" : ""}`}
-						onClick={() => setActiveNav("org")}
+						onClick={() => navigate("/organizacion")}
 					>
 						<Users size={18} />
 						<span>Organización</span>
@@ -466,34 +594,48 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						{/* Tip banner */}
 						<div className="tip-banner fade-in" style={{ animationDelay: "0.05s" }}>
 							<Sparkles size={18} className="tip-icon" />
-							<p>
-								Ordenamos por urgencia y luego por las actividades más cortas para que avances
-								rápido.
-							</p>
+							<p>{headerInfo.tipText}</p>
 						</div>
 
 						{/* Header toolbar */}
 						<div className="content-header fade-in" style={{ animationDelay: "0.12s" }}>
 							<div className="header-left">
 								<h1 className="page-title">
-									<CalendarCheck size={22} className="title-icon" />
-									Actividades
+									<headerInfo.TitleIcon size={22} className="title-icon" />
+									{headerInfo.title}
 								</h1>
-								<button className="btn-add" onClick={() => setCreateOpen(true)}>
-									<Plus size={16} />
-									<span>Añadir actividad</span>
-								</button>
+								{activeNav === "org" && (
+									<>
+										<button
+											className="btn-add"
+											style={{ background: "#334155", border: "1px solid #475569" }}
+											onClick={() => setSubjectModal({ mode: "add" })}
+										>
+											<BookOpen size={16} />
+											<span>Agregar materia</span>
+										</button>
+										<button
+											className="btn-add"
+											onClick={() => {
+												setPrefilledSubject("");
+												setCreateOpen(true);
+											}}
+										>
+											<Plus size={16} />
+											<span>Nueva actividad</span>
+										</button>
+									</>
+								)}
 							</div>
 
-							{/* Create activity modal (top-level) */}
+							{/* Create activity modal (rendered at top level to avoid z-index issues) */}
 							<CreateActivityModal
 								open={createOpen}
 								onClose={() => setCreateOpen(false)}
+								initialSubject={prefilledSubject}
+								knownSubjects={knownSubjects}
 								onCreate={async (payload: NewActivityPayloadFromModal) => {
 									try {
-										// send only activity-level fields to API (subtasks are handled elsewhere)
-										// Build payload for backend — include subtasks (convert to backend field names)
-										// Send only activity-level fields for now (skip subtasks)
 										const apiPayload = {
 											course_name: payload.subject,
 											title: payload.title,
@@ -512,13 +654,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 															0,
 														)
 													: 0),
+											subtasks: payload.subtasks?.map((s) => ({
+												name: s.title,
+												target_date: s.target_date,
+												estimated_hours: Number(s.estimated_hours || 0),
+											})),
 										};
 
-										console.debug("[createActivity] payload:", apiPayload);
+										console.log("createActivity payload:", apiPayload);
 										const resp = await createActivity(apiPayload);
-										console.debug("[createActivity] response:", resp);
 
-										// ensure UI shows subtask count and estimated hours that were provided in the modal
 										const totalHoursFromPayload =
 											payload.total_estimated_hours ??
 											(payload.subtasks
@@ -539,32 +684,25 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											total_estimated_hours: resp.total_estimated_hours ?? totalHoursFromPayload,
 										};
 										setActivities((prev) => [created, ...prev]);
-
-										// Open and scroll to the section where the activity belongs
-										const section = classifyActivity(created.due_date);
-										setOpenSection((prev) => ({ name: section, key: prev.key + 1 }));
-
+										if (activeNav === "org") {
+											const subjectName =
+												resp.course_name ?? apiPayload.course_name ?? payload.subject;
+											if (subjectName) setPendingExpandSubject(subjectName);
+										}
 										setCreateOpen(false);
 										toast.success("Actividad creada");
 									} catch (err) {
-										// log full axios error payload if present
 										console.error("Failed to create activity:", err);
-										try {
-											// eslint-disable-next-line @typescript-eslint/no-explicit-any
-											const serverErr = err as any;
-											if (serverErr && serverErr.response && serverErr.response.data) {
-												console.debug("[createActivity] server response:", serverErr.response.data);
-											}
-										} catch {
-											/* ignore logging errors */
-										}
-										// keep modal open so user can retry; show toast error
 										toast.error("Error creando la actividad. Intenta de nuevo.");
 									}
 								}}
 							/>
 							<div className="header-right">
-								<div className="filter-wrapper" ref={filterRef}>
+								<div
+									className="filter-wrapper"
+									ref={filterRef}
+									style={{ display: activeNav === "today" ? "none" : undefined }}
+								>
 									<button
 										className={`btn-filter ${filtersOpen ? "active" : ""}`}
 										onClick={() => setFiltersOpen(!filtersOpen)}
@@ -579,49 +717,81 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									{/* Filter panel */}
 									<div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
 										<div className="filter-panel-header">
-											<span>Filtrar por</span>
+											<span>{activeNav === "org" ? "Ordenar materias" : "Filtrar por"}</span>
 											<button className="filter-close" onClick={() => setFiltersOpen(false)}>
 												<X size={14} />
 											</button>
 										</div>
 
-										{/* Create activity modal moved to top-level to avoid z-index/overflow issues */}
 										<div className="filter-options">
-											<button
-												className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
-												onClick={() => toggleFilter("urgency")}
-											>
-												<AlertTriangle size={13} />
-												Urgencia
-											</button>
-											<button
-												className={`filter-chip ${activeFilters.includes("duration") ? "on" : ""}`}
-												onClick={() => toggleFilter("duration")}
-											>
-												<Clock size={13} />
-												Duración
-											</button>
-											<button
-												className={`filter-chip ${activeFilters.includes("date") ? "on" : ""}`}
-												onClick={() => toggleFilter("date")}
-											>
-												<CalendarCheck size={13} />
-												Fecha límite
-											</button>
-											<button
-												className={`filter-chip ${activeFilters.includes("category") ? "on" : ""}`}
-												onClick={() => toggleFilter("category")}
-											>
-												<Tag size={13} />
-												Categoría
-											</button>
-											<button
-												className={`filter-chip ${activeFilters.includes("alphabetical") ? "on" : ""}`}
-												onClick={() => toggleFilter("alphabetical")}
-											>
-												<ArrowUpDown size={13} />
-												Alfabético
-											</button>
+											{activeNav === "org" ? (
+												<>
+													<button
+														className={`filter-chip ${activeFilters.includes("org-az") ? "on" : ""}`}
+														onClick={() => toggleFilter("org-az")}
+													>
+														<ArrowUpDown size={13} />A → Z
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("org-za") ? "on" : ""}`}
+														onClick={() => toggleFilter("org-za")}
+													>
+														<ArrowUpDown size={13} />Z → A
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("org-count") ? "on" : ""}`}
+														onClick={() => toggleFilter("org-count")}
+													>
+														<Tag size={13} />
+														Más actividades
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("org-hours") ? "on" : ""}`}
+														onClick={() => toggleFilter("org-hours")}
+													>
+														<Clock size={13} />
+														Más horas
+													</button>
+												</>
+											) : (
+												<>
+													<button
+														className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
+														onClick={() => toggleFilter("urgency")}
+													>
+														<AlertTriangle size={13} />
+														Urgencia
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("duration") ? "on" : ""}`}
+														onClick={() => toggleFilter("duration")}
+													>
+														<Clock size={13} />
+														Duración
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("date") ? "on" : ""}`}
+														onClick={() => toggleFilter("date")}
+													>
+														<CalendarCheck size={13} />
+														Fecha límite
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("category") ? "on" : ""}`}
+														onClick={() => toggleFilter("category")}
+													>
+														<Tag size={13} />
+														Categoría
+													</button>
+													<button
+														className={`filter-chip ${activeFilters.includes("alphabetical") ? "on" : ""}`}
+														onClick={() => toggleFilter("alphabetical")}
+													>
+														<ArrowUpDown size={13} />
+														Alfabético
+													</button>
+												</>
+											)}
 										</div>
 										{activeFilters.length > 0 && (
 											<button className="filter-clear" onClick={() => setActiveFilters([])}>
@@ -642,177 +812,95 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											type="text"
 											placeholder="Buscar actividades..."
 											className="search-input"
+											value={searchQuery}
+											onChange={(e) => setSearchQuery(e.target.value)}
 										/>
 									</div>
 								</div>
 							</div>
 						</div>
 
-						{/* Activity sections */}
-						<div className="activity-sections fade-in" style={{ animationDelay: "0.2s" }}>
-							{/* OVERDUE */}
-							<ActivitySection
-								title="Vencidas"
-								icon={<AlertTriangle size={18} />}
-								count={overdue.length}
-								activities={overdue}
-								variant="overdue"
-								openTrigger={openSection.name === "overdue" ? openSection.key : undefined}
-								onDelete={requestDeleteActivity}
+						{/* ===== TODAY VIEW ===== */}
+						{activeNav === "today" && (
+							<TodayKanban
+								initialData={todayData}
+								onDataRefresh={setTodayData}
+								activities={activities}
+								searchQuery={searchQuery}
 							/>
+						)}
+						{/* ===== ORG VIEW ===== */}
+						{activeNav === "org" && (
+							<OrganizationView
+								activities={activities}
+								subjects={subjects}
+								onDelete={requestDeleteActivity}
+								onAddSubject={addCustomSubject}
+								onRemoveSubject={removeCustomSubject}
+								onRenameSubject={renameCustomSubject}
+								onActivityUpdate={(updated) =>
+									setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
+								}
+								activeFilters={activeFilters}
+								searchQuery={searchQuery}
+								expandSubject={pendingExpandSubject}
+								onOpenCreate={(subject) => {
+									setPrefilledSubject(subject ?? "");
+									setCreateOpen(true);
+								}}
+							/>
+						)}
 
-							{/* TODAY */}
-							<ActivitySection
-								title="Para hoy"
-								icon={<CalendarClock size={18} />}
-								count={today.length}
-								activities={today}
-								variant="today"
-								openTrigger={openSection.name === "today" ? openSection.key : undefined}
-								onDelete={requestDeleteActivity}
-							/>
-
-							{/* UPCOMING */}
-							<ActivitySection
-								title="Próximas"
-								icon={<CalendarClock size={18} />}
-								count={upcoming.length}
-								activities={upcoming}
-								variant="upcoming"
-								openTrigger={openSection.name === "upcoming" ? openSection.key : undefined}
-								onDelete={requestDeleteActivity}
-							/>
-						</div>
+						{/* ===== PROGRESS VIEW ===== */}
+						{activeNav === "progress" && (
+							<div
+								className="fade-in"
+								style={{
+									animationDelay: "0.2s",
+									padding: "4rem 2rem",
+									textAlign: "center",
+									color: "#94a3b8",
+								}}
+							>
+								<BarChart3
+									size={48}
+									style={{ opacity: 0.2, margin: "0 auto 1rem auto", display: "block" }}
+								/>
+								<p>Vista de progreso en construcción...</p>
+							</div>
+						)}
 					</>
 				)}
+				{/* Subject name modal (from header button) */}
+				{subjectModal &&
+					createPortal(
+						<div
+							style={{
+								position: "fixed",
+								inset: 0,
+								background: "rgba(4,3,12,0.72)",
+								backdropFilter: "blur(14px) saturate(150%)",
+								WebkitBackdropFilter: "blur(14px) saturate(150%)",
+								zIndex: 9998,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+							onClick={() => setSubjectModal(null)}
+						>
+							<SubjectFormModal
+								mode={subjectModal.mode}
+								current={subjectModal.current}
+								onClose={() => setSubjectModal(null)}
+								onConfirm={(name) => {
+									addCustomSubject(name);
+									setSubjectModal(null);
+								}}
+							/>
+						</div>,
+						document.body,
+					)}
 			</main>
 		</div>
 	);
 }
-
-/* ============ SUB-COMPONENTS ============ */
-
-interface ActivitySectionProps {
-	title: string;
-	icon: React.ReactNode;
-	count: number;
-	activities: Activity[];
-	variant: SectionVariant;
-	openTrigger?: number;
-	onDelete?: (id: number) => void;
-}
-
-function ActivitySection({
-	title,
-	icon,
-	count,
-	activities,
-	variant,
-	openTrigger,
-	onDelete,
-}: ActivitySectionProps) {
-	const [collapsed, setCollapsed] = useState(false);
-	const sectionRef = useRef<HTMLElement | null>(null);
-	const prevTrigger = useRef<number | undefined>(undefined);
-	const isEmpty = activities.length === 0;
-
-	useEffect(() => {
-		if (openTrigger === undefined) return;
-		if (prevTrigger.current === openTrigger) return;
-		prevTrigger.current = openTrigger;
-
-		// Schedule collapse + scroll on a microtask to avoid synchronous setState
-		// inside the effect body which can trigger cascading renders.
-		let cancelled = false;
-		Promise.resolve().then(() => {
-			if (cancelled) return;
-			setCollapsed(false);
-			if (sectionRef.current) {
-				sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-			}
-		});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [openTrigger]);
-
-	return (
-		<section
-			ref={sectionRef}
-			className={`activity-section section-${variant}`}
-			id={`section-${variant}`}
-		>
-			<div className="section-header" onClick={() => setCollapsed(!collapsed)}>
-				<div className="section-title-group">
-					<ChevronDown size={16} className={`collapse-icon ${collapsed ? "collapsed" : ""}`} />
-					<span className={`section-icon section-icon-${variant}`}>{icon}</span>
-					<h2 className="section-title">{title}</h2>
-				</div>
-				<span className="section-count">{count} actividades</span>
-			</div>
-
-			<div className={`section-collapsible ${collapsed ? "collapsed" : ""}`}>
-				<div className="section-collapsible-inner">
-					{isEmpty ? (
-						<div className="section-empty">
-							<Inbox size={28} strokeWidth={1.5} />
-							<p>Aún no hay nada por aquí</p>
-						</div>
-					) : (
-						<>
-							<div className="table-header">
-								<span className="col-activity">Actividad</span>
-								<span className="col-duration">Duración estimada</span>
-								<span className="col-date">Fecha de finalización</span>
-								<span className="col-subtasks"># de subtareas</span>
-								<span className="col-action" />
-							</div>
-							<div className="table-body">
-								{activities.map((activity) => (
-									<div key={activity.id} className="table-row">
-										<div className="col-activity">
-											<span className={`activity-tag tag-${variant}`}>{activity.title}</span>
-										</div>
-										<div className="col-duration">
-											<span className="badge badge-duration">
-												{formatHours(activity.total_estimated_hours)}
-											</span>
-										</div>
-										<div className="col-date">
-											<span className={`badge badge-date badge-date-${variant}`}>
-												{formatDate(activity.due_date)}
-											</span>
-										</div>
-										<div className="col-subtasks">
-											<span className="badge badge-subtask">{activity.subtask_count}</span>
-										</div>
-										<div className="col-action">
-											<button className="btn-row-action" aria-label="Ver detalles">
-												<ArrowRight size={18} />
-											</button>
-											<button
-												type="button"
-												className="btn-row-action btn-row-delete"
-												aria-label="Eliminar actividad"
-												onClick={() => onDelete?.(activity.id)}
-											>
-												<Trash2 size={14} />
-											</button>
-										</div>
-									</div>
-								))}
-							</div>
-						</>
-					)}
-				</div>
-			</div>
-		</section>
-	);
-}
-
-// Hook to react to openTrigger prop changes inside ActivitySection
-// We implement this via a small effect attached to the ActivitySection function scope
-// by reading the injected openTrigger (passed via arguments) and reacting to changes.
-// Note: this keeps the component self-contained and avoids prop-type churn.
-// The effect is implemented above using the `openTrigger` local variable.

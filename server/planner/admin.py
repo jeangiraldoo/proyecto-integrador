@@ -5,10 +5,14 @@ from .models import (
 	Conflict,
 	ConflictResolution,
 	Progress,
+	Subject,
 	Subtask,
 	User,
+	UserSubject,
 )
 
+admin.site.register(Subject)
+admin.site.register(UserSubject)
 admin.site.register(User)
 admin.site.register(Activity)
 admin.site.register(Subtask)

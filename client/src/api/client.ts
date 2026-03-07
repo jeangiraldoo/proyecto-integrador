@@ -1,7 +1,10 @@
 import axios from "axios";
 
+const baseURL =
+	(import.meta.env.VITE_API_BASE_URL as string) ?? "https://proyecto-integrador-as97.onrender.com/";
+
 const client = axios.create({
-	baseURL: "http://localhost:8000",
+	baseURL,
 	headers: {
 		"Content-Type": "application/json",
 	},
@@ -32,7 +35,7 @@ client.interceptors.response.use(
 
 			if (refreshToken) {
 				try {
-					const response = await axios.post("http://localhost:8000/api/token/refresh/", {
+					const response = await axios.post(`${baseURL}/api/token/refresh/`, {
 						refresh: refreshToken,
 					});
 
@@ -46,7 +49,7 @@ client.interceptors.response.use(
 					// Si falla el refresh, cerramos sesión
 					localStorage.removeItem("access_token");
 					localStorage.removeItem("refresh_token");
-					window.location.href = "/";
+					window.location.href = "/login";
 					return Promise.reject(refreshError);
 				}
 			}

@@ -2,7 +2,7 @@ from datetime import date
 
 from rest_framework import serializers
 
-from .models import Activity, Subtask, User
+from .models import Activity, Subject, Subtask, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -48,11 +48,12 @@ class SubtaskSerializer(serializers.ModelSerializer):
 
 		if "target_date" in attrs:
 			target_date = attrs["target_date"]
-			if target_date < date.today():
-				errors["target_date"] = "Target date cannot be earlier than today"
+			# No past-date restriction — users may create/edit overdue subtasks
 
 			activity = self.context.get("activity")
-			if activity and target_date > activity.due_date:
+			# Only enforce the due-date ceiling when the activity itself is not already overdue.
+			# If the activity is past-due, allow subtasks with any future target_date.
+			if activity and target_date > activity.due_date and activity.due_date >= date.today():
 				errors["target_date"] = (
 					f"Target date cannot be later than the activity due date ({activity.due_date})"
 				)
@@ -72,6 +73,8 @@ class ActivitySerializer(serializers.ModelSerializer):
 	total_estimated_hours = serializers.SerializerMethodField()
 	subtask_count = serializers.SerializerMethodField()
 	subtasks = SubtaskSerializer(many=True, required=False)
+
+	description = serializers.CharField(required=False, allow_blank=True)
 
 	class Meta:
 		model = Activity
@@ -109,16 +112,14 @@ class ActivitySerializer(serializers.ModelSerializer):
 				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
 
 		if "due_date" in attrs:
-			due_date = attrs.get("due_date")
-			if due_date < date.today():
-				errors["due_date"] = "Due date cannot be earlier than today"
+			pass  # No past-date restriction — users may create overdue activities
 
 		if errors:
 			raise serializers.ValidationError({"errors": errors})
 
 		return attrs
 
-	def get_total_estimated_hours(self, obj):
+	def get_total_estimated_hours(self, obj) -> int:
 		# Sum estimated_hours across related subtasks. If there are no subtasks,
 		# allow a client-provided hint (stored temporarily on the instance during create)
 		if obj.subtasks.exists():
@@ -132,9 +133,10 @@ class ActivitySerializer(serializers.ModelSerializer):
 				return 0
 		return 0
 
-	def get_subtask_count(self, obj):
+	def get_subtask_count(self, obj) -> int:
 		return obj.subtasks.count()
 
+	#  Moved `create` method to ActivitySerializer to handle nested writes
 	def create(self, validated_data):
 		# Handle nested subtasks if provided
 		subtasks_data = validated_data.pop("subtasks", [])
@@ -168,56 +170,32 @@ class ActivitySerializer(serializers.ModelSerializer):
 		return activity
 
 
-class SubtaskSerializer(serializers.ModelSerializer):
-	name = serializers.CharField(required=True, allow_blank=True)
-	status = serializers.CharField(required=True, allow_blank=True)
-	target_date = serializers.DateField(required=True)
+# Serializer used by TodayView — adds activity context to each subtask
+class TodaySubtaskSerializer(SubtaskSerializer):
+	activity = serializers.SerializerMethodField()
+	course_name = serializers.SerializerMethodField()
 
+	class Meta(SubtaskSerializer.Meta):
+		fields = [*SubtaskSerializer.Meta.fields, "activity", "course_name"]
+
+	def get_activity(self, obj) -> dict:
+		act = obj.activity_id  # ForeignKey named activity_id → related Activity object
+		return {"id": act.pk, "title": act.title}
+
+	def get_course_name(self, obj) -> str:
+		return obj.activity_id.course_name
+
+
+# Note: a single SubtaskSerializer is defined above for nested use in ActivitySerializer.
+
+
+class SubjectSerializer(serializers.ModelSerializer):
 	class Meta:
-		model = Subtask
-		fields = [
-			"id",
-			"name",
-			"estimated_hours",
-			"target_date",
-			"status",
-			"ordering",
-			"created_at",
-			"updated_at",
-		]
-		read_only_fields = ["id", "created_at", "updated_at"]
+		model = Subject
+		fields = ["id", "name", "creation_date"]
+		read_only_fields = ["id", "creation_date"]
 
-	def validate(self, attrs):
-		errors = {}
-
-		if "name" in attrs:
-			name = attrs["name"].strip()
-			if not name:
-				errors["name"] = "Name is required"
-
-		if "status" in attrs:
-			status = attrs["status"]
-			allowed_statuses = ["pending", "completed", "in_progress"]
-			if status not in allowed_statuses:
-				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
-
-		if "target_date" in attrs:
-			target_date = attrs["target_date"]
-			if target_date < date.today():
-				errors["target_date"] = "Target date cannot be earlier than today"
-
-			activity = self.context.get("activity")
-			if activity and target_date > activity.due_date:
-				errors["target_date"] = (
-					f"Target date cannot be later than the activity due date ({activity.due_date})"
-				)
-
-		if "estimated_hours" in attrs:
-			estimated_hours = attrs["estimated_hours"]
-			if estimated_hours <= 0:
-				errors["estimated_hours"] = "Estimated hours must be a positive number"
-
-		if errors:
-			raise serializers.ValidationError({"errors": errors})
-
-		return attrs
+	def validate_name(self, value):
+		if not value.strip():
+			raise serializers.ValidationError("Subject name cannot be empty.")
+		return value.strip()

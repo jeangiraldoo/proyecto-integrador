@@ -1,0 +1,1011 @@
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import {
+	AlertTriangle,
+	Plus,
+	ChevronDown,
+	X,
+	Loader2,
+	Trash2,
+	CheckCircle2,
+	ClipboardList,
+	Pencil,
+} from "lucide-react";
+import { fetchTodayView, createSubtask, type Activity, type Subtask } from "../api/dashboard";
+import { toast } from "sonner";
+import "./Dashboard.css";
+import { formatDate, type KanbanState } from "./dashboardUtils";
+
+interface EditSubtaskModalProps {
+	subtask: Subtask;
+	initialName: string;
+	initialHours: string;
+	initialDate: string;
+	initialStatus: Subtask["status"];
+	setName: (v: string) => void;
+	setHours: (v: string) => void;
+	setDate: (v: string) => void;
+	setStatus: (v: Subtask["status"]) => void;
+	saving: boolean;
+	onSave: () => void;
+	onClose: () => void;
+}
+export function EditSubtaskModal({
+	subtask,
+	initialName,
+	initialHours,
+	initialDate,
+	initialStatus,
+	setName,
+	setHours,
+	setDate,
+	setStatus,
+	saving,
+	onSave,
+	onClose,
+}: EditSubtaskModalProps) {
+	useEffect(() => {
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", handleKey);
+		return () => window.removeEventListener("keydown", handleKey);
+	}, [onClose]);
+
+	const labelStyle: React.CSSProperties = {
+		display: "block",
+		fontSize: "11px",
+		fontWeight: 700,
+		color: "#94a3b8",
+		textTransform: "uppercase",
+		letterSpacing: "0.06em",
+		marginBottom: "6px",
+	};
+	const inputStyle: React.CSSProperties = {
+		width: "100%",
+		background: "#0f172a",
+		border: "1px solid #334155",
+		borderRadius: "7px",
+		padding: "9px 12px",
+		fontSize: "14px",
+		color: "#f1f5f9",
+		outline: "none",
+		boxSizing: "border-box",
+		transition: "border-color 0.15s",
+	};
+
+	return createPortal(
+		<>
+			{/* Backdrop */}
+			<div
+				onClick={onClose}
+				style={{
+					position: "fixed",
+					inset: 0,
+					background: "rgba(4,3,12,0.72)",
+					backdropFilter: "blur(14px) saturate(150%)",
+					WebkitBackdropFilter: "blur(14px) saturate(150%)",
+					zIndex: 2200,
+					animation: "fadeInBackdrop 0.18s ease",
+				}}
+			/>
+			{/* Dialog */}
+			<div
+				style={{
+					position: "fixed",
+					inset: 0,
+					zIndex: 2201,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "20px",
+				}}
+			>
+				<div
+					style={{
+						position: "relative",
+						background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
+						border: "1px solid #1e293b",
+						borderRadius: "16px",
+						width: "100%",
+						maxWidth: "440px",
+						boxShadow: "0 25px 60px rgba(0,0,0,0.65), inset 0 0 60px rgba(124,92,255,0.03)",
+						animation: "fadeInScale 0.22s cubic-bezier(0.16,1,0.3,1)",
+					}}
+				>
+					<div className="modal-glow-line" />
+					<div className="modal-glow-halo" />
+					{/* Header */}
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							padding: "18px 20px 14px",
+							borderBottom: "1px solid #1e293b",
+						}}
+					>
+						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+							<div
+								style={{
+									width: "32px",
+									height: "32px",
+									borderRadius: "8px",
+									background: "rgba(192,132,252,0.12)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								<Pencil size={15} color="#c084fc" />
+							</div>
+							<div>
+								<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#f1f5f9" }}>
+									Editar subtarea
+								</p>
+								<p
+									style={{
+										margin: 0,
+										fontSize: "11px",
+										color: "#64748b",
+										marginTop: "1px",
+										maxWidth: "260px",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+									}}
+								>
+									{subtask.name}
+								</p>
+							</div>
+						</div>
+						<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+							<X size={15} />
+						</button>
+					</div>
+					{/* Body */}
+					<div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+						<div>
+							<label style={labelStyle}>Nombre</label>
+							<input
+								style={inputStyle}
+								value={initialName}
+								onChange={(e) => setName(e.target.value)}
+								maxLength={200}
+								autoFocus
+								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+								onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+							/>
+						</div>
+						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+							<div>
+								<label style={labelStyle}>Horas est.</label>
+								<input
+									style={inputStyle}
+									type="number"
+									min="0"
+									step="0.5"
+									value={initialHours}
+									onChange={(e) => setHours(e.target.value)}
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								/>
+							</div>
+							<div>
+								<label style={labelStyle}>Fecha límite</label>
+								<input
+									style={inputStyle}
+									type="date"
+									value={initialDate}
+									onChange={(e) => setDate(e.target.value)}
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								/>
+							</div>
+						</div>
+						<div>
+							<label style={labelStyle}>Estado</label>
+							<StatusPicker value={initialStatus} onChange={setStatus} />
+						</div>
+					</div>
+					{/* Footer */}
+					<div style={{ display: "flex", gap: "8px", padding: "14px 20px 18px" }}>
+						<button
+							onClick={onSave}
+							disabled={saving}
+							className="modal-btn-primary"
+							style={{
+								flex: 1,
+								padding: "10px 14px",
+								borderRadius: "8px",
+								border: "none",
+								cursor: saving ? "wait" : "pointer",
+								fontSize: "13px",
+								fontWeight: 700,
+								background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+								color: "#fff",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "7px",
+								opacity: saving ? 0.7 : 1,
+								boxShadow: "0 4px 14px rgba(124,58,237,0.28)",
+							}}
+						>
+							{saving ? <Loader2 size={13} className="spinner" /> : <CheckCircle2 size={13} />}
+							{saving ? "Guardando..." : "Guardar cambios"}
+						</button>
+						<button
+							onClick={onClose}
+							disabled={saving}
+							className="modal-btn-cancel"
+							style={{
+								padding: "10px 18px",
+								borderRadius: "8px",
+								border: "1px solid #334155",
+								cursor: "pointer",
+								fontSize: "13px",
+								fontWeight: 600,
+								background: "transparent",
+								color: "#94a3b8",
+							}}
+						>
+							Cancelar
+						</button>
+					</div>
+				</div>
+			</div>
+		</>,
+		document.body,
+	);
+}
+
+/* ============ DELETE CONFIRM MODAL ============ */
+interface DeleteConfirmModalProps {
+	subtaskName: string;
+	deleting: boolean;
+	onConfirm: () => void;
+	onClose: () => void;
+}
+export function DeleteConfirmModal({
+	subtaskName,
+	deleting,
+	onConfirm,
+	onClose,
+}: DeleteConfirmModalProps) {
+	useEffect(() => {
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && !deleting) onClose();
+		};
+		window.addEventListener("keydown", handleKey);
+		return () => window.removeEventListener("keydown", handleKey);
+	}, [onClose, deleting]);
+
+	return createPortal(
+		<>
+			{/* Backdrop */}
+			<div
+				onClick={() => {
+					if (!deleting) onClose();
+				}}
+				style={{
+					position: "fixed",
+					inset: 0,
+					background: "rgba(4,3,12,0.72)",
+					backdropFilter: "blur(14px) saturate(150%)",
+					WebkitBackdropFilter: "blur(14px) saturate(150%)",
+					zIndex: 2200,
+					animation: "fadeInBackdrop 0.18s ease",
+				}}
+			/>
+			{/* Dialog */}
+			<div
+				style={{
+					position: "fixed",
+					inset: 0,
+					zIndex: 2201,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "20px",
+				}}
+			>
+				<div
+					style={{
+						position: "relative",
+						background: "linear-gradient(155deg,#1a0e0e 0%,#110909 55%,#090404 100%)",
+						border: "1px solid rgba(248,113,113,0.2)",
+						borderRadius: "16px",
+						width: "100%",
+						maxWidth: "360px",
+						boxShadow: "0 25px 60px rgba(0,0,0,0.65), inset 0 0 60px rgba(239,68,68,0.03)",
+						animation: "fadeInScale 0.22s cubic-bezier(0.16,1,0.3,1)",
+						textAlign: "center",
+						padding: "32px 28px 24px",
+					}}
+				>
+					<div
+						className="modal-glow-line"
+						style={{
+							background:
+								"linear-gradient(90deg, transparent, rgba(239,68,68,0.5) 28%, rgba(248,113,113,0.3) 62%, transparent)",
+						}}
+					/>
+					{/* Icon */}
+					<div
+						style={{
+							width: "56px",
+							height: "56px",
+							borderRadius: "50%",
+							background: "rgba(248,113,113,0.12)",
+							border: "1px solid rgba(248,113,113,0.25)",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							margin: "0 auto 20px",
+						}}
+					>
+						<Trash2 size={22} color="#f87171" />
+					</div>
+					<p style={{ margin: "0 0 8px", fontSize: "17px", fontWeight: 700, color: "#f1f5f9" }}>
+						¿Eliminar subtarea?
+					</p>
+					<p style={{ margin: "0 0 24px", fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
+						Se eliminará permanentemente{" "}
+						<strong style={{ color: "#e2e8f0" }}>"{subtaskName}"</strong>. Esta acción no se puede
+						deshacer.
+					</p>
+					<div style={{ display: "flex", gap: "10px" }}>
+						<button
+							onClick={onConfirm}
+							disabled={deleting}
+							className="modal-btn-danger"
+							style={{
+								flex: 1,
+								padding: "11px 14px",
+								borderRadius: "8px",
+								border: "none",
+								cursor: deleting ? "wait" : "pointer",
+								fontSize: "13px",
+								fontWeight: 700,
+								background: "#ef4444",
+								color: "#fff",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "7px",
+								opacity: deleting ? 0.7 : 1,
+							}}
+						>
+							{deleting ? <Loader2 size={13} className="spinner" /> : <Trash2 size={13} />}
+							{deleting ? "Eliminando..." : "Sí, eliminar"}
+						</button>
+						<button
+							onClick={onClose}
+							disabled={deleting}
+							className="modal-btn-cancel"
+							style={{
+								flex: 1,
+								padding: "11px 14px",
+								borderRadius: "8px",
+								border: "1px solid #334155",
+								cursor: "pointer",
+								fontSize: "13px",
+								fontWeight: 600,
+								background: "transparent",
+								color: "#94a3b8",
+							}}
+						>
+							Cancelar
+						</button>
+					</div>
+				</div>
+			</div>
+		</>,
+		document.body,
+	);
+}
+
+/* ============ STATUS PICKER ============ */
+export function StatusPicker({
+	value,
+	onChange,
+}: {
+	value: Subtask["status"];
+	onChange: (v: Subtask["status"]) => void;
+}) {
+	const opts: { v: Subtask["status"]; label: string; color: string }[] = [
+		{ v: "pending", label: "Pendiente", color: "#fbbf24" },
+		{ v: "in_progress", label: "En progreso", color: "#60a5fa" },
+		{ v: "completed", label: "Completada", color: "#34d399" },
+	];
+	return (
+		<div style={{ display: "flex", gap: "5px" }}>
+			{opts.map(({ v, label, color }) => (
+				<button
+					key={v}
+					type="button"
+					onClick={() => onChange(v)}
+					style={{
+						flex: 1,
+						padding: "7px 5px",
+						borderRadius: "6px",
+						border: `1.5px solid ${value === v ? color : "#334155"}`,
+						background: value === v ? `${color}20` : "transparent",
+						color: value === v ? color : "#64748b",
+						fontSize: "11px",
+						fontWeight: 700,
+						cursor: "pointer",
+						transition: "all 0.14s",
+						lineHeight: 1,
+					}}
+				>
+					{label}
+				</button>
+			))}
+		</div>
+	);
+}
+
+/* ============ CREATE SUBTASK MODAL ============ */
+export function CreateSubtaskModal({
+	activities,
+	onClose,
+	onCreated,
+}: {
+	activities: Activity[];
+	onClose: () => void;
+	onCreated: (kanban: KanbanState) => void;
+}) {
+	const [selectedActivityId, setSelectedActivityId] = useState<number | "">("");
+	const [name, setName] = useState("");
+	const [targetDate, setTargetDate] = useState("");
+	const [hours, setHours] = useState("1");
+	const [status, setStatus] = useState<Subtask["status"]>("pending");
+	const [saving, setSaving] = useState(false);
+	const [actDropOpen, setActDropOpen] = useState(false);
+	const _now = new Date();
+	const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+
+	useEffect(() => {
+		function onKey(e: KeyboardEvent) {
+			if (e.key === "Escape") onClose();
+		}
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, [onClose]);
+
+	async function handleSubmit() {
+		if (!selectedActivityId) {
+			toast.error("Selecciona una actividad.");
+			return;
+		}
+		if (!name.trim()) {
+			toast.error("El nombre es obligatorio.");
+			return;
+		}
+		if (!targetDate) {
+			toast.error("Selecciona una fecha límite.");
+			return;
+		}
+		const h = parseFloat(hours);
+		if (isNaN(h) || h < 0) {
+			toast.error("Horas inválidas.");
+			return;
+		}
+		setSaving(true);
+		try {
+			await createSubtask(selectedActivityId as number, {
+				name: name.trim(),
+				estimated_hours: h,
+				target_date: targetDate,
+				status,
+				ordering: 1,
+			});
+			const todayView = await fetchTodayView();
+			const k: KanbanState = {
+				overdue: todayView.overdue,
+				today: todayView.today,
+				upcoming: todayView.upcoming,
+			};
+			onCreated(k);
+			toast.success("Subtarea creada");
+			onClose();
+		} catch {
+			toast.error("Error al crear la subtarea.");
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	const selectedActivity = activities.find((a) => a.id === selectedActivityId);
+	const inputStyle: React.CSSProperties = {
+		background: "#1e293b",
+		border: "1px solid #334155",
+		borderRadius: "6px",
+		color: "#f1f5f9",
+		fontSize: "13px",
+		padding: "8px 11px",
+		width: "100%",
+		outline: "none",
+		boxSizing: "border-box",
+	};
+	const labelStyle: React.CSSProperties = {
+		fontSize: "10px",
+		color: "#64748b",
+		textTransform: "uppercase",
+		letterSpacing: "0.05em",
+		fontWeight: 600,
+		display: "block",
+		marginBottom: "6px",
+	};
+
+	return createPortal(
+		<>
+			<div
+				onClick={onClose}
+				style={{
+					position: "fixed",
+					inset: 0,
+					background: "rgba(0,0,0,0.55)",
+					zIndex: 2100,
+					backdropFilter: "blur(4px)",
+					animation: "fadeInBackdrop 0.18s ease",
+				}}
+			/>
+			<div
+				style={{
+					position: "fixed",
+					inset: 0,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					zIndex: 2101,
+					pointerEvents: "none",
+					padding: "24px",
+				}}
+			>
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label="Crear subtarea"
+					style={{
+						pointerEvents: "auto",
+						position: "relative",
+						width: "min(560px, 100%)",
+						background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
+						borderRadius: "14px",
+						border: "1px solid #1e293b",
+						boxShadow: "0 24px 64px rgba(0,0,0,0.65), inset 0 0 60px rgba(124,92,255,0.03)",
+						display: "flex",
+						flexDirection: "column",
+						animation: "fadeInScale 0.22s cubic-bezier(0.16,1,0.3,1)",
+						maxHeight: "calc(100vh - 48px)",
+						overflow: "hidden",
+					}}
+					onClick={(e) => e.stopPropagation()}
+				>
+					{/* Soft radial bloom — no hard line */}
+					<div
+						style={{
+							position: "absolute",
+							top: "-20px",
+							left: "-20px",
+							right: "-20px",
+							height: "180px",
+							background:
+								"radial-gradient(ellipse 85% 60% at 50% 0%, rgba(124,92,255,0.18) 0%, rgba(124,92,255,0.06) 50%, transparent 100%)",
+							pointerEvents: "none",
+							zIndex: 1,
+						}}
+					/>
+					{/* Header */}
+					<div
+						style={{
+							position: "relative",
+							zIndex: 2,
+							display: "flex",
+							alignItems: "center",
+							padding: "18px 20px 16px",
+							borderBottom: "1px solid #1e293b",
+						}}
+					>
+						<div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
+							<div
+								style={{
+									width: 42,
+									height: 42,
+									flexShrink: 0,
+									borderRadius: "13px",
+									background: "linear-gradient(135deg,rgba(124,92,255,0.25),rgba(167,139,250,0.1))",
+									border: "1px solid rgba(124,92,255,0.25)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									color: "#c084fc",
+									boxShadow: "0 0 20px rgba(124,92,255,0.18)",
+								}}
+							>
+								<ClipboardList size={20} />
+							</div>
+							<div>
+								<h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>
+									Nueva subtarea
+								</h2>
+								<p style={{ margin: 0, fontSize: "11px", color: "#475569" }}>
+									Asóciala a una actividad existente
+								</p>
+							</div>
+						</div>
+						<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+							<X size={15} />
+						</button>
+					</div>
+					{/* Body */}
+					<div
+						style={{
+							overflowY: "auto",
+							padding: "20px",
+							display: "flex",
+							flexDirection: "column",
+							gap: "16px",
+						}}
+					>
+						{/* Activity picker */}
+						<div>
+							<label style={labelStyle}>Actividad</label>
+							<div style={{ position: "relative" }}>
+								<button
+									type="button"
+									onClick={() => setActDropOpen(!actDropOpen)}
+									style={{
+										...inputStyle,
+										textAlign: "left",
+										cursor: "pointer",
+										display: "flex",
+										alignItems: "center",
+										gap: "8px",
+										border: `1px solid ${actDropOpen ? "#c084fc" : "#334155"}`,
+									}}
+								>
+									{selectedActivity ? (
+										<>
+											<span
+												style={{
+													fontSize: "10px",
+													background: "rgba(192,132,252,0.1)",
+													color: "#c084fc",
+													padding: "1px 7px",
+													borderRadius: "20px",
+													fontWeight: 700,
+													flexShrink: 0,
+												}}
+											>
+												{selectedActivity.course_name || "Sin materia"}
+											</span>
+											<span
+												style={{
+													flex: 1,
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													whiteSpace: "nowrap",
+												}}
+											>
+												{selectedActivity.title}
+											</span>
+										</>
+									) : (
+										<span style={{ color: "#475569", flex: 1 }}>Selecciona una actividad...</span>
+									)}
+									<ChevronDown
+										size={14}
+										color="#64748b"
+										style={{
+											flexShrink: 0,
+											transform: actDropOpen ? "rotate(180deg)" : "none",
+											transition: "transform 0.15s",
+										}}
+									/>
+								</button>
+								{actDropOpen && (
+									<div
+										style={{
+											position: "absolute",
+											top: "calc(100% + 4px)",
+											left: 0,
+											right: 0,
+											background: "#1e293b",
+											border: "1px solid #334155",
+											borderRadius: "8px",
+											zIndex: 10,
+											maxHeight: "200px",
+											overflowY: "auto",
+											boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+											animation: "fadeInScale 0.14s ease",
+										}}
+									>
+										{activities.length === 0 ? (
+											<p style={{ padding: "12px", fontSize: "12px", color: "#64748b", margin: 0 }}>
+												No hay actividades.
+											</p>
+										) : (
+											activities.map((act) => (
+												<button
+													key={act.id}
+													type="button"
+													onClick={() => {
+														setSelectedActivityId(act.id);
+														setActDropOpen(false);
+													}}
+													style={{
+														width: "100%",
+														padding: "9px 12px",
+														background:
+															selectedActivityId === act.id
+																? "rgba(192,132,252,0.1)"
+																: "transparent",
+														border: "none",
+														cursor: "pointer",
+														display: "flex",
+														alignItems: "center",
+														gap: "8px",
+														borderBottom: "1px solid rgba(255,255,255,0.04)",
+														textAlign: "left",
+														transition: "background 0.12s",
+													}}
+													onMouseOver={(e) => {
+														if (selectedActivityId !== act.id)
+															e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+													}}
+													onMouseOut={(e) => {
+														if (selectedActivityId !== act.id)
+															e.currentTarget.style.background = "transparent";
+													}}
+												>
+													{act.course_name && (
+														<span
+															style={{
+																fontSize: "10px",
+																background: "rgba(192,132,252,0.1)",
+																color: "#c084fc",
+																padding: "1px 6px",
+																borderRadius: "20px",
+																fontWeight: 700,
+																flexShrink: 0,
+															}}
+														>
+															{act.course_name}
+														</span>
+													)}
+													<span
+														style={{
+															fontSize: "12px",
+															color: "#f1f5f9",
+															flex: 1,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+														}}
+													>
+														{act.title}
+													</span>
+													{selectedActivityId === act.id && (
+														<CheckCircle2 size={13} color="#c084fc" style={{ flexShrink: 0 }} />
+													)}
+												</button>
+											))
+										)}
+									</div>
+								)}
+							</div>
+						</div>
+						{/* Activity due date warning */}
+						{selectedActivity &&
+							(() => {
+								const actIsOverdue = selectedActivity.due_date < todayIso;
+								return (
+									<>
+										{actIsOverdue && (
+											<div
+												style={{
+													display: "flex",
+													alignItems: "flex-start",
+													gap: "10px",
+													background: "rgba(248,113,113,0.08)",
+													border: "1px solid rgba(248,113,113,0.35)",
+													borderRadius: "8px",
+													padding: "10px 13px",
+													marginBottom: "6px",
+												}}
+											>
+												<AlertTriangle
+													size={14}
+													color="#f87171"
+													style={{ flexShrink: 0, marginTop: "1px" }}
+												/>
+												<div>
+													<p
+														style={{
+															margin: 0,
+															fontSize: "12px",
+															color: "#f87171",
+															fontWeight: 700,
+														}}
+													>
+														⚠ Actividad vencida
+													</p>
+													<p
+														style={{
+															margin: "3px 0 0",
+															fontSize: "11px",
+															color: "#94a3b8",
+															lineHeight: 1.4,
+														}}
+													>
+														Esta actividad ya superó su fecha límite. La subtarea se creará de todas
+														formas.
+													</p>
+												</div>
+											</div>
+										)}
+										<div
+											style={{
+												display: "flex",
+												alignItems: "flex-start",
+												gap: "10px",
+												background: actIsOverdue
+													? "rgba(248,113,113,0.05)"
+													: "rgba(251,191,36,0.07)",
+												border: actIsOverdue
+													? "1px solid rgba(248,113,113,0.2)"
+													: "1px solid rgba(251,191,36,0.25)",
+												borderRadius: "8px",
+												padding: "10px 13px",
+											}}
+										>
+											<AlertTriangle
+												size={14}
+												color={actIsOverdue ? "#f87171" : "#fbbf24"}
+												style={{ flexShrink: 0, marginTop: "1px" }}
+											/>
+											<div>
+												<p
+													style={{
+														margin: 0,
+														fontSize: "12px",
+														color: actIsOverdue ? "#f87171" : "#fbbf24",
+														fontWeight: 600,
+													}}
+												>
+													Plazo de la actividad: {formatDate(selectedActivity.due_date)}
+												</p>
+												<p
+													style={{
+														margin: "3px 0 0",
+														fontSize: "11px",
+														color: "#94a3b8",
+														lineHeight: 1.4,
+													}}
+												>
+													{actIsOverdue
+														? "Puedes asignar cualquier fecha futura para esta subtarea."
+														: "La subtarea debe completarse dentro de este mismo plazo."}
+												</p>
+											</div>
+										</div>
+									</>
+								);
+							})()}
+						{/* Name */}
+						<div>
+							<label style={labelStyle}>Nombre de la subtarea</label>
+							<input
+								style={inputStyle}
+								placeholder="ej. Revisar capítulo 3..."
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								maxLength={200}
+								autoFocus
+								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+								onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+							/>
+						</div>
+						{/* Date + Hours */}
+						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+							<div>
+								<label style={labelStyle}>Fecha límite</label>
+								<input
+									style={inputStyle}
+									type="date"
+									min={todayIso}
+									max={
+										selectedActivity && selectedActivity.due_date >= todayIso
+											? selectedActivity.due_date
+											: undefined
+									}
+									value={targetDate}
+									onChange={(e) => setTargetDate(e.target.value)}
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								/>
+							</div>
+							<div>
+								<label style={labelStyle}>Tiempo estimado (h)</label>
+								<input
+									style={inputStyle}
+									type="number"
+									min="0"
+									step="0.5"
+									value={hours}
+									onChange={(e) => setHours(e.target.value)}
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								/>
+							</div>
+						</div>
+						{/* Status */}
+						<div>
+							<label style={labelStyle}>Estado inicial</label>
+							<StatusPicker value={status} onChange={setStatus} />
+						</div>
+					</div>
+					{/* Footer */}
+					<div
+						style={{
+							padding: "14px 20px",
+							borderTop: "1px solid #1e293b",
+							display: "flex",
+							gap: "8px",
+						}}
+					>
+						<button
+							onClick={() => void handleSubmit()}
+							disabled={saving}
+							className="modal-btn-primary"
+							style={{
+								flex: 1,
+								padding: "10px 16px",
+								borderRadius: "8px",
+								border: "none",
+								cursor: saving ? "wait" : "pointer",
+								fontSize: "13px",
+								fontWeight: 700,
+								background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+								color: "#fff",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "8px",
+								opacity: saving ? 0.7 : 1,
+								boxShadow: "0 4px 14px rgba(124,58,237,0.28)",
+							}}
+						>
+							{saving ? <Loader2 size={14} className="spinner" /> : <Plus size={14} />}
+							{saving ? "Creando..." : "Crear subtarea"}
+						</button>
+						<button
+							onClick={onClose}
+							disabled={saving}
+							className="modal-btn-cancel"
+							style={{
+								padding: "10px 18px",
+								borderRadius: "8px",
+								border: "1px solid #334155",
+								cursor: "pointer",
+								fontSize: "13px",
+								fontWeight: 600,
+								background: "transparent",
+								color: "#94a3b8",
+							}}
+						>
+							Cancelar
+						</button>
+					</div>
+				</div>
+			</div>
+		</>,
+		document.body,
+	);
+}
+
+/* ---- SubjectFormModal ---- */

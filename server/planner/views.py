@@ -3,6 +3,8 @@ from datetime import timedelta
 
 from django.http import Http404
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound, ValidationError
@@ -10,13 +12,25 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Activity, Subtask
-from .serializers import ActivitySerializer, SubtaskSerializer, UserSerializer
+from .models import Activity, Subject, Subtask
+from .serializers import (
+	ActivitySerializer,
+	SubjectSerializer,
+	SubtaskSerializer,
+	TodaySubtaskSerializer,
+	UserSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 
 @api_view(["GET"])
+@extend_schema(
+	summary="Health check",
+	description="Return a simple status object confirming the API is reachable.",
+	responses={200: OpenApiTypes.OBJECT},
+	examples=[OpenApiExample("Health example", value={"status": "ok"}, response_only=True)],
+)
 def health_check():
 	return Response({"status": "ok"})
 
@@ -24,12 +38,69 @@ def health_check():
 class MeView(APIView):
 	permission_classes = [IsAuthenticated]
 
+	@extend_schema(
+		summary="Current user",
+		description="Return details for the authenticated user.",
+		responses=UserSerializer,
+		examples=[
+			OpenApiExample(
+				"Me example",
+				value={
+					"id": 1,
+					"username": "juan",
+					"email": "juan@example.com",
+					"name": "Juan",
+					"max_daily_hours": 8,
+					"date_joined": "2024-01-01T00:00:00Z",
+				},
+				response_only=True,
+			)
+		],
+	)
 	def get(self, request):
 		serializer = UserSerializer(request.user)
 		return Response(serializer.data)
 
 
 class ActivityViewSet(viewsets.ModelViewSet):
+	"""
+	Activities endpoints (authenticated user only).
+
+	- GET /activities/ -> list activities (example abridged)
+
+		[
+			{
+				"id": 1,
+				"title": "Study",
+				"description": "...",
+				"estimated_hours": 2,
+				"course_name": "Math",
+				"user": 1,
+			}
+		]
+
+	- POST /activities/ -> create activity
+
+		Request example:
+		{
+			"title": "Study",
+			"description": "Read chapters",
+			"estimated_hours": 2,
+			"course_name": "Math",
+		}
+
+	- GET /activities/{id}/ -> retrieve activity
+
+	- PATCH /activities/{id}/ -> partial update
+
+		Request example: {"title": "Study session", "estimated_hours": 3}
+
+	- DELETE /activities/{id}/ -> delete activity
+
+		Response: 204 No Content
+
+	"""
+
 	serializer_class = ActivitySerializer
 	permission_classes = [IsAuthenticated]
 
@@ -39,6 +110,36 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	def perform_create(self, serializer):
 		serializer.save(user=self.request.user)
 
+	@extend_schema(
+		summary="Create activity",
+		description="Create a new activity for the authenticated user.",
+		request=ActivitySerializer,
+		responses={201: ActivitySerializer},
+		examples=[
+			OpenApiExample(
+				"Create request",
+				value={
+					"title": "Study",
+					"description": "Read chapters",
+					"estimated_hours": 2,
+					"course_name": "Math",
+				},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Create response",
+				value={
+					"id": 1,
+					"title": "Study",
+					"description": "Read chapters",
+					"estimated_hours": 2,
+					"course_name": "Math",
+					"user": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
 	def create(self, request, *args, **kwargs):
 		serializer = self.get_serializer(data=request.data)
 		if not serializer.is_valid():
@@ -48,6 +149,19 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		headers = self.get_success_headers(serializer.data)
 		return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+	@extend_schema(
+		summary="Delete activity",
+		description="Delete an activity owned by the authenticated user.",
+		responses={204: None},
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+	)
 	def destroy(self, request, *args, **kwargs):
 		try:
 			activity = self.get_object()
@@ -64,6 +178,39 @@ class ActivityViewSet(viewsets.ModelViewSet):
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			)
 
+	@extend_schema(
+		summary="Partial update activity",
+		description="Partially update fields of an activity.",
+		request=ActivitySerializer,
+		responses={200: ActivitySerializer},
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Patch request",
+				value={"title": "Study session", "estimated_hours": 3},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Patch response",
+				value={
+					"id": 1,
+					"title": "Study session",
+					"description": "Read chapters",
+					"estimated_hours": 3,
+					"course_name": "Math",
+					"user": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
 	def partial_update(self, request, *args, **kwargs):
 		try:
 			activity = self.get_object()
@@ -83,6 +230,101 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 		serializer.save()
 		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+	@extend_schema(
+		summary="List activities",
+		description="Return a list of activities for the authenticated user.",
+		responses=ActivitySerializer(many=True),
+		examples=[
+			OpenApiExample(
+				"List example",
+				value=[
+					{
+						"id": 1,
+						"title": "Study",
+						"description": "Read chapters",
+						"estimated_hours": 2,
+						"course_name": "Math",
+						"user": 1,
+					}
+				],
+				response_only=True,
+			),
+		],
+	)
+	def list(self, request, *args, **kwargs):
+		return super().list(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Update activity",
+		description="Replace an activity's fields (PUT).",
+		request=ActivitySerializer,
+		responses=ActivitySerializer,
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Update request",
+				value={
+					"title": "Study full",
+					"description": "Full replace",
+					"estimated_hours": 4,
+					"course_name": "Math",
+				},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Update response",
+				value={
+					"id": 1,
+					"title": "Study full",
+					"description": "Full replace",
+					"estimated_hours": 4,
+					"course_name": "Math",
+					"user": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
+	def update(self, request, *args, **kwargs):
+		return super().update(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Retrieve activity",
+		description="Get a single activity by id.",
+		responses=ActivitySerializer,
+		parameters=[
+			OpenApiParameter(
+				"id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Retrieve example",
+				value={
+					"id": 1,
+					"title": "Study",
+					"description": "Read chapters",
+					"estimated_hours": 2,
+					"course_name": "Math",
+					"user": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
+	def retrieve(self, request, *args, **kwargs):
+		return super().retrieve(request, *args, **kwargs)
 
 
 class SubtaskViewSet(viewsets.ModelViewSet):
@@ -107,6 +349,76 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		context["activity"] = self.get_activity()
 		return context
 
+	@extend_schema(
+		summary="List subtasks",
+		description="List subtasks for a given activity id.",
+		responses=SubtaskSerializer(many=True),
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"List subtasks example",
+				value=[
+					{
+						"id": 1,
+						"name": "Do exercises",
+						"estimated_hours": 2,
+						"target_date": "2026-03-01",
+						"status": "pending",
+						"ordering": 1,
+					}
+				],
+				response_only=True,
+			),
+		],
+	)
+	def list(self, request, *args, **kwargs):
+		return super().list(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Create subtask",
+		description="Create a subtask for the specified activity",
+		request=SubtaskSerializer,
+		responses={201: SubtaskSerializer},
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Create subtask request",
+				value={
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "pending",
+				},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Create subtask response",
+				value={
+					"id": 1,
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "pending",
+					"ordering": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
 	def create(self, request, *args, **kwargs):
 		activity = self.get_activity()
 		serializer = self.get_serializer(data=request.data)
@@ -127,6 +439,25 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			)
 
+	@extend_schema(
+		summary="Delete subtask",
+		description="Delete a subtask of the given activity.",
+		responses={204: None},
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+			OpenApiParameter(
+				"subtask_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Subtask id",
+			),
+		],
+	)
 	def destroy(self, request, activity_id=None, subtask_id=None):
 		activity = self.get_activity()
 
@@ -145,6 +476,104 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		subtask.delete()
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
+	@extend_schema(
+		summary="Retrieve subtask",
+		description="Get a single subtask by id.",
+		responses=SubtaskSerializer,
+		parameters=[
+			OpenApiParameter(
+				"activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id"
+			),
+			OpenApiParameter(
+				"subtask_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subtask id"
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Retrieve subtask example",
+				value={
+					"id": 1,
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "pending",
+					"ordering": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
+	def retrieve(self, request, *args, **kwargs):
+		return super().retrieve(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Update subtask (full)",
+		description="Fully replace a subtask's fields.",
+		request=SubtaskSerializer,
+		responses={200: SubtaskSerializer},
+		parameters=[
+			OpenApiParameter(
+				"activity_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Activity id"
+			),
+			OpenApiParameter(
+				"subtask_id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subtask id"
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Update subtask request",
+				value={
+					"name": "Do exercises",
+					"estimated_hours": 3,
+					"target_date": "2026-03-05",
+					"status": "in_progress",
+				},
+				request_only=True,
+			),
+		],
+	)
+	def update(self, request, *args, **kwargs):
+		return super().update(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Partial update subtask",
+		description="Partially update a subtask's fields.",
+		request=SubtaskSerializer,
+		responses={200: SubtaskSerializer},
+		parameters=[
+			OpenApiParameter(
+				"activity_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Activity id",
+			),
+			OpenApiParameter(
+				"subtask_id",
+				OpenApiTypes.INT,
+				OpenApiParameter.PATH,
+				description="Subtask id",
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Patch subtask request",
+				value={"status": "completed"},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Patch subtask response",
+				value={
+					"id": 1,
+					"name": "Do exercises",
+					"estimated_hours": 2,
+					"target_date": "2026-03-01",
+					"status": "completed",
+					"ordering": 1,
+				},
+				response_only=True,
+			),
+		],
+	)
 	def partial_update(self, request, activity_id=None, subtask_id=None):
 		activity = self.get_activity()
 
@@ -179,6 +608,23 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 class TodayView(APIView):
 	permission_classes = [IsAuthenticated]
 
+	@extend_schema(
+		summary="Today view",
+		description=("Return overdue, today and upcoming subtasks. Optional query param `n_days`."),
+		responses=OpenApiTypes.OBJECT,
+		examples=[
+			OpenApiExample(
+				"Today example",
+				value={
+					"overdue": [],
+					"today": [],
+					"upcoming": [],
+					"meta": {"n_days": 7},
+				},
+				response_only=True,
+			),
+		],
+	)
 	def get(self, request):
 		try:
 			n_days_param = request.query_params.get("n_days")
@@ -220,9 +666,9 @@ class TodayView(APIView):
 
 			return Response(
 				{
-					"overdue": SubtaskSerializer(overdue, many=True).data,
-					"today": SubtaskSerializer(today_tasks, many=True).data,
-					"upcoming": SubtaskSerializer(upcoming, many=True).data,
+					"overdue": TodaySubtaskSerializer(overdue, many=True).data,
+					"today": TodaySubtaskSerializer(today_tasks, many=True).data,
+					"upcoming": TodaySubtaskSerializer(upcoming, many=True).data,
 					"meta": {"n_days": n_days},
 				}
 			)
@@ -232,6 +678,197 @@ class TodayView(APIView):
 
 		except Exception:
 			logger.exception("Unexpected error generating today view")
+			return Response(
+				{"errors": {"server": "Internal server error"}},
+				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			)
+
+
+class SubjectViewSet(viewsets.ModelViewSet):
+	"""
+	CRUD Endpoints for Academic Subjects.
+	"""
+
+	serializer_class = SubjectSerializer
+	permission_classes = [IsAuthenticated]
+
+	def get_queryset(self):
+		return Subject.objects.all().order_by("-creation_date")
+
+	@extend_schema(
+		summary="List subjects",
+		description="Retrieve a list of all academic subjects.",
+		responses=SubjectSerializer(many=True),
+		examples=[
+			OpenApiExample(
+				"List subjects example",
+				value=[
+					{"id": 1, "name": "Cálculo III", "creation_date": "2026-01-01"},
+					{"id": 2, "name": "Redes", "creation_date": "2026-01-02"},
+				],
+				response_only=True,
+			)
+		],
+	)
+	def list(self, request, *args, **kwargs):
+		return super().list(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Retrieve subject",
+		description="Get details of a specific subject by ID.",
+		responses=SubjectSerializer,
+		parameters=[
+			OpenApiParameter(
+				"id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subject id"
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Retrieve subject example",
+				value={"id": 1, "name": "Cálculo III", "creation_date": "2026-01-01"},
+				response_only=True,
+			)
+		],
+	)
+	def retrieve(self, request, *args, **kwargs):
+		return super().retrieve(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Create subject",
+		description="Create a new academic subject.",
+		request=SubjectSerializer,
+		responses={201: SubjectSerializer},
+		examples=[
+			OpenApiExample(
+				"Create subject request",
+				value={"name": "Cálculo III"},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Create subject response",
+				value={"id": 1, "name": "Cálculo III", "creation_date": "2026-01-01"},
+				response_only=True,
+			),
+		],
+	)
+	def create(self, request, *args, **kwargs):
+		serializer = self.get_serializer(data=request.data)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+	@extend_schema(
+		summary="Update subject (full)",
+		description="Fully replace a subject's name. Renames course_name on linked activities.",
+		request=SubjectSerializer,
+		responses={200: SubjectSerializer},
+		parameters=[
+			OpenApiParameter(
+				"id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subject id"
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Update subject request",
+				value={"name": "Álgebra Lineal"},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Update subject response",
+				value={"id": 1, "name": "Álgebra Lineal", "creation_date": "2026-01-01"},
+				response_only=True,
+			),
+		],
+	)
+	def update(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+
+		old_name = subject.name
+		serializer = self.get_serializer(subject, data=request.data, partial=False)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		new_name = serializer.data["name"]
+
+		# Propagate rename to all activities that used this subject's name
+		if old_name != new_name:
+			Activity.objects.filter(course_name=old_name).update(course_name=new_name)
+			Activity.objects.filter(subject=subject).update(course_name=new_name)
+
+		return Response(serializer.data, status=status.HTTP_200_OK)
+
+	@extend_schema(
+		summary="Partial update subject",
+		description="Partially update subject fields. Renames course_name on linked activities.",
+		request=SubjectSerializer,
+		responses={200: SubjectSerializer},
+		parameters=[
+			OpenApiParameter(
+				"id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subject id"
+			),
+		],
+		examples=[
+			OpenApiExample(
+				"Patch subject request",
+				value={"name": "Álgebra Lineal"},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Patch subject response",
+				value={"id": 1, "name": "Álgebra Lineal", "creation_date": "2026-01-01"},
+				response_only=True,
+			),
+		],
+	)
+	def partial_update(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+
+		old_name = subject.name
+		serializer = self.get_serializer(subject, data=request.data, partial=True)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		serializer.save()
+		new_name = serializer.data["name"]
+
+		# Propagate rename to all activities that used this subject's name
+		if old_name != new_name:
+			Activity.objects.filter(course_name=old_name).update(course_name=new_name)
+			Activity.objects.filter(subject=subject).update(course_name=new_name)
+
+		return Response(serializer.data, status=status.HTTP_200_OK)
+
+	@extend_schema(
+		summary="Delete subject",
+		description="Delete a subject and all its activities and subtasks (cascade).",
+		responses={204: None},
+		parameters=[
+			OpenApiParameter(
+				"id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Subject id"
+			),
+		],
+	)
+	def destroy(self, request, *args, **kwargs):
+		try:
+			subject = self.get_object()
+			# Cascade: delete all activities matching by name or FK (subtasks cascade automatically)
+			Activity.objects.filter(course_name=subject.name).delete()
+			Activity.objects.filter(subject=subject).delete()
+			subject.delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+		except Http404 as err:
+			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
+		except Exception:
+			logger.exception("Unexpected error deleting subject")
 			return Response(
 				{"errors": {"server": "Internal server error"}},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
