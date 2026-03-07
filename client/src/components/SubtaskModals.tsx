@@ -15,6 +15,7 @@ import { fetchTodayView, createSubtask, type Activity, type Subtask } from "../a
 import { toast } from "sonner";
 import "./Dashboard.css";
 import { formatDate, type KanbanState } from "./dashboardUtils";
+import { useTheme } from "../hooks/useTheme";
 
 interface EditSubtaskModalProps {
 	subtask: Subtask;
@@ -52,23 +53,33 @@ export function EditSubtaskModal({
 		return () => window.removeEventListener("keydown", handleKey);
 	}, [onClose]);
 
+	const { isDark } = useTheme();
+	const smModalBg = isDark
+		? "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)"
+		: "linear-gradient(155deg,#f8f5ff 0%,#f0ecfb 60%,#ebe5f7 100%)";
+	const smModalBdr = isDark ? "#1e293b" : "rgba(124,92,255,0.2)";
+	const smTitleClr = isDark ? "#f1f5f9" : "#1e1a33";
+	const smSubClr = isDark ? "#64748b" : "#7a62c9";
+	const smCancelBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
+	const smCancelClr = isDark ? "#94a3b8" : "#7a62c9";
+
 	const labelStyle: React.CSSProperties = {
 		display: "block",
 		fontSize: "11px",
 		fontWeight: 700,
-		color: "#94a3b8",
+		color: isDark ? "#94a3b8" : "#7a62c9",
 		textTransform: "uppercase",
 		letterSpacing: "0.06em",
 		marginBottom: "6px",
 	};
 	const inputStyle: React.CSSProperties = {
 		width: "100%",
-		background: "#0f172a",
-		border: "1px solid #334155",
+		background: isDark ? "#0f172a" : "#ffffff",
+		border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
 		borderRadius: "7px",
 		padding: "9px 12px",
 		fontSize: "14px",
-		color: "#f1f5f9",
+		color: isDark ? "#f1f5f9" : "#1e1a33",
 		outline: "none",
 		boxSizing: "border-box",
 		transition: "border-color 0.15s",
@@ -104,8 +115,8 @@ export function EditSubtaskModal({
 				<div
 					style={{
 						position: "relative",
-						background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
-						border: "1px solid #1e293b",
+						background: smModalBg,
+						border: `1px solid ${smModalBdr}`,
 						borderRadius: "16px",
 						width: "100%",
 						maxWidth: "440px",
@@ -122,7 +133,7 @@ export function EditSubtaskModal({
 							alignItems: "center",
 							justifyContent: "space-between",
 							padding: "18px 20px 14px",
-							borderBottom: "1px solid #1e293b",
+							borderBottom: `1px solid ${smModalBdr}`,
 						}}
 					>
 						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -140,14 +151,14 @@ export function EditSubtaskModal({
 								<Pencil size={15} color="#c084fc" />
 							</div>
 							<div>
-								<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#f1f5f9" }}>
+								<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: smTitleClr }}>
 									Editar subtarea
 								</p>
 								<p
 									style={{
 										margin: 0,
 										fontSize: "11px",
-										color: "#64748b",
+										color: smSubClr,
 										marginTop: "1px",
 										maxWidth: "260px",
 										overflow: "hidden",
@@ -174,7 +185,9 @@ export function EditSubtaskModal({
 								maxLength={200}
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-								onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								onBlur={(e) =>
+									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+								}
 							/>
 						</div>
 						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -188,7 +201,11 @@ export function EditSubtaskModal({
 									value={initialHours}
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
+									}
 								/>
 							</div>
 							<div>
@@ -199,7 +216,11 @@ export function EditSubtaskModal({
 									value={initialDate}
 									onChange={(e) => setDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
+									}
 								/>
 							</div>
 						</div>
@@ -242,12 +263,12 @@ export function EditSubtaskModal({
 							style={{
 								padding: "10px 18px",
 								borderRadius: "8px",
-								border: "1px solid #334155",
+								border: `1px solid ${smCancelBdr}`,
 								cursor: "pointer",
 								fontSize: "13px",
 								fontWeight: 600,
 								background: "transparent",
-								color: "#94a3b8",
+								color: smCancelClr,
 							}}
 						>
 							Cancelar
@@ -280,6 +301,15 @@ export function DeleteConfirmModal({
 		window.addEventListener("keydown", handleKey);
 		return () => window.removeEventListener("keydown", handleKey);
 	}, [onClose, deleting]);
+	const { isDark } = useTheme();
+	const dcModalBg = isDark
+		? "linear-gradient(155deg,#1a0e0e 0%,#110909 55%,#090404 100%)"
+		: "linear-gradient(155deg,#fff5f5 0%,#fff0f0 55%,#ffe8e8 100%)";
+	const dcTitleClr = isDark ? "#f1f5f9" : "#1e1a33";
+	const dcTextClr = isDark ? "#94a3b8" : "#7a728f";
+	const dcStrongClr = isDark ? "#e2e8f0" : "#1e1a33";
+	const dcCancelBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
+	const dcCancelClr = isDark ? "#94a3b8" : "#7a62c9";
 
 	return createPortal(
 		<>
@@ -313,7 +343,7 @@ export function DeleteConfirmModal({
 				<div
 					style={{
 						position: "relative",
-						background: "linear-gradient(155deg,#1a0e0e 0%,#110909 55%,#090404 100%)",
+						background: dcModalBg,
 						border: "1px solid rgba(248,113,113,0.2)",
 						borderRadius: "16px",
 						width: "100%",
@@ -347,12 +377,12 @@ export function DeleteConfirmModal({
 					>
 						<Trash2 size={22} color="#f87171" />
 					</div>
-					<p style={{ margin: "0 0 8px", fontSize: "17px", fontWeight: 700, color: "#f1f5f9" }}>
+					<p style={{ margin: "0 0 8px", fontSize: "17px", fontWeight: 700, color: dcTitleClr }}>
 						¿Eliminar subtarea?
 					</p>
-					<p style={{ margin: "0 0 24px", fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
+					<p style={{ margin: "0 0 24px", fontSize: "13px", color: dcTextClr, lineHeight: 1.6 }}>
 						Se eliminará permanentemente{" "}
-						<strong style={{ color: "#e2e8f0" }}>"{subtaskName}"</strong>. Esta acción no se puede
+						<strong style={{ color: dcStrongClr }}>"{subtaskName}"</strong>. Esta acción no se puede
 						deshacer.
 					</p>
 					<div style={{ display: "flex", gap: "10px" }}>
@@ -388,12 +418,12 @@ export function DeleteConfirmModal({
 								flex: 1,
 								padding: "11px 14px",
 								borderRadius: "8px",
-								border: "1px solid #334155",
+								border: `1px solid ${dcCancelBdr}`,
 								cursor: "pointer",
 								fontSize: "13px",
 								fontWeight: 600,
 								background: "transparent",
-								color: "#94a3b8",
+								color: dcCancelClr,
 							}}
 						>
 							Cancelar
@@ -414,6 +444,7 @@ export function StatusPicker({
 	value: Subtask["status"];
 	onChange: (v: Subtask["status"]) => void;
 }) {
+	const { isDark } = useTheme();
 	const opts: { v: Subtask["status"]; label: string; color: string }[] = [
 		{ v: "pending", label: "Pendiente", color: "#fbbf24" },
 		{ v: "in_progress", label: "En progreso", color: "#60a5fa" },
@@ -430,9 +461,9 @@ export function StatusPicker({
 						flex: 1,
 						padding: "7px 5px",
 						borderRadius: "6px",
-						border: `1.5px solid ${value === v ? color : "#334155"}`,
+						border: `1.5px solid ${value === v ? color : isDark ? "#334155" : "rgba(124,92,255,0.18)"}`,
 						background: value === v ? `${color}20` : "transparent",
-						color: value === v ? color : "#64748b",
+						color: value === v ? color : isDark ? "#64748b" : "#9580c9",
 						fontSize: "11px",
 						fontWeight: 700,
 						cursor: "pointer",
@@ -464,6 +495,7 @@ export function CreateSubtaskModal({
 	const [status, setStatus] = useState<Subtask["status"]>("pending");
 	const [saving, setSaving] = useState(false);
 	const [actDropOpen, setActDropOpen] = useState(false);
+	const { isDark } = useTheme();
 	const _now = new Date();
 	const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
@@ -520,10 +552,10 @@ export function CreateSubtaskModal({
 
 	const selectedActivity = activities.find((a) => a.id === selectedActivityId);
 	const inputStyle: React.CSSProperties = {
-		background: "#1e293b",
-		border: "1px solid #334155",
+		background: isDark ? "#1e293b" : "#ffffff",
+		border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
 		borderRadius: "6px",
-		color: "#f1f5f9",
+		color: isDark ? "#f1f5f9" : "#1e1a33",
 		fontSize: "13px",
 		padding: "8px 11px",
 		width: "100%",
@@ -532,7 +564,7 @@ export function CreateSubtaskModal({
 	};
 	const labelStyle: React.CSSProperties = {
 		fontSize: "10px",
-		color: "#64748b",
+		color: isDark ? "#64748b" : "#7a62c9",
 		textTransform: "uppercase",
 		letterSpacing: "0.05em",
 		fontWeight: 600,
@@ -573,9 +605,11 @@ export function CreateSubtaskModal({
 						pointerEvents: "auto",
 						position: "relative",
 						width: "min(560px, 100%)",
-						background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
+						background: isDark
+							? "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)"
+							: "linear-gradient(155deg,#f8f5ff 0%,#f0ecfb 60%,#ebe5f7 100%)",
 						borderRadius: "14px",
-						border: "1px solid #1e293b",
+						border: `1px solid ${isDark ? "#1e293b" : "rgba(124,92,255,0.2)"}`,
 						boxShadow: "0 24px 64px rgba(0,0,0,0.65), inset 0 0 60px rgba(124,92,255,0.03)",
 						display: "flex",
 						flexDirection: "column",
@@ -607,7 +641,7 @@ export function CreateSubtaskModal({
 							display: "flex",
 							alignItems: "center",
 							padding: "18px 20px 16px",
-							borderBottom: "1px solid #1e293b",
+							borderBottom: `1px solid ${isDark ? "#1e293b" : "rgba(124,92,255,0.2)"}`,
 						}}
 					>
 						<div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
@@ -629,7 +663,14 @@ export function CreateSubtaskModal({
 								<ClipboardList size={20} />
 							</div>
 							<div>
-								<h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>
+								<h2
+									style={{
+										margin: 0,
+										fontSize: "15px",
+										fontWeight: 700,
+										color: isDark ? "#f1f5f9" : "#1e1a33",
+									}}
+								>
 									Nueva subtarea
 								</h2>
 								<p style={{ margin: 0, fontSize: "11px", color: "#475569" }}>
@@ -665,7 +706,7 @@ export function CreateSubtaskModal({
 										display: "flex",
 										alignItems: "center",
 										gap: "8px",
-										border: `1px solid ${actDropOpen ? "#c084fc" : "#334155"}`,
+										border: `1px solid ${actDropOpen ? "#c084fc" : isDark ? "#334155" : "rgba(124,92,255,0.18)"}`,
 									}}
 								>
 									{selectedActivity ? (
@@ -714,8 +755,8 @@ export function CreateSubtaskModal({
 											top: "calc(100% + 4px)",
 											left: 0,
 											right: 0,
-											background: "#1e293b",
-											border: "1px solid #334155",
+											background: isDark ? "#1e293b" : "rgba(255,255,255,0.97)",
+											border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
 											borderRadius: "8px",
 											zIndex: 10,
 											maxHeight: "200px",
@@ -725,7 +766,14 @@ export function CreateSubtaskModal({
 										}}
 									>
 										{activities.length === 0 ? (
-											<p style={{ padding: "12px", fontSize: "12px", color: "#64748b", margin: 0 }}>
+											<p
+												style={{
+													padding: "12px",
+													fontSize: "12px",
+													color: isDark ? "#64748b" : "#7a62c9",
+													margin: 0,
+												}}
+											>
 												No hay actividades.
 											</p>
 										) : (
@@ -780,7 +828,7 @@ export function CreateSubtaskModal({
 													<span
 														style={{
 															fontSize: "12px",
-															color: "#f1f5f9",
+															color: isDark ? "#f1f5f9" : "#1e1a33",
 															flex: 1,
 															overflow: "hidden",
 															textOverflow: "ellipsis",
@@ -838,7 +886,7 @@ export function CreateSubtaskModal({
 														style={{
 															margin: "3px 0 0",
 															fontSize: "11px",
-															color: "#94a3b8",
+															color: isDark ? "#94a3b8" : "#7a728f",
 															lineHeight: 1.4,
 														}}
 													>
@@ -883,7 +931,7 @@ export function CreateSubtaskModal({
 													style={{
 														margin: "3px 0 0",
 														fontSize: "11px",
-														color: "#94a3b8",
+														color: isDark ? "#94a3b8" : "#7a728f",
 														lineHeight: 1.4,
 													}}
 												>
@@ -907,7 +955,9 @@ export function CreateSubtaskModal({
 								maxLength={200}
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-								onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+								onBlur={(e) =>
+									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+								}
 							/>
 						</div>
 						{/* Date + Hours */}
@@ -926,7 +976,11 @@ export function CreateSubtaskModal({
 									value={targetDate}
 									onChange={(e) => setTargetDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
+									}
 								/>
 							</div>
 							<div>
@@ -939,7 +993,11 @@ export function CreateSubtaskModal({
 									value={hours}
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-									onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
+									}
 								/>
 							</div>
 						</div>
@@ -953,7 +1011,7 @@ export function CreateSubtaskModal({
 					<div
 						style={{
 							padding: "14px 20px",
-							borderTop: "1px solid #1e293b",
+							borderTop: `1px solid ${isDark ? "#1e293b" : "rgba(124,92,255,0.2)"}`,
 							display: "flex",
 							gap: "8px",
 						}}
@@ -990,12 +1048,12 @@ export function CreateSubtaskModal({
 							style={{
 								padding: "10px 18px",
 								borderRadius: "8px",
-								border: "1px solid #334155",
+								border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
 								cursor: "pointer",
 								fontSize: "13px",
 								fontWeight: 600,
 								background: "transparent",
-								color: "#94a3b8",
+								color: isDark ? "#94a3b8" : "#7a62c9",
 							}}
 						>
 							Cancelar

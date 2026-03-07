@@ -435,6 +435,17 @@
 		drop-shadow(0 0 22px rgba(124, 108, 235, 0.45));
 }
 
+[data-theme="light"] .sidebar-logo {
+	filter: brightness(0.55) saturate(1.2) sepia(0.25);
+	opacity: 0.75;
+	animation: none;
+}
+
+[data-theme="light"] .sidebar-logo:hover {
+	filter: brightness(0.45) saturate(1.4) sepia(0.2);
+	opacity: 1;
+}
+
 @keyframes logo-glow {
 	0%,
 	100% {
@@ -1890,4 +1901,193 @@
 .modal-btn-danger:active:not(:disabled) {
 	transform: translateY(0) scale(0.97) !important;
 	transition-duration: 0.06s !important;
+}
+
+/* ============================================================
+   LIGHT THEME — Dashboard variable overrides
+   ============================================================ */
+
+[data-theme="light"] .dashboard {
+	--bg-primary: #f0edfb;
+	--bg-secondary: #e8e2f7;
+	--sidebar-g1: #e4dcf5;
+	--sidebar-g2: #dcd4ee;
+	--sidebar-g3: #d3cbe6;
+	--sidebar-border: rgba(124, 108, 235, 0.18);
+	--text-primary: #1e1a33;
+	--text-secondary: #4a4568;
+	--text-muted: #7a728f;
+	--text-white: #1e1a33;
+	--accent: #7c6ceb;
+	--accent-light: #6d5fdb;
+	--accent-soft: #5548c0;
+	--accent-bg: rgba(124, 108, 235, 0.08);
+	--accent-bg-hover: rgba(124, 108, 235, 0.14);
+	--accent-border: rgba(124, 108, 235, 0.22);
+	--card-bg: rgba(255, 255, 255, 0.78);
+	--card-border: rgba(124, 108, 235, 0.14);
+	--row-hover: rgba(124, 108, 235, 0.05);
+	--red-bg: rgba(239, 68, 68, 0.08);
+	--red: #dc2626;
+	--blue-bg: rgba(59, 130, 246, 0.08);
+	--blue: #2563eb;
+	--yellow-bg: rgba(202, 138, 4, 0.1);
+	--yellow: #ca8a04;
+	--capacity-glow: rgba(124, 108, 235, 0.28);
+	--shadow-accent: rgba(124, 108, 235, 0.2);
+}
+
+/* Sidebar gradient */
+[data-theme="light"] .sidebar {
+	background: linear-gradient(
+		180deg,
+		var(--sidebar-g1) 0%,
+		var(--sidebar-g2) 50%,
+		var(--sidebar-g3) 100%
+	);
+	border-right-color: rgba(124, 108, 235, 0.15);
+	box-shadow: 2px 0 20px rgba(124, 108, 235, 0.06);
+}
+
+/* Avatar online dot border color */
+[data-theme="light"] .avatar-status {
+	border-color: var(--sidebar-g1);
+}
+
+/* Subtask dropdown (hardcoded dark colors → light) */
+[data-theme="light"] .subtask-dropdown {
+	background: rgba(232, 226, 250, 0.85);
+	border-top-color: rgba(124, 108, 235, 0.14);
+}
+
+[data-theme="light"] .subtask-title {
+	color: #1e1a33;
+}
+
+[data-theme="light"] .subtask-row-completed .subtask-title {
+	color: rgba(30, 26, 51, 0.48);
+}
+
+[data-theme="light"] .subtask-icon-button {
+	background: rgba(124, 108, 235, 0.08);
+	color: #4a4568;
+}
+
+[data-theme="light"] .subtask-icon-button:hover {
+	background: rgba(124, 108, 235, 0.16);
+}
+
+[data-theme="light"] .subtask-row-completed {
+	background: rgba(124, 108, 235, 0.05);
+}
+
+[data-theme="light"] .subtask-row-pending {
+	background: rgba(239, 68, 68, 0.07);
+}
+
+[data-theme="light"] .subtask-row-in_progress {
+	background: rgba(59, 130, 246, 0.07);
+}
+
+[data-theme="light"] .subtask-status-completed {
+	background: rgba(30, 26, 51, 0.12);
+	color: #4a4568;
+}
+
+[data-theme="light"] .subtask-status-pending {
+	background: rgba(220, 38, 38, 0.1);
+	color: #b91c1c;
+}
+
+[data-theme="light"] .subtask-status-in_progress {
+	background: rgba(37, 99, 235, 0.1);
+	color: #1d4ed8;
+}
+
+/* Subtasks toggle button */
+[data-theme="light"] .btn-subtasks-toggle {
+	background: rgba(124, 108, 235, 0.07);
+	border-color: rgba(124, 108, 235, 0.2);
+	color: var(--text-secondary);
+}
+
+[data-theme="light"] .btn-subtasks-toggle:hover {
+	background: rgba(124, 108, 235, 0.13);
+	border-color: rgba(124, 108, 235, 0.3);
+}
+
+[data-theme="light"] .btn-subtasks-toggle-open {
+	background: rgba(124, 108, 235, 0.15);
+	border-color: rgba(124, 108, 235, 0.6);
+	color: #3d2faa;
+}
+
+/* Progress bar track */
+[data-theme="light"] .subtask-progress-bar {
+	background: rgba(124, 108, 235, 0.12);
+}
+
+/* Compact confirm modals */
+[data-theme="light"] .ca-modal {
+	background: linear-gradient(180deg, rgba(243, 238, 255, 0.97), rgba(235, 230, 252, 0.99));
+	border-color: rgba(124, 108, 235, 0.15);
+	box-shadow: 0 18px 40px rgba(124, 108, 235, 0.12);
+}
+
+[data-theme="light"] .ca-header {
+	border-bottom-color: rgba(124, 108, 235, 0.1);
+}
+
+[data-theme="light"] .ca-modal-compact .ca-actions .btn-ghost {
+	background: rgba(124, 108, 235, 0.06);
+	color: var(--text-secondary);
+	border-color: rgba(124, 108, 235, 0.15);
+}
+
+[data-theme="light"] .ca-actions .btn-ghost {
+	background: rgba(124, 108, 235, 0.06);
+	color: var(--text-secondary);
+	border-color: rgba(124, 108, 235, 0.15);
+}
+
+/* Modal close button */
+[data-theme="light"] .modal-close-x {
+	background: rgba(124, 108, 235, 0.06);
+	border-color: rgba(124, 108, 235, 0.15);
+	color: #7a728f;
+}
+
+/* Cancel button on light */
+[data-theme="light"] .modal-btn-cancel:hover:not(:disabled) {
+	border-color: #a09bc0 !important;
+	color: #1e1a33 !important;
+	background: rgba(124, 108, 235, 0.08) !important;
+}
+
+/* Sidebar theme toggle row */
+.sidebar-theme-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.55rem 0.85rem;
+	margin-bottom: 0.5rem;
+	border-radius: 12px;
+	background: var(--accent-bg);
+	border: 1px solid var(--accent-border);
+	transition:
+		background 0.3s,
+		border-color 0.3s;
+}
+
+.sidebar-theme-label {
+	font-size: 0.8rem;
+	font-weight: 500;
+	color: var(--text-secondary);
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+
+.sidebar-theme-label svg {
+	color: var(--accent-light);
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, BookOpen, Loader2, CheckCircle2, Pencil } from "lucide-react";
 import { type Activity } from "../api/dashboard";
+import { useTheme } from "../hooks/useTheme";
 import "./Dashboard.css";
 
 interface SubjectFormModalProps {
@@ -17,6 +18,7 @@ export function SubjectFormModal({
 	onClose,
 	onConfirm,
 }: SubjectFormModalProps) {
+	const { isDark } = useTheme();
 	const [value, setValue] = useState(current ?? "");
 	const inputRef = useRef<HTMLInputElement>(null);
 	useEffect(() => {
@@ -29,14 +31,26 @@ export function SubjectFormModal({
 		onConfirm(name);
 	}
 
+	const modalBg = isDark
+		? "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)"
+		: "linear-gradient(155deg,#f8f5ff 0%,#f0ecfb 60%,#ebe5f7 100%)";
+	const modalBdr = isDark ? "#1e293b" : "rgba(124,92,255,0.2)";
+	const inputBg = isDark ? "#0f172a" : "#ffffff";
+	const inputBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
+	const inputClr = isDark ? "#f1f5f9" : "#1e1a33";
+	const titleClr = isDark ? "#f1f5f9" : "#1e1a33";
+	const subtitleClr = isDark ? "#64748b" : "#7a62c9";
+	const cancelBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
+	const cancelClr = isDark ? "#94a3b8" : "#7a62c9";
+
 	return (
 		<div
 			onClick={(e) => e.stopPropagation()}
 			style={{
 				fontFamily: "inherit",
 				position: "relative",
-				background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
-				border: "1px solid #1e293b",
+				background: modalBg,
+				border: `1px solid ${modalBdr}`,
 				borderRadius: "16px",
 				padding: "24px 28px 20px",
 				width: "400px",
@@ -96,7 +110,7 @@ export function SubjectFormModal({
 				<div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
 					<h3
 						style={{
-							color: "#f1f5f9",
+							color: titleClr,
 							fontWeight: 700,
 							fontSize: "16px",
 							margin: 0,
@@ -104,7 +118,7 @@ export function SubjectFormModal({
 					>
 						{mode === "add" ? "Nueva materia" : "Renombrar materia"}
 					</h3>
-					<p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+					<p style={{ margin: 0, fontSize: "12px", color: subtitleClr }}>
 						{mode === "add"
 							? "Agrupa tus actividades por asignatura"
 							: "Escribe el nuevo nombre para esta materia"}
@@ -125,17 +139,17 @@ export function SubjectFormModal({
 				}}
 				style={{
 					fontFamily: "inherit",
-					background: "#0f172a",
-					border: "1px solid #334155",
+					background: inputBg,
+					border: `1px solid ${inputBdr}`,
 					borderRadius: "8px",
 					padding: "10px 14px",
-					color: "#f1f5f9",
+					color: inputClr,
 					fontSize: "14px",
 					outline: "none",
 					transition: "border-color 0.15s",
 				}}
 				onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
-				onBlur={(e) => (e.currentTarget.style.borderColor = "#334155")}
+				onBlur={(e) => (e.currentTarget.style.borderColor = inputBdr)}
 			/>
 			<div style={{ display: "flex", gap: "8px" }}>
 				<button
@@ -170,13 +184,13 @@ export function SubjectFormModal({
 					style={{
 						padding: "10px 18px",
 						borderRadius: "8px",
-						border: "1px solid #334155",
+						border: `1px solid ${cancelBdr}`,
 						cursor: "pointer",
 						fontFamily: "inherit",
 						fontSize: "13px",
 						fontWeight: 600,
 						background: "transparent",
-						color: "#94a3b8",
+						color: cancelClr,
 					}}
 				>
 					Cancelar
@@ -206,14 +220,24 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 	const [courseName, setCourseName] = useState(activity.course_name || "");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
+	const { isDark } = useTheme();
+
+	const eaModalBg = isDark
+		? "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)"
+		: "linear-gradient(155deg,#f8f5ff 0%,#f0ecfb 60%,#ebe5f7 100%)";
+	const eaModalBdr = isDark ? "#1e293b" : "rgba(124,92,255,0.2)";
+	const eaTitleClr = isDark ? "#f1f5f9" : "#1e1a33";
+	const eaLabelClr = isDark ? "#64748b" : "#7a62c9";
+	const eaCancelBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
+	const eaCancelClr = isDark ? "#94a3b8" : "#7a62c9";
 
 	const fld: React.CSSProperties = {
 		fontFamily: "inherit",
-		background: "#0f172a",
-		border: "1px solid #334155",
+		background: isDark ? "#0f172a" : "#ffffff",
+		border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
 		borderRadius: "8px",
 		padding: "10px 14px",
-		color: "#f1f5f9",
+		color: isDark ? "#f1f5f9" : "#1e1a33",
 		fontSize: "14px",
 		outline: "none",
 		width: "100%",
@@ -246,8 +270,8 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 			style={{
 				fontFamily: "inherit",
 				position: "relative",
-				background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
-				border: "1px solid #1e293b",
+				background: eaModalBg,
+				border: `1px solid ${eaModalBdr}`,
 				borderRadius: "16px",
 				padding: "24px 28px 20px",
 				width: "480px",
@@ -277,7 +301,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 					>
 						<Pencil size={14} color="#c084fc" />
 					</div>
-					<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#f1f5f9" }}>
+					<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: eaTitleClr }}>
 						Editar actividad
 					</p>
 				</div>
@@ -302,7 +326,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 			<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<span
 					style={{
-						color: "#64748b",
+						color: eaLabelClr,
 						fontSize: "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
@@ -316,7 +340,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 			<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<span
 					style={{
-						color: "#64748b",
+						color: eaLabelClr,
 						fontSize: "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
@@ -336,7 +360,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 				<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 					<span
 						style={{
-							color: "#64748b",
+							color: eaLabelClr,
 							fontSize: "11px",
 							fontWeight: 700,
 							textTransform: "uppercase",
@@ -355,7 +379,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 				<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 					<span
 						style={{
-							color: "#64748b",
+							color: eaLabelClr,
 							fontSize: "11px",
 							fontWeight: 700,
 							textTransform: "uppercase",
@@ -378,7 +402,7 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 			<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<span
 					style={{
-						color: "#64748b",
+						color: eaLabelClr,
 						fontSize: "11px",
 						fontWeight: 700,
 						textTransform: "uppercase",
@@ -433,12 +457,12 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 					style={{
 						padding: "10px 18px",
 						borderRadius: "8px",
-						border: "1px solid #334155",
+						border: `1px solid ${eaCancelBdr}`,
 						cursor: "pointer",
 						fontSize: "13px",
 						fontWeight: 600,
 						background: "transparent",
-						color: "#94a3b8",
+						color: eaCancelClr,
 					}}
 				>
 					Cancelar

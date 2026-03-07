@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTheme } from "../hooks/useTheme";
 import {
 	CalendarCheck,
 	CalendarClock,
@@ -63,6 +64,55 @@ export default function TodayKanban({
 	activities: Activity[];
 	searchQuery?: string;
 }) {
+	const { isDark } = useTheme();
+	// Theme-aware color palette (avoids CSS overriding inline styles)
+	const tv = {
+		pillBg: isDark ? "#0d1525" : "rgba(255,255,255,0.72)",
+		pillBorder: isDark ? "#1e293b" : "rgba(124,92,255,0.2)",
+		pillText: isDark ? "#94a3b8" : "#4a4568",
+		pillStrong: isDark ? "#f1f5f9" : "#1e1a33",
+		pillIdle: isDark ? "#475569" : "#7a62c9",
+		chipBg: isDark ? "rgba(15,27,45,0.6)" : "rgba(124,92,255,0.06)",
+		chipBorder: isDark ? "#1e293b" : "rgba(124,92,255,0.18)",
+		chipColor: isDark ? "#64748b" : "#7a62c9",
+		chipChkBdr: isDark ? "#334155" : "rgba(124,92,255,0.3)",
+		tabBg: isDark ? "#0d1525" : "rgba(255,255,255,0.65)",
+		tabShadow: isDark ? "inset 0 0 0 1px #1e293b" : "inset 0 0 0 1px rgba(124,92,255,0.18)",
+		tabHoverBg: isDark ? "#111827" : "rgba(124,92,255,0.1)",
+		tabHoverSh: isDark ? "inset 0 0 0 1px #334155" : "inset 0 0 0 1px rgba(124,92,255,0.28)",
+		tabTagClr: isDark ? "#7d8fa3" : "#7a8aaa",
+		tabCntBg: isDark ? "#1e293b" : "rgba(124,92,255,0.1)",
+		tabCntClr: isDark ? "#475569" : "#6258a0",
+		tabSubClr: isDark ? "#334155" : "#9b8eba",
+		emptyBg: isDark ? "#0d1525" : "rgba(124,92,255,0.07)",
+		emptyBdr: isDark ? "#1e293b" : "rgba(124,92,255,0.2)",
+		emptyIcon: isDark ? "#1e3a5f" : "#c4b5fd",
+		emptyTxt: isDark ? "#334155" : "#7a728f",
+		cardBg: isDark ? "#0f1b2d" : "rgba(255,255,255,0.82)",
+		cardBgDone: isDark ? "rgba(13,21,37,0.6)" : "rgba(124,92,255,0.04)",
+		cardBgProg: isDark ? "rgba(96,165,250,0.04)" : "rgba(59,130,246,0.05)",
+		cardBdrDone: isDark ? "#1a2336" : "rgba(124,92,255,0.1)",
+		cardBdrProg: isDark ? "#1e3a5f" : "rgba(96,165,250,0.22)",
+		cardBdr: isDark ? "#1e3050" : "rgba(124,92,255,0.18)",
+		cardLBdrDone: isDark ? "#1e3050" : "rgba(124,92,255,0.15)",
+		cardHoverBg: isDark ? "#132040" : "rgba(255,255,255,0.97)",
+		cardHoverBgDone: isDark ? "rgba(13,21,37,0.85)" : "rgba(124,92,255,0.07)",
+		cardHoverBdr: isDark ? "#2a4060" : "rgba(124,92,255,0.28)",
+		cardHoverBdrDone: isDark ? "#243050" : "rgba(124,92,255,0.15)",
+		titDone: isDark ? "#3d566e" : "#94a3b8",
+		titProg: isDark ? "#93c5fd" : "#3b82f6",
+		titNml: isDark ? "#e2e8f0" : "#1e1a33",
+		actDone: isDark ? "#2a3d52" : "#b0bcc9",
+		actNml: isDark ? "#5e798f" : "#5878a0",
+		hrsDone: isDark ? "#2a3d52" : "#b0bcc9",
+		hrsNml: isDark ? "#d4a017" : "#c48e00",
+		statusDoneTxt: isDark ? "#2a4a3a" : "#3d9977",
+		dropBg: isDark ? "#1e293b" : "rgba(255,255,255,0.97)",
+		dropBdr: isDark ? "#334155" : "rgba(124,92,255,0.22)",
+		dropSh: isDark ? "0 8px 24px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.12)",
+		dropTxt: isDark ? "#94a3b8" : "#7a728f",
+	} as const;
+
 	const [kanban, setKanban] = useState<KanbanState>(initialData ?? EMPTY_KANBAN);
 	const [kanbanLoading, setKanbanLoading] = useState(!initialData);
 	const [selectedSubtask, setSelectedSubtask] = useState<{
@@ -284,12 +334,12 @@ export default function TodayKanban({
 						display: "flex",
 						alignItems: "center",
 						gap: "8px",
-						background: "#0d1525",
-						border: "1px solid #1e293b",
+						background: tv.pillBg,
+						border: `1px solid ${tv.pillBorder}`,
 						borderRadius: "10px",
 						padding: "9px 14px",
 						fontSize: "13px",
-						color: "#94a3b8",
+						color: tv.pillText,
 						minWidth: 0,
 					}}
 				>
@@ -299,7 +349,7 @@ export default function TodayKanban({
 					>
 						{allItems.length > 0 ? (
 							<>
-								Tienes <strong style={{ color: "#f1f5f9" }}>{pendingCount}</strong> subtarea
+								Tienes <strong style={{ color: tv.pillStrong }}>{pendingCount}</strong> subtarea
 								{pendingCount !== 1 ? "s" : ""} pendiente{pendingCount !== 1 ? "s" : ""}.
 								{hasOverdueOpen && (
 									<span style={{ marginLeft: "10px", color: "#f87171", fontWeight: 600 }}>
@@ -308,7 +358,9 @@ export default function TodayKanban({
 								)}
 							</>
 						) : (
-							<span style={{ color: "#475569" }}>Sin subtareas urgentes — ¡todo bajo control!</span>
+							<span style={{ color: tv.pillIdle }}>
+								Sin subtareas urgentes — ¡todo bajo control!
+							</span>
 						)}
 					</span>
 				</div>
@@ -368,9 +420,9 @@ export default function TodayKanban({
 									gap: "5px",
 									padding: "5px 10px 5px 8px",
 									borderRadius: "20px",
-									border: active ? `1px solid ${accent}55` : "1px solid #1e293b",
-									background: active ? `${accent}18` : "rgba(15,27,45,0.6)",
-									color: active ? accent : "#64748b",
+									border: active ? `1px solid ${accent}55` : `1px solid ${tv.chipBorder}`,
+									background: active ? `${accent}18` : tv.chipBg,
+									color: active ? accent : tv.chipColor,
 									fontSize: "11px",
 									fontWeight: active ? 600 : 400,
 									cursor: "pointer",
@@ -385,7 +437,7 @@ export default function TodayKanban({
 										width: "14px",
 										height: "14px",
 										borderRadius: "4px",
-										border: active ? `1.5px solid ${accent}` : "1.5px solid #334155",
+										border: active ? `1.5px solid ${accent}` : `1.5px solid ${tv.chipChkBdr}`,
 										background: active ? `${accent}22` : "transparent",
 										display: "flex",
 										alignItems: "center",
@@ -433,20 +485,20 @@ export default function TodayKanban({
 								cursor: "pointer",
 								textAlign: "left",
 								overflow: "hidden",
-								background: active ? `${accent}14` : "#0d1525",
-								boxShadow: active ? `inset 0 0 0 1.5px ${accent}50` : "inset 0 0 0 1px #1e293b",
+								background: active ? `${accent}14` : tv.tabBg,
+								boxShadow: active ? `inset 0 0 0 1.5px ${accent}50` : tv.tabShadow,
 								transition: "all 0.18s",
 							}}
 							onMouseOver={(e) => {
 								if (!active) {
-									e.currentTarget.style.background = "#111827";
-									e.currentTarget.style.boxShadow = "inset 0 0 0 1px #334155";
+									e.currentTarget.style.background = tv.tabHoverBg;
+									e.currentTarget.style.boxShadow = tv.tabHoverSh;
 								}
 							}}
 							onMouseOut={(e) => {
 								if (!active) {
-									e.currentTarget.style.background = "#0d1525";
-									e.currentTarget.style.boxShadow = "inset 0 0 0 1px #1e293b";
+									e.currentTarget.style.background = tv.tabBg;
+									e.currentTarget.style.boxShadow = tv.tabShadow;
 								}
 							}}
 						>
@@ -475,7 +527,7 @@ export default function TodayKanban({
 										gap: "6px",
 										fontSize: "12px",
 										fontWeight: 700,
-										color: active ? accent : "#7d8fa3",
+										color: active ? accent : tv.tabTagClr,
 									}}
 								>
 									<span style={{ display: "flex" }}>{icon}</span>
@@ -487,8 +539,8 @@ export default function TodayKanban({
 										fontWeight: 800,
 										padding: "1px 8px",
 										borderRadius: "20px",
-										background: active ? `${accent}25` : "#1e293b",
-										color: active ? accent : "#475569",
+										background: active ? `${accent}25` : tv.tabCntBg,
+										color: active ? accent : tv.tabCntClr,
 										transition: "all 0.18s",
 									}}
 								>
@@ -499,7 +551,7 @@ export default function TodayKanban({
 							<span
 								style={{
 									fontSize: "10px",
-									color: active ? `${accent}99` : "#334155",
+									color: active ? `${accent}99` : tv.tabSubClr,
 									fontWeight: 500,
 									lineHeight: 1,
 								}}
@@ -593,16 +645,16 @@ export default function TodayKanban({
 										width: 48,
 										height: 48,
 										borderRadius: "50%",
-										background: "#0d1525",
-										border: "1px solid #1e293b",
+										background: tv.emptyBg,
+										border: `1px solid ${tv.emptyBdr}`,
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
 									}}
 								>
-									<CheckCircle2 size={22} color="#1e3a5f" />
+									<CheckCircle2 size={22} color={tv.emptyIcon} />
 								</div>
-								<p style={{ fontSize: "13px", margin: 0, color: "#334155", fontWeight: 500 }}>
+								<p style={{ fontSize: "13px", margin: 0, color: tv.emptyTxt, fontWeight: 500 }}>
 									Nada por aquí — ¡todo libre! 🎉
 								</p>
 							</div>
@@ -652,7 +704,7 @@ export default function TodayKanban({
 									const borderColor = isSelected
 										? "#c084fc"
 										: isCompleted
-											? "#1e293b"
+											? tv.cardLBdrDone
 											: (sColor[subtask.status] ?? accent);
 									return (
 										<div
@@ -681,12 +733,12 @@ export default function TodayKanban({
 												background: isSelected
 													? "rgba(192,132,252,0.08)"
 													: isCompleted
-														? "rgba(13,21,37,0.6)"
+														? tv.cardBgDone
 														: subtask.status === "in_progress"
-															? "rgba(96,165,250,0.04)"
-															: "#0f1b2d",
-												border: `1px solid ${isSelected ? "rgba(192,132,252,0.4)" : isCompleted ? "#1a2336" : subtask.status === "in_progress" ? "#1e3a5f" : "#1e3050"}`,
-												borderLeft: `3px solid ${isCompleted ? "#1e3050" : borderColor}`,
+															? tv.cardBgProg
+															: tv.cardBg,
+												border: `1px solid ${isSelected ? "rgba(192,132,252,0.4)" : isCompleted ? tv.cardBdrDone : subtask.status === "in_progress" ? tv.cardBdrProg : tv.cardBdr}`,
+												borderLeft: `3px solid ${isCompleted ? tv.cardLBdrDone : borderColor}`,
 												borderRadius: "10px",
 												padding: "13px 16px 13px 14px",
 												cursor: "pointer",
@@ -697,17 +749,21 @@ export default function TodayKanban({
 											onMouseOver={(e) => {
 												if (!isSelected) {
 													e.currentTarget.style.background = isCompleted
-														? "rgba(13,21,37,0.85)"
-														: "#132040";
-													e.currentTarget.style.borderColor = isCompleted ? "#243050" : "#2a4060";
+														? tv.cardHoverBgDone
+														: tv.cardHoverBg;
+													e.currentTarget.style.borderColor = isCompleted
+														? tv.cardHoverBdrDone
+														: tv.cardHoverBdr;
 												}
 											}}
 											onMouseOut={(e) => {
 												if (!isSelected) {
 													e.currentTarget.style.background = isCompleted
-														? "rgba(13,21,37,0.6)"
-														: "#0f1b2d";
-													e.currentTarget.style.borderColor = isCompleted ? "#1a2336" : "#1e3050";
+														? tv.cardBgDone
+														: tv.cardBg;
+													e.currentTarget.style.borderColor = isCompleted
+														? tv.cardBdrDone
+														: tv.cardBdr;
 												}
 											}}
 										>
@@ -782,12 +838,12 @@ export default function TodayKanban({
 																			top: openSelect!.top,
 																			left: openSelect!.left,
 																			zIndex: 9999,
-																			background: "#1e293b",
-																			border: "1px solid #334155",
+																			background: tv.dropBg,
+																			border: `1px solid ${tv.dropBdr}`,
 																			borderRadius: "10px",
 																			overflow: "hidden",
 																			minWidth: "130px",
-																			boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+																			boxShadow: tv.dropSh,
 																			animation: "dropdownOpen 0.15s cubic-bezier(0.16,1,0.3,1)",
 																			transformOrigin: "top left",
 																		}}
@@ -815,7 +871,7 @@ export default function TodayKanban({
 																					background:
 																						subtask.status === val ? `${color}20` : "transparent",
 																					border: "none",
-																					color: subtask.status === val ? color : "#94a3b8",
+																					color: subtask.status === val ? color : tv.dropTxt,
 																					fontSize: "12px",
 																					fontWeight: subtask.status === val ? 600 : 400,
 																					cursor: "pointer",
@@ -830,7 +886,7 @@ export default function TodayKanban({
 																					e.currentTarget.style.background =
 																						subtask.status === val ? `${color}20` : "transparent";
 																					e.currentTarget.style.color =
-																						subtask.status === val ? color : "#94a3b8";
+																						subtask.status === val ? color : tv.dropTxt;
 																				}}
 																			>
 																				<span
@@ -861,10 +917,10 @@ export default function TodayKanban({
 														fontSize: "14px",
 														fontWeight: 600,
 														color: isCompleted
-															? "#3d566e"
+															? tv.titDone
 															: subtask.status === "in_progress"
-																? "#93c5fd"
-																: "#e2e8f0",
+																? tv.titProg
+																: tv.titNml,
 														textDecoration: isCompleted ? "line-through" : "none",
 														margin: "0 0 6px",
 														lineHeight: 1.35,
@@ -904,7 +960,7 @@ export default function TodayKanban({
 														<span
 															style={{
 																fontSize: "11px",
-																color: isCompleted ? "#2a3d52" : "#5e798f",
+																color: isCompleted ? tv.actDone : tv.actNml,
 																overflow: "hidden",
 																textOverflow: "ellipsis",
 																whiteSpace: "nowrap",
@@ -947,7 +1003,7 @@ export default function TodayKanban({
 														<span
 															style={{
 																fontSize: "11px",
-																color: isCompleted ? "#2a3d52" : "#d4a017",
+																color: isCompleted ? tv.hrsDone : tv.hrsNml,
 																display: "flex",
 																alignItems: "center",
 																gap: "3px",
@@ -966,7 +1022,7 @@ export default function TodayKanban({
 															background: isCompleted
 																? "rgba(52,211,153,0.06)"
 																: `${sColor[subtask.status]}1a`,
-															color: isCompleted ? "#2a4a3a" : sColor[subtask.status],
+															color: isCompleted ? tv.statusDoneTxt : sColor[subtask.status],
 															fontWeight: 700,
 															display: "flex",
 															alignItems: "center",
@@ -979,7 +1035,7 @@ export default function TodayKanban({
 																width: 5,
 																height: 5,
 																borderRadius: "50%",
-																background: isCompleted ? "#2a4a3a" : sColor[subtask.status],
+																background: isCompleted ? tv.statusDoneTxt : sColor[subtask.status],
 																flexShrink: 0,
 															}}
 														/>

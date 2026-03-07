@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
 	User,
 	Lock,
@@ -17,6 +18,7 @@ import client from "../api/client";
 import "./Login.css";
 import lumaLogoFull from "../assets/luma.png";
 import heroIllustration from "../assets/login.png";
+import ThemeToggle from "./ThemeToggle";
 
 interface LoginProps {
 	onLoginSuccess: (token: string) => void;
@@ -77,6 +79,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
 	return (
 		<div className="lp-scene">
+			{/* ── Theme toggle — top-right corner ── */}
+			<div className="lp-theme-toggle-btn">
+				<ThemeToggle />
+			</div>
+
 			{/* ── Background atmospheric layer ── */}
 			<div className="lp-bg" aria-hidden="true">
 				<div className="lp-orb lp-orb--purple" />
@@ -168,7 +175,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								id="username"
 								type="text"
 								className="lp-field__input"
-								placeholder="tu usuario"
+								placeholder="Tu usuario"
 								value={username}
 								onChange={(e) => setUsername(e.target.value)}
 								disabled={isLoading}
@@ -200,21 +207,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 							/>
 							<button
 								type="button"
-								className={`lp-pw-toggle${showPassword ? " lp-pw-toggle--on" : ""}`}
+								className="lp-pw-toggle"
 								onClick={() => setShowPassword((v) => !v)}
 								tabIndex={-1}
 								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 							>
-								<Eye
-									className="lp-pw-toggle__icon lp-pw-toggle__icon--show"
-									size={16}
-									strokeWidth={1.5}
-								/>
-								<EyeOff
-									className="lp-pw-toggle__icon lp-pw-toggle__icon--hide"
-									size={16}
-									strokeWidth={1.5}
-								/>
+								{showPassword ? (
+									<EyeOff size={16} strokeWidth={1.5} />
+								) : (
+									<Eye size={16} strokeWidth={1.5} />
+								)}
 							</button>
 						</div>
 					</div>
@@ -233,9 +235,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
 				<footer className="lp-card__footer">
 					¿Primera vez por aquí?{" "}
-					<a href="#" className="lp-card__signup">
+					<Link to="/registro" className="lp-card__signup">
 						Crea una cuenta
-					</a>
+					</Link>
 				</footer>
 			</div>
 		</div>

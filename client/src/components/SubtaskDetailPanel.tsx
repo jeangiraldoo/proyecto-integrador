@@ -14,6 +14,7 @@ import {
 	Pencil,
 } from "lucide-react";
 import { type Subtask } from "../api/dashboard";
+import { useTheme } from "../hooks/useTheme";
 import { toast } from "sonner";
 import "./Dashboard.css";
 import { formatDate, type KanbanGroup } from "./dashboardUtils";
@@ -38,6 +39,24 @@ export function SubtaskDetailPanel({
 	) => Promise<void>;
 	onDelete: () => Promise<void>;
 }) {
+	const { isDark } = useTheme();
+	const sdp = {
+		panelBg: isDark ? "#0f172a" : "#ffffff",
+		panelBdr: isDark ? "#1e293b" : "rgba(124,92,255,0.18)",
+		divider: isDark ? "#1e293b" : "rgba(124,92,255,0.12)",
+		iconClr: isDark ? "#475569" : "#c4b5fd",
+		iconHoverX: isDark ? "#f1f5f9" : "#1e1a33",
+		titleClr: isDark ? "#f1f5f9" : "#1e1a33",
+		titleDone: isDark ? "#64748b" : "#9580c9",
+		metaIcon: isDark ? "#334155" : "#c4b5fd",
+		metaLabel: isDark ? "#475569" : "#9580c9",
+		metaValue: isDark ? "#94a3b8" : "#3d3466",
+		tsLabel: isDark ? "#334155" : "#b8a8e0",
+		tsKey: isDark ? "#475569" : "#9580c9",
+		tsVal: isDark ? "#64748b" : "#7a6ba8",
+		ctaBg: isDark ? "#1e293b" : "rgba(124,92,255,0.1)",
+		ctaClr: isDark ? "#64748b" : "#7c3aed",
+	};
 	const isCompleted = subtask.status === "completed";
 	const groupMeta: Record<KanbanGroup, { accent: string; bgAccent: string; label: string }> = {
 		overdue: { accent: "#f87171", bgAccent: "rgba(248,113,113,0.1)", label: "Vencida" },
@@ -161,8 +180,8 @@ export function SubtaskDetailPanel({
 					right: 0,
 					bottom: 0,
 					width: "360px",
-					background: "#0f172a",
-					borderLeft: "1px solid #1e293b",
+					background: sdp.panelBg,
+					borderLeft: `1px solid ${sdp.panelBdr}`,
 					zIndex: 2001,
 					display: "flex",
 					flexDirection: "column",
@@ -177,7 +196,7 @@ export function SubtaskDetailPanel({
 						alignItems: "center",
 						gap: "8px",
 						padding: "13px 16px",
-						borderBottom: "1px solid #1e293b",
+						borderBottom: `1px solid ${sdp.divider}`,
 					}}
 				>
 					<span
@@ -203,14 +222,14 @@ export function SubtaskDetailPanel({
 								background: "none",
 								border: "none",
 								cursor: "pointer",
-								color: "#475569",
+								color: sdp.iconClr,
 								padding: "6px",
 								borderRadius: "5px",
 								display: "flex",
 								transition: "color 0.15s",
 							}}
 							onMouseOver={(e) => (e.currentTarget.style.color = "#c084fc")}
-							onMouseOut={(e) => (e.currentTarget.style.color = "#475569")}
+							onMouseOut={(e) => (e.currentTarget.style.color = sdp.iconClr)}
 						>
 							<Pencil size={15} />
 						</button>
@@ -221,14 +240,14 @@ export function SubtaskDetailPanel({
 								background: "none",
 								border: "none",
 								cursor: "pointer",
-								color: "#475569",
+								color: sdp.iconClr,
 								padding: "6px",
 								borderRadius: "5px",
 								display: "flex",
 								transition: "color 0.15s",
 							}}
 							onMouseOver={(e) => (e.currentTarget.style.color = "#f87171")}
-							onMouseOut={(e) => (e.currentTarget.style.color = "#475569")}
+							onMouseOut={(e) => (e.currentTarget.style.color = sdp.iconClr)}
 						>
 							<Trash2 size={15} />
 						</button>
@@ -239,14 +258,14 @@ export function SubtaskDetailPanel({
 								background: "none",
 								border: "none",
 								cursor: "pointer",
-								color: "#475569",
+								color: sdp.iconClr,
 								padding: "6px",
 								borderRadius: "5px",
 								display: "flex",
 								transition: "color 0.15s",
 							}}
-							onMouseOver={(e) => (e.currentTarget.style.color = "#f1f5f9")}
-							onMouseOut={(e) => (e.currentTarget.style.color = "#475569")}
+							onMouseOver={(e) => (e.currentTarget.style.color = isDark ? "#f1f5f9" : "#1e1a33")}
+							onMouseOut={(e) => (e.currentTarget.style.color = sdp.iconClr)}
 							aria-label="Cerrar"
 						>
 							<X size={17} />
@@ -291,7 +310,7 @@ export function SubtaskDetailPanel({
 							style={{
 								fontSize: "17px",
 								fontWeight: 700,
-								color: isCompleted ? "#64748b" : "#f1f5f9",
+								color: isCompleted ? sdp.titleDone : sdp.titleClr,
 								margin: 0,
 								lineHeight: 1.45,
 								textDecoration: isCompleted ? "line-through" : "none",
@@ -301,14 +320,14 @@ export function SubtaskDetailPanel({
 						</h2>
 					</div>
 
-					<div style={{ height: "1px", background: "#1e293b" }} />
+					<div style={{ height: "1px", background: sdp.divider }} />
 
 					{/* Meta rows */}
 					<div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 						{subtask.activity && (
 							<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
 								<span
-									style={{ color: "#334155", display: "flex", flexShrink: 0, marginTop: "1px" }}
+									style={{ color: sdp.metaIcon, display: "flex", flexShrink: 0, marginTop: "1px" }}
 								>
 									<ClipboardList size={15} />
 								</span>
@@ -316,7 +335,7 @@ export function SubtaskDetailPanel({
 									<p
 										style={{
 											fontSize: "10px",
-											color: "#475569",
+											color: sdp.metaLabel,
 											margin: "0 0 2px 0",
 											textTransform: "uppercase",
 											letterSpacing: "0.05em",
@@ -325,21 +344,23 @@ export function SubtaskDetailPanel({
 									>
 										Actividad
 									</p>
-									<p style={{ fontSize: "13px", color: "#94a3b8", margin: 0, fontWeight: 500 }}>
+									<p style={{ fontSize: "13px", color: sdp.metaValue, margin: 0, fontWeight: 500 }}>
 										{subtask.activity.title}
 									</p>
 								</div>
 							</div>
 						)}
 						<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-							<span style={{ color: "#334155", display: "flex", flexShrink: 0, marginTop: "1px" }}>
+							<span
+								style={{ color: sdp.metaIcon, display: "flex", flexShrink: 0, marginTop: "1px" }}
+							>
 								<CalendarClock size={15} />
 							</span>
 							<div>
 								<p
 									style={{
 										fontSize: "10px",
-										color: "#475569",
+										color: sdp.metaLabel,
 										margin: "0 0 2px 0",
 										textTransform: "uppercase",
 										letterSpacing: "0.05em",
@@ -348,20 +369,22 @@ export function SubtaskDetailPanel({
 								>
 									Fecha límite
 								</p>
-								<p style={{ fontSize: "13px", color: "#94a3b8", margin: 0, fontWeight: 500 }}>
+								<p style={{ fontSize: "13px", color: sdp.metaValue, margin: 0, fontWeight: 500 }}>
 									{formatDate(subtask.target_date)}
 								</p>
 							</div>
 						</div>
 						<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-							<span style={{ color: "#334155", display: "flex", flexShrink: 0, marginTop: "1px" }}>
+							<span
+								style={{ color: sdp.metaIcon, display: "flex", flexShrink: 0, marginTop: "1px" }}
+							>
 								<Clock size={15} />
 							</span>
 							<div>
 								<p
 									style={{
 										fontSize: "10px",
-										color: "#475569",
+										color: sdp.metaLabel,
 										margin: "0 0 2px 0",
 										textTransform: "uppercase",
 										letterSpacing: "0.05em",
@@ -376,14 +399,16 @@ export function SubtaskDetailPanel({
 							</div>
 						</div>
 						<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-							<span style={{ color: "#334155", display: "flex", flexShrink: 0, marginTop: "1px" }}>
+							<span
+								style={{ color: sdp.metaIcon, display: "flex", flexShrink: 0, marginTop: "1px" }}
+							>
 								{isCompleted ? <CheckCircle2 size={15} color="#34d399" /> : <Circle size={15} />}
 							</span>
 							<div>
 								<p
 									style={{
 										fontSize: "10px",
-										color: "#475569",
+										color: sdp.metaLabel,
 										margin: "0 0 2px 0",
 										textTransform: "uppercase",
 										letterSpacing: "0.05em",
@@ -402,7 +427,7 @@ export function SubtaskDetailPanel({
 						{subtask.ordering > 0 && (
 							<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
 								<span
-									style={{ color: "#334155", display: "flex", flexShrink: 0, marginTop: "1px" }}
+									style={{ color: sdp.metaIcon, display: "flex", flexShrink: 0, marginTop: "1px" }}
 								>
 									<ArrowUpDown size={15} />
 								</span>
@@ -410,7 +435,7 @@ export function SubtaskDetailPanel({
 									<p
 										style={{
 											fontSize: "10px",
-											color: "#475569",
+											color: sdp.metaLabel,
 											margin: "0 0 2px 0",
 											textTransform: "uppercase",
 											letterSpacing: "0.05em",
@@ -419,7 +444,7 @@ export function SubtaskDetailPanel({
 									>
 										Posición
 									</p>
-									<p style={{ fontSize: "13px", color: "#94a3b8", margin: 0, fontWeight: 500 }}>
+									<p style={{ fontSize: "13px", color: sdp.metaValue, margin: 0, fontWeight: 500 }}>
 										#{subtask.ordering}
 									</p>
 								</div>
@@ -430,12 +455,12 @@ export function SubtaskDetailPanel({
 					{/* Timestamps section */}
 					{(subtask.created_at || subtask.updated_at) && (
 						<>
-							<div style={{ height: "1px", background: "#1e293b" }} />
+							<div style={{ height: "1px", background: sdp.divider }} />
 							<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
 								<p
 									style={{
 										fontSize: "10px",
-										color: "#334155",
+										color: sdp.tsLabel,
 										textTransform: "uppercase",
 										letterSpacing: "0.06em",
 										fontWeight: 600,
@@ -452,8 +477,8 @@ export function SubtaskDetailPanel({
 											alignItems: "center",
 										}}
 									>
-										<span style={{ fontSize: "11px", color: "#475569" }}>Creada</span>
-										<span style={{ fontSize: "11px", color: "#64748b", fontFamily: "monospace" }}>
+										<span style={{ fontSize: "11px", color: sdp.tsKey }}>Creada</span>
+										<span style={{ fontSize: "11px", color: sdp.tsVal, fontFamily: "monospace" }}>
 											{formatDt(subtask.created_at)}
 										</span>
 									</div>
@@ -466,8 +491,8 @@ export function SubtaskDetailPanel({
 											alignItems: "center",
 										}}
 									>
-										<span style={{ fontSize: "11px", color: "#475569" }}>Última edición</span>
-										<span style={{ fontSize: "11px", color: "#64748b", fontFamily: "monospace" }}>
+										<span style={{ fontSize: "11px", color: sdp.tsKey }}>Última edición</span>
+										<span style={{ fontSize: "11px", color: sdp.tsVal, fontFamily: "monospace" }}>
 											{formatDt(subtask.updated_at)}
 										</span>
 									</div>
@@ -478,7 +503,7 @@ export function SubtaskDetailPanel({
 				</div>
 
 				{/* ---- Footer CTA ---- */}
-				<div style={{ padding: "14px 18px", borderTop: "1px solid #1e293b" }}>
+				<div style={{ padding: "14px 18px", borderTop: `1px solid ${sdp.divider}` }}>
 					<button
 						onClick={onToggle}
 						disabled={toggling}
@@ -494,8 +519,8 @@ export function SubtaskDetailPanel({
 							cursor: toggling ? "wait" : "pointer",
 							fontSize: "13px",
 							fontWeight: 700,
-							background: isCompleted ? "#1e293b" : "linear-gradient(135deg,#7c3aed,#6d28d9)",
-							color: isCompleted ? "#64748b" : "#fff",
+							background: isCompleted ? sdp.ctaBg : "linear-gradient(135deg,#7c3aed,#6d28d9)",
+							color: isCompleted ? sdp.ctaClr : "#fff",
 							transition: "opacity 0.15s",
 							boxShadow: isCompleted ? "none" : "0 4px 14px rgba(124,58,237,0.35)",
 						}}
