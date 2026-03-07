@@ -4,7 +4,7 @@
  * Esto demuestra cómo usar los fixtures para escribir tests
  * más limpios y fáciles de mantener.
  */
-import { test, expect } from "./fixtures/base.fixture";
+import { test, expect } from "../fixtures/base.fixture";
 
 test.describe("Login - Usando fixtures", () => {
     test("debe mostrar el formulario al cargar la página", async ({ loginPage, page }) => {
