@@ -5,7 +5,7 @@ import { Page } from '@playwright/test';
  */
 export async function loginAndGoToDashboard(page: Page) {
     // 1. Ir a la ruta de inicio (formulario de login)
-    await page.goto('/');
+    await page.goto('/login');
 
     // 2. Llenar credenciales
     await page.locator('#username').fill('jean');
