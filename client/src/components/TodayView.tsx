@@ -11,6 +11,9 @@ import {
 	Loader2,
 	Check,
 	CheckCircle2,
+	ArrowUp,
+	Zap,
+	ArrowRight,
 } from "lucide-react";
 import {
 	fetchTodayView,
@@ -24,6 +27,30 @@ import "./Dashboard.css";
 import { daysUntil, type KanbanGroup, type KanbanState, EMPTY_KANBAN } from "./dashboardUtils";
 import { SubtaskDetailPanel } from "./SubtaskDetailPanel";
 import { CreateSubtaskModal } from "./SubtaskModals";
+
+/** Sorting rule ("Regla de Oro"):
+ *  - Overdue  → chronological, oldest first (target_date ASC)
+ *  - Today    → tie-break by shortest duration first (estimated_hours ASC)
+ *  - Upcoming → chronological, nearest first (target_date ASC)
+ */
+function sortSubtasks(group: KanbanGroup, items: Subtask[]): Subtask[] {
+	const copy = [...items];
+	if (group === "overdue" || group === "upcoming") {
+		copy.sort((a, b) => {
+			const da = a.target_date ? new Date(a.target_date).getTime() : Infinity;
+			const db = b.target_date ? new Date(b.target_date).getTime() : Infinity;
+			return da - db;
+		});
+	} else {
+		// today: shortest estimated_hours first
+		copy.sort((a, b) => {
+			const ha = Number(a.estimated_hours) || 0;
+			const hb = Number(b.estimated_hours) || 0;
+			return ha - hb;
+		});
+	}
+	return copy;
+}
 
 export default function TodayKanban({
 	initialData,
@@ -209,27 +236,31 @@ export default function TodayKanban({
 		items: Subtask[];
 		accent: string;
 		icon: React.JSX.Element;
+		sortHint: { icon: React.JSX.Element; text: string };
 	}[] = [
 		{
 			group: "overdue" as KanbanGroup,
 			label: "Vencidas",
-			items: kanban.overdue,
+			items: sortSubtasks("overdue", kanban.overdue),
 			accent: "#f87171",
 			icon: <AlertTriangle size={13} />,
+			sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
 		},
 		{
 			group: "today" as KanbanGroup,
 			label: "Para hoy",
-			items: kanban.today,
+			items: sortSubtasks("today", kanban.today),
 			accent: "#c084fc",
 			icon: <CalendarCheck size={13} />,
+			sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
 		},
 		{
 			group: "upcoming" as KanbanGroup,
 			label: "Próximas",
-			items: kanban.upcoming,
+			items: sortSubtasks("upcoming", kanban.upcoming),
 			accent: "#60a5fa",
 			icon: <CalendarClock size={13} />,
+			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
 		},
 	];
 
@@ -479,6 +510,58 @@ export default function TodayKanban({
 					);
 				})}
 			</div>
+			{/* ─────────────────── Sort context bar ─────────────────── */}
+			{(() => {
+				const active = columns.find((c) => c.group === activeTab)!;
+				return (
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: "7px",
+							marginBottom: "10px",
+							padding: "7px 12px",
+							borderRadius: "8px",
+							background: `${active.accent}0f`,
+							border: `1px solid ${active.accent}28`,
+						}}
+					>
+						<span
+							style={{
+								fontSize: "11px",
+								color: `${active.accent}80`,
+								flexShrink: 0,
+								letterSpacing: "0.03em",
+								textTransform: "uppercase",
+								fontWeight: 600,
+							}}
+						>
+							Orden
+						</span>
+						<span
+							style={{
+								width: "1px",
+								height: "12px",
+								background: `${active.accent}30`,
+								flexShrink: 0,
+							}}
+						/>
+						<span
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: "5px",
+								fontSize: "12px",
+								fontWeight: 600,
+								color: active.accent,
+							}}
+						>
+							{active.sortHint.icon}
+							{active.sortHint.text}
+						</span>
+					</div>
+				);
+			})()}
 
 			{/* ─────────────────── Card list ─────────────────── */}
 			{columns
