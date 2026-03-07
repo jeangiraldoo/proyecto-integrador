@@ -464,7 +464,8 @@ export function CreateSubtaskModal({
 	const [status, setStatus] = useState<Subtask["status"]>("pending");
 	const [saving, setSaving] = useState(false);
 	const [actDropOpen, setActDropOpen] = useState(false);
-	const todayIso = new Date().toISOString().split("T")[0];
+	const _now = new Date();
+	const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
 	useEffect(() => {
 		function onKey(e: KeyboardEvent) {
@@ -571,7 +572,7 @@ export function CreateSubtaskModal({
 					style={{
 						pointerEvents: "auto",
 						position: "relative",
-						width: "min(480px, 100%)",
+						width: "min(560px, 100%)",
 						background: "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)",
 						borderRadius: "14px",
 						border: "1px solid #1e293b",
@@ -584,30 +585,48 @@ export function CreateSubtaskModal({
 					}}
 					onClick={(e) => e.stopPropagation()}
 				>
-					<div className="modal-glow-line" />
-					<div className="modal-glow-halo" />
+					{/* Soft radial bloom — no hard line */}
+					<div
+						style={{
+							position: "absolute",
+							top: "-20px",
+							left: "-20px",
+							right: "-20px",
+							height: "180px",
+							background:
+								"radial-gradient(ellipse 85% 60% at 50% 0%, rgba(124,92,255,0.18) 0%, rgba(124,92,255,0.06) 50%, transparent 100%)",
+							pointerEvents: "none",
+							zIndex: 1,
+						}}
+					/>
 					{/* Header */}
 					<div
 						style={{
+							position: "relative",
+							zIndex: 2,
 							display: "flex",
 							alignItems: "center",
 							padding: "18px 20px 16px",
 							borderBottom: "1px solid #1e293b",
 						}}
 					>
-						<div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+						<div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
 							<div
 								style={{
-									width: 32,
-									height: 32,
-									borderRadius: "8px",
-									background: "rgba(124,58,237,0.15)",
+									width: 42,
+									height: 42,
+									flexShrink: 0,
+									borderRadius: "13px",
+									background: "linear-gradient(135deg,rgba(124,92,255,0.25),rgba(167,139,250,0.1))",
+									border: "1px solid rgba(124,92,255,0.25)",
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "center",
+									color: "#c084fc",
+									boxShadow: "0 0 20px rgba(124,92,255,0.18)",
 								}}
 							>
-								<ClipboardList size={16} color="#c084fc" />
+								<ClipboardList size={20} />
 							</div>
 							<div>
 								<h2 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>
