@@ -5,7 +5,6 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
-import Proximamente from "./components/landing/ComingSoon";
 import client from "./api/client";
 import { isTokenValid, clearAuthStorage } from "./api/auth";
 import ThemeProvider from "./context/ThemeProvider";
