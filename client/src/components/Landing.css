@@ -1,0 +1,122 @@
+/* ══════════════════════════════════════════════════
+   Landing hero — sits centered in lp-scene
+══════════════════════════════════════════════════ */
+.landing-hero {
+	position: relative;
+	z-index: 1;
+	width: 480px;
+	max-width: calc(100vw - 2rem);
+	padding: 3rem 3rem 2.75rem;
+	background: rgba(12, 9, 30, 0.78);
+	backdrop-filter: blur(48px) saturate(150%);
+	-webkit-backdrop-filter: blur(48px) saturate(150%);
+	border: 1px solid rgba(196, 181, 253, 0.1);
+	border-radius: 26px;
+	box-shadow:
+		0 0 0 1px rgba(139, 112, 255, 0.05),
+		0 28px 70px rgba(0, 0, 0, 0.6),
+		0 0 90px rgba(100, 70, 230, 0.08);
+	text-align: center;
+}
+
+/* Reuse the card shine from lp-card */
+.landing-hero__shine {
+	position: absolute;
+	top: 0;
+	left: 18%;
+	right: 18%;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(196, 181, 253, 0.4), transparent);
+	border-radius: 1px;
+}
+
+.landing-hero__logo {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.landing-hero__title {
+	font-size: 2.2rem;
+	font-weight: 800;
+	color: #f0ecff;
+	letter-spacing: -0.035em;
+	line-height: 1.15;
+	margin: 0 0 0.85rem;
+}
+
+.landing-hero__subtitle {
+	font-size: 0.92rem;
+	color: #7e7a9e;
+	line-height: 1.65;
+	margin: 0 0 2.25rem;
+}
+
+/* ── CTA buttons ── */
+.landing-hero__actions {
+	display: flex;
+	gap: 0.85rem;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+/* Primary — inherits .lp-btn but as a link */
+.landing-btn--primary {
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Outline / secondary button */
+.landing-btn--outline {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.88rem 1.5rem;
+	border: 1px solid rgba(196, 181, 253, 0.22);
+	border-radius: 14px;
+	color: #b09fff;
+	font-size: 0.93rem;
+	font-weight: 600;
+	font-family: "Plus Jakarta Sans", sans-serif;
+	text-decoration: none;
+	transition:
+		border-color 0.2s ease,
+		color 0.2s ease,
+		background 0.2s ease;
+}
+
+.landing-btn--outline:hover {
+	border-color: rgba(196, 181, 253, 0.45);
+	color: #f0ecff;
+	background: rgba(139, 112, 255, 0.07);
+}
+
+/* ── Light theme overrides ── */
+[data-theme="light"] .landing-hero {
+	background: rgba(255, 255, 255, 0.9);
+	border-color: rgba(124, 108, 235, 0.16);
+	box-shadow:
+		0 0 0 1px rgba(124, 108, 235, 0.06),
+		0 28px 70px rgba(0, 0, 0, 0.1),
+		0 0 60px rgba(124, 108, 235, 0.06);
+}
+
+[data-theme="light"] .landing-hero__title {
+	color: #1e1a33;
+}
+
+[data-theme="light"] .landing-hero__subtitle {
+	color: #4a4568;
+}
+
+[data-theme="light"] .landing-btn--outline {
+	border-color: rgba(124, 108, 235, 0.28);
+	color: #6d5fdb;
+}
+
+[data-theme="light"] .landing-btn--outline:hover {
+	border-color: rgba(124, 108, 235, 0.5);
+	color: #4a3d9e;
+	background: rgba(124, 108, 235, 0.06);
+}
