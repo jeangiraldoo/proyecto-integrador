@@ -135,7 +135,7 @@ export function SubtaskDetailPanel({
 		try {
 			await onDelete();
 		} catch {
-			toast.error("No se pudo eliminar la subtarea.");
+			toast.error("No se pudo eliminar la tarea.");
 			setDeleting(false);
 			setDeleteStep(false);
 		}
@@ -173,7 +173,7 @@ export function SubtaskDetailPanel({
 			<aside
 				role="dialog"
 				aria-modal="true"
-				aria-label="Detalle de subtarea"
+				aria-label="Detalle de tarea"
 				style={{
 					position: "fixed",
 					top: 0,
