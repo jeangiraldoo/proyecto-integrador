@@ -324,31 +324,31 @@ export default function TodayKanban({
 		icon: React.JSX.Element;
 		sortHint: { icon: React.JSX.Element; text: string };
 	}[] = [
-		{
-			group: "overdue" as KanbanGroup,
-			label: "Vencidas",
-			items: sortSubtasks("overdue", kanban.overdue),
-			accent: "#f87171",
-			icon: <AlertTriangle size={13} />,
-			sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
-		},
-		{
-			group: "today" as KanbanGroup,
-			label: "Para hoy",
-			items: sortSubtasks("today", kanban.today),
-			accent: "#c084fc",
-			icon: <CalendarCheck size={13} />,
-			sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
-		},
-		{
-			group: "upcoming" as KanbanGroup,
-			label: "Próximas",
-			items: sortSubtasks("upcoming", kanban.upcoming),
-			accent: "#60a5fa",
-			icon: <CalendarClock size={13} />,
-			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
-		},
-	];
+			{
+				group: "overdue" as KanbanGroup,
+				label: "Vencidas",
+				items: sortSubtasks("overdue", kanban.overdue),
+				accent: "#f87171",
+				icon: <AlertTriangle size={13} />,
+				sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
+			},
+			{
+				group: "today" as KanbanGroup,
+				label: "Para hoy",
+				items: sortSubtasks("today", kanban.today),
+				accent: "#c084fc",
+				icon: <CalendarCheck size={13} />,
+				sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
+			},
+			{
+				group: "upcoming" as KanbanGroup,
+				label: "Próximas",
+				items: sortSubtasks("upcoming", kanban.upcoming),
+				accent: "#60a5fa",
+				icon: <CalendarClock size={13} />,
+				sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
+			},
+		];
 
 	return (
 		<>
@@ -753,9 +753,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-																group,
-															},
+															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+															group,
+														},
 												)
 											}
 											onKeyDown={(e) => {

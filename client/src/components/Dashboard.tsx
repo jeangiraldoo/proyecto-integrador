@@ -943,13 +943,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												payload.total_estimated_hours ??
 												(payload.subtasks
 													? payload.subtasks.reduce(
-															(acc, s) =>
-																acc +
-																(typeof s.estimated_hours === "number"
-																	? s.estimated_hours
-																	: Number(s.estimated_hours || 0)),
-															0,
-														)
+														(acc, s) =>
+															acc +
+															(typeof s.estimated_hours === "number"
+																? s.estimated_hours
+																: Number(s.estimated_hours || 0)),
+														0,
+													)
 													: 0),
 											subtasks: payload.subtasks?.map((s) => ({
 												name: s.title,
@@ -965,13 +965,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											payload.total_estimated_hours ??
 											(payload.subtasks
 												? payload.subtasks.reduce(
-														(acc, s) =>
-															acc +
-															(typeof s.estimated_hours === "number"
-																? s.estimated_hours
-																: Number(s.estimated_hours || 0)),
-														0,
-													)
+													(acc, s) =>
+														acc +
+														(typeof s.estimated_hours === "number"
+															? s.estimated_hours
+															: Number(s.estimated_hours || 0)),
+													0,
+												)
 												: 0);
 
 										const created: Activity = {
@@ -1142,11 +1142,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								maxDailyHours={user?.max_daily_hours ?? 0}
 								onConflict={handleConflictDetected}
 								onSubtaskMutated={() => {
-								void refreshConflicts();
-								void fetchActivities().then((acts) =>
-									setActivities(Array.isArray(acts) ? acts : []),
-								);
-							}}
+									void refreshConflicts();
+									void fetchActivities().then((acts) =>
+										setActivities(Array.isArray(acts) ? acts : []),
+									);
+								}}
 								searchQuery={searchQuery}
 							/>
 						)}

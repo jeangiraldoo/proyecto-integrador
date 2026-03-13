@@ -274,7 +274,7 @@ export default function ConflictModal({
         resolver?.mode === "hours"
             ? normalizeHourValue(
                 resolver.subtask.estimatedHours -
-                    Math.max(resolver.conflict.plannedHours - resolver.conflict.maxHours, 0),
+                Math.max(resolver.conflict.plannedHours - resolver.conflict.maxHours, 0),
             )
             : null;
 

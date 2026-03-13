@@ -540,7 +540,10 @@
 	font-weight: 700;
 	cursor: pointer;
 	white-space: nowrap;
-	transition: background 0.18s, border-color 0.18s, transform 0.18s;
+	transition:
+		background 0.18s,
+		border-color 0.18s,
+		transform 0.18s;
 }
 
 .cf-resolver-chip:hover:not(:disabled) {
