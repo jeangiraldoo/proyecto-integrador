@@ -203,14 +203,25 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class UserRegistrationSerializer(serializers.Serializer):
 	username = serializers.CharField(max_length=150)
-	email = serializers.EmailField(required=False, allow_blank=True, default="")
+	email = serializers.EmailField(required=True, allow_blank=False)
 	password = serializers.CharField(write_only=True, min_length=8)
 	password_confirm = serializers.CharField(write_only=True)
 
 	def validate_username(self, value):
-		if User.objects.filter(username=value).exists():
+		normalized_username = value.strip()
+		if not normalized_username:
+			raise serializers.ValidationError("El nombre de usuario es obligatorio.")
+		if User.objects.filter(username__iexact=normalized_username).exists():
 			raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
-		return value
+		return normalized_username
+
+	def validate_email(self, value):
+		normalized_email = value.strip().lower()
+		if not normalized_email:
+			raise serializers.ValidationError("El correo es obligatorio.")
+		if User.objects.filter(email__iexact=normalized_email).exists():
+			raise serializers.ValidationError("Este correo ya está en uso.")
+		return normalized_email
 
 	def validate(self, attrs):
 		if attrs["password"] != attrs["password_confirm"]:
@@ -221,7 +232,7 @@ class UserRegistrationSerializer(serializers.Serializer):
 		validated_data.pop("password_confirm")
 		user = User.objects.create_user(
 			username=validated_data["username"],
-			email=validated_data.get("email", ""),
+			email=validated_data["email"],
 			password=validated_data["password"],
 		)
 		return user
