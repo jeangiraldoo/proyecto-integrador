@@ -255,37 +255,43 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		}
 	}, []);
 
-	const notifyConflictToast = useCallback((count?: number) => {
-		const label =
-			typeof count === "number"
-				? count === 1
-					? "Tienes 1 conflicto pendiente."
-					: `Tienes ${count} conflictos pendientes.`
-				: "Se detecto una sobrecarga de horas.";
+	const notifyConflictToast = useCallback(
+		(count?: number) => {
+			const label =
+				typeof count === "number"
+					? count === 1
+						? "Tienes 1 conflicto pendiente."
+						: `Tienes ${count} conflictos pendientes.`
+					: "Se detecto una sobrecarga de horas.";
 
-		toast.warning(label, {
-			action: {
-				label: "Ver",
-				onClick: () => {
-					setConflictsOpen(true);
-					if (activeNav !== "today") navigate("/hoy");
+			toast.warning(label, {
+				action: {
+					label: "Ver",
+					onClick: () => {
+						setConflictsOpen(true);
+						if (activeNav !== "today") navigate("/hoy");
+					},
 				},
-			},
-			duration: 7000,
-		});
-	}, [activeNav, navigate]);
+				duration: 7000,
+			});
+		},
+		[activeNav, navigate],
+	);
 
-	const handleConflictDetected = useCallback((info: ConflictInfo) => {
-		void refreshConflicts().then((nextConflicts) => {
-			if (nextConflicts.length > 0) {
-				notifyConflictToast(nextConflicts.length);
-				return;
-			}
-			if (info.date) {
-				notifyConflictToast();
-			}
-		});
-	}, [notifyConflictToast, refreshConflicts]);
+	const handleConflictDetected = useCallback(
+		(info: ConflictInfo) => {
+			void refreshConflicts().then((nextConflicts) => {
+				if (nextConflicts.length > 0) {
+					notifyConflictToast(nextConflicts.length);
+					return;
+				}
+				if (info.date) {
+					notifyConflictToast();
+				}
+			});
+		},
+		[notifyConflictToast, refreshConflicts],
+	);
 
 	const conflictModalItems = useMemo<ConflictModalItem[]>(() => {
 		const subtaskPool = activities.flatMap((activity) =>
@@ -312,7 +318,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			const subtitle =
 				subtasks.length > 1
 					? `${subtasks.length} subtareas afectadas en esta fecha`
-					: subtasks[0]?.name ?? "Sobrecarga reportada por el backend";
+					: (subtasks[0]?.name ?? "Sobrecarga reportada por el backend");
 
 			return {
 				id: conflict.id,
@@ -342,7 +348,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const resolveActivityIdForConflictSubtask = useCallback(
 		(subtask: ConflictModalSubtask) => {
 			if (subtask.activityId) return subtask.activityId;
-			return activities.find((activity) => activity.subtasks?.some((item) => item.id === subtask.id))?.id;
+			return activities.find((activity) =>
+				activity.subtasks?.some((item) => item.id === subtask.id),
+			)?.id;
 		},
 		[activities],
 	);
@@ -380,13 +388,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const handleConflictDateResolve = useCallback(
-		async ({
-			subtask,
-			nextDate,
-		}: {
-			subtask: ConflictModalSubtask;
-			nextDate: string;
-		}) => {
+		async ({ subtask, nextDate }: { subtask: ConflictModalSubtask; nextDate: string }) => {
 			const activityId = resolveActivityIdForConflictSubtask(subtask);
 			if (!activityId) {
 				toast.error("No se pudo identificar la actividad de la subtarea.");
@@ -413,13 +415,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const handleConflictHoursResolve = useCallback(
-		async ({
-			subtask,
-			nextHours,
-		}: {
-			subtask: ConflictModalSubtask;
-			nextHours: number;
-		}) => {
+		async ({ subtask, nextHours }: { subtask: ConflictModalSubtask; nextHours: number }) => {
 			const activityId = resolveActivityIdForConflictSubtask(subtask);
 			if (!activityId) {
 				toast.error("No se pudo identificar la actividad de la subtarea.");
@@ -729,9 +725,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					dateLoadMap={dateLoadMap}
 					maxDailyHours={user?.max_daily_hours ?? 0}
 					onClose={() => setConflictsOpen(false)}
-					onChangeDate={({ subtask, nextDate }) =>
-						handleConflictDateResolve({ subtask, nextDate })
-					}
+					onChangeDate={({ subtask, nextDate }) => handleConflictDateResolve({ subtask, nextDate })}
 					onReduceHours={({ subtask, nextHours }) =>
 						handleConflictHoursResolve({ subtask, nextHours })
 					}
@@ -943,13 +937,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												payload.total_estimated_hours ??
 												(payload.subtasks
 													? payload.subtasks.reduce(
-														(acc, s) =>
-															acc +
-															(typeof s.estimated_hours === "number"
-																? s.estimated_hours
-																: Number(s.estimated_hours || 0)),
-														0,
-													)
+															(acc, s) =>
+																acc +
+																(typeof s.estimated_hours === "number"
+																	? s.estimated_hours
+																	: Number(s.estimated_hours || 0)),
+															0,
+														)
 													: 0),
 											subtasks: payload.subtasks?.map((s) => ({
 												name: s.title,
@@ -965,13 +959,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											payload.total_estimated_hours ??
 											(payload.subtasks
 												? payload.subtasks.reduce(
-													(acc, s) =>
-														acc +
-														(typeof s.estimated_hours === "number"
-															? s.estimated_hours
-															: Number(s.estimated_hours || 0)),
-													0,
-												)
+														(acc, s) =>
+															acc +
+															(typeof s.estimated_hours === "number"
+																? s.estimated_hours
+																: Number(s.estimated_hours || 0)),
+														0,
+													)
 												: 0);
 
 										const created: Activity = {
