@@ -41,3 +41,23 @@ import type { Subtask } from "../api/dashboard";
 export type KanbanGroup = "overdue" | "today" | "upcoming";
 export type KanbanState = { overdue: Subtask[]; today: Subtask[]; upcoming: Subtask[] };
 export const EMPTY_KANBAN: KanbanState = { overdue: [], today: [], upcoming: [] };
+
+export function checkDailyConflicts(
+	subtasks: Array<{ target_date: string; estimated_hours: number }>,
+	maxDailyHours: number,
+): { date: string; totalHours: number } | null {
+	if (maxDailyHours <= 0) return null;
+	const hoursMap = new Map<string, number>();
+
+	for (const subtask of subtasks) {
+		if (!subtask.target_date) continue;
+		const current = hoursMap.get(subtask.target_date) ?? 0;
+		hoursMap.set(subtask.target_date, current + (Number(subtask.estimated_hours) || 0));
+	}
+
+	for (const [date, totalHours] of hoursMap.entries()) {
+		if (totalHours > maxDailyHours) return { date, totalHours };
+	}
+
+	return null;
+}

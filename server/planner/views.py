@@ -1,28 +1,65 @@
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
+from django.db import transaction
+from django.db.models import Sum
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view
+from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Activity, Subject, Subtask
+from .models import Activity, Conflict, Subject, Subtask
 from .serializers import (
 	ActivitySerializer,
+	ConflictResolveSerializer,
+	ConflictSerializer,
 	SubjectSerializer,
 	SubtaskSerializer,
 	TodaySubtaskSerializer,
 	UserRegistrationSerializer,
 	UserSerializer,
+	UserUpdateSerializer,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _evaluate_day_conflicts(user, target_date: date) -> None:
+	"""Create, update, or auto-resolve a Conflict for a given user/date after any subtask change."""
+	total: int = int(
+		Subtask.objects.filter(
+			activity_id__user=user,
+			target_date=target_date,
+			status__in=["pending", "in_progress"],
+		).aggregate(total=Sum("estimated_hours"))["total"]
+		or 0
+	)
+	if total > user.max_daily_hours:
+		conflict = Conflict.objects.filter(user=user, affected_date=target_date).first()
+		if conflict:
+			conflict.planned_hours = total
+			conflict.max_allowed_hours = user.max_daily_hours
+			conflict.status = "pending"
+			conflict.save(update_fields=["planned_hours", "max_allowed_hours", "status"])
+		else:
+			Conflict.objects.create(
+				user=user,
+				affected_date=target_date,
+				type="overload",
+				planned_hours=total,
+				max_allowed_hours=user.max_daily_hours,
+				status="pending",
+			)
+	else:
+		Conflict.objects.filter(user=user, affected_date=target_date, status="pending").update(
+			status="resolved"
+		)
 
 
 @api_view(["GET"])
@@ -79,6 +116,42 @@ class MeView(APIView):
 		serializer = UserSerializer(request.user)
 		return Response(serializer.data)
 
+	@extend_schema(
+		summary="Update current user",
+		description="Partially update the authenticated user's profile (e.g. max_daily_hours).",
+		request=UserUpdateSerializer,
+		responses={200: UserSerializer},
+		examples=[
+			OpenApiExample(
+				"Patch me request",
+				value={"max_daily_hours": 8},
+				request_only=True,
+			),
+		],
+	)
+	def patch(self, request):
+		serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		old_max: int = request.user.max_daily_hours
+		serializer.save()
+		new_max: int = serializer.instance.max_daily_hours
+
+		# When the daily cap changes, re-evaluate every date that has subtasks —
+		# not just dates with pending conflicts, because a previously-resolved
+		# conflict may need to become pending again if the cap was lowered.
+		if old_max != new_max:
+			affected_dates = list(
+				Subtask.objects.filter(activity_id__user=request.user)
+				.values_list("target_date", flat=True)
+				.distinct()
+			)
+			for d in affected_dates:
+				_evaluate_day_conflicts(request.user, d)
+
+		return Response(UserSerializer(serializer.instance).data)
+
 
 class ActivityViewSet(viewsets.ModelViewSet):
 	"""
@@ -126,7 +199,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		return Activity.objects.filter(user=self.request.user)
 
 	def perform_create(self, serializer):
-		serializer.save(user=self.request.user)
+		activity = serializer.save(user=self.request.user)
+		affected_dates = list(activity.subtasks.values_list("target_date", flat=True).distinct())
+		for affected_date in affected_dates:
+			_evaluate_day_conflicts(self.request.user, affected_date)
 
 	@extend_schema(
 		summary="Create activity",
@@ -183,7 +259,12 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	def destroy(self, request, *args, **kwargs):
 		try:
 			activity = self.get_object()
+			affected_dates = list(
+				activity.subtasks.values_list("target_date", flat=True).distinct()
+			)
 			activity.delete()
+			for affected_date in affected_dates:
+				_evaluate_day_conflicts(request.user, affected_date)
 			return Response(status=status.HTTP_204_NO_CONTENT)
 
 		except Http404 as err:
@@ -444,6 +525,7 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		try:
 			serializer.is_valid(raise_exception=True)
 			serializer.save(activity_id=activity)
+			_evaluate_day_conflicts(request.user, serializer.instance.target_date)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 		except ValidationError as err:
@@ -491,7 +573,9 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				}
 			) from err
 
+		target_date = subtask.target_date
 		subtask.delete()
+		_evaluate_day_conflicts(request.user, target_date)
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
 	@extend_schema(
@@ -607,10 +691,15 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				}
 			) from err
 
+		old_date = subtask.target_date
 		serializer = self.get_serializer(subtask, data=request.data, partial=True)
 		try:
 			serializer.is_valid(raise_exception=True)
 			serializer.save()
+			new_date: date = serializer.instance.target_date
+			_evaluate_day_conflicts(request.user, new_date)
+			if old_date != new_date:
+				_evaluate_day_conflicts(request.user, old_date)
 			return Response(serializer.data, status=status.HTTP_201_CREATED)
 		except ValidationError as e:
 			logger.warning("Subtask validation error on PATCH", extra={"errors": e.detail})
@@ -878,10 +967,28 @@ class SubjectViewSet(viewsets.ModelViewSet):
 	def destroy(self, request, *args, **kwargs):
 		try:
 			subject = self.get_object()
+			affected_dates = list(
+				Subtask.objects.filter(
+					activity_id__course_name=subject.name, activity_id__user=request.user
+				)
+				.values_list("target_date", flat=True)
+				.distinct()
+			)
+			affected_dates.extend(
+				list(
+					Subtask.objects.filter(
+						activity_id__subject=subject, activity_id__user=request.user
+					)
+					.values_list("target_date", flat=True)
+					.distinct()
+				)
+			)
 			# Cascade: delete all activities matching by name or FK (subtasks cascade automatically)
 			Activity.objects.filter(course_name=subject.name).delete()
 			Activity.objects.filter(subject=subject).delete()
 			subject.delete()
+			for affected_date in set(affected_dates):
+				_evaluate_day_conflicts(request.user, affected_date)
 			return Response(status=status.HTTP_204_NO_CONTENT)
 		except Http404 as err:
 			raise NotFound(detail={"errors": {"resource": "Subject not found"}}) from err
@@ -891,3 +998,149 @@ class SubjectViewSet(viewsets.ModelViewSet):
 				{"errors": {"server": "Internal server error"}},
 				status=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			)
+
+
+class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
+	"""
+	Read-only endpoints for the authenticated user's pending overload conflicts.
+	GET /conflicts/      → list all pending conflicts
+	GET /conflicts/{id}/ → retrieve a single conflict
+	"""
+
+	serializer_class = ConflictSerializer
+	permission_classes = [IsAuthenticated]
+
+	def get_queryset(self):
+		return Conflict.objects.filter(user=self.request.user, status="pending").order_by(
+			"affected_date"
+		)
+
+	@extend_schema(
+		summary="List conflicts",
+		description=(
+			"Return all pending overload conflicts for the authenticated user. "
+			"Re-evaluates live state before responding."
+		),
+		responses=ConflictSerializer(many=True),
+		examples=[
+			OpenApiExample(
+				"List conflicts example",
+				value=[
+					{
+						"id": 1,
+						"affected_date": "2026-03-11",
+						"planned_hours": 10,
+						"max_allowed_hours": 4,
+						"status": "pending",
+						"detected_at": "2026-03-10T12:00:00Z",
+					}
+				],
+				response_only=True,
+			)
+		],
+	)
+	def list(self, request, *args, **kwargs):
+		# Re-evaluate every date that has subtasks before returning, so the
+		# response always reflects the current state (no stale resolved/pending).
+		dates = list(
+			Subtask.objects.filter(activity_id__user=request.user)
+			.values_list("target_date", flat=True)
+			.distinct()
+		)
+		for d in dates:
+			_evaluate_day_conflicts(request.user, d)
+		return super().list(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Retrieve conflict",
+		description="Get a single conflict by id.",
+		responses=ConflictSerializer,
+		parameters=[
+			OpenApiParameter(
+				"id", OpenApiTypes.INT, OpenApiParameter.PATH, description="Conflict id"
+			),
+		],
+	)
+	def retrieve(self, request, *args, **kwargs):
+		return super().retrieve(request, *args, **kwargs)
+
+	@extend_schema(
+		summary="Resolve conflict",
+		description=(
+			"Apply a resolution action to a pending conflict. "
+			"Supported actions: 'reduce_hours' (requires new_hours) "
+			"and 'reschedule' (requires new_date). "
+			"Records the resolution in ConflictResolution and re-evaluates affected dates."
+		),
+		request=ConflictResolveSerializer,
+		responses={200: ConflictSerializer},
+		examples=[
+			OpenApiExample(
+				"Reduce hours",
+				value={"subtask_id": 76, "action_type": "reduce_hours", "new_hours": 2},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Reschedule",
+				value={"subtask_id": 76, "action_type": "reschedule", "new_date": "2026-03-12"},
+				request_only=True,
+			),
+		],
+	)
+	@action(detail=True, methods=["post"], url_path="resolve")
+	def resolve(self, request, pk=None):
+		conflict = self.get_object()
+
+		if conflict.status == "resolved":
+			return Response(
+				{"errors": {"conflict": "This conflict is already resolved."}},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		serializer = ConflictResolveSerializer(data=request.data)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+		data = serializer.validated_data
+		action_type: str = data["action_type"]
+		subtask_id: int = data["subtask_id"]
+
+		try:
+			subtask = Subtask.objects.get(id=subtask_id, activity_id__user=request.user)
+		except Subtask.DoesNotExist:
+			return Response(
+				{"errors": {"subtask_id": "Subtask not found or does not belong to you."}},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		old_date: date = subtask.target_date
+
+		with transaction.atomic():
+			if action_type == "reduce_hours":
+				subtask.estimated_hours = data["new_hours"]
+				subtask.save(update_fields=["estimated_hours", "updated_at"])
+				description = f"Reduced estimated hours to {data['new_hours']}h on {old_date}."
+			else:  # reschedule
+				new_date: date = data["new_date"]
+				subtask.target_date = new_date
+				subtask.save(update_fields=["target_date", "updated_at"])
+				description = f"Rescheduled subtask from {old_date} to {new_date}."
+
+			from .models import ConflictResolution
+
+			# Always log what the user did, even if the conflict isn't fully resolved yet.
+			ConflictResolution.objects.update_or_create(
+				conflict=conflict,
+				defaults={"action": action_type, "description": description},
+			)
+
+		# Re-evaluate the affected date(s). _evaluate_day_conflicts decides
+		# whether to keep the conflict pending (still overloaded) or resolve it.
+		_evaluate_day_conflicts(request.user, old_date)
+		if action_type == "reschedule":
+			_evaluate_day_conflicts(request.user, data["new_date"])
+
+		# Return the conflict's current state so the frontend knows whether
+		# it's fully resolved or still pending with updated planned_hours.
+		conflict.refresh_from_db()
+		return Response(ConflictSerializer(conflict).data, status=status.HTTP_200_OK)

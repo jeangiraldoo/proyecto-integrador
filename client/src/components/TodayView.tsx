@@ -24,8 +24,16 @@ import {
 	type Subtask,
 } from "../api/dashboard";
 import { toast } from "sonner";
+import { getAccessToken } from "../api/auth";
 import "./Dashboard.css";
-import { daysUntil, type KanbanGroup, type KanbanState, EMPTY_KANBAN } from "./dashboardUtils";
+import {
+	checkDailyConflicts,
+	daysUntil,
+	type KanbanGroup,
+	type KanbanState,
+	EMPTY_KANBAN,
+} from "./dashboardUtils";
+import { type ConflictInfo } from "./ConflictModal";
 import { SubtaskDetailPanel } from "./SubtaskDetailPanel";
 import { CreateSubtaskModal } from "./SubtaskModals";
 
@@ -57,11 +65,17 @@ export default function TodayKanban({
 	initialData,
 	onDataRefresh,
 	activities,
+	maxDailyHours = 0,
+	onConflict,
+	onSubtaskMutated,
 	searchQuery = "",
 }: {
 	initialData: KanbanState | null;
 	onDataRefresh: (data: KanbanState) => void;
 	activities: Activity[];
+	maxDailyHours?: number;
+	onConflict?: (info: ConflictInfo) => void;
+	onSubtaskMutated?: () => void;
 	searchQuery?: string;
 }) {
 	const { isDark } = useTheme();
@@ -141,7 +155,7 @@ export default function TodayKanban({
 			return;
 		}
 		let cancelled = false;
-		const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+		const token = typeof window !== "undefined" ? getAccessToken() : null;
 		if (!token) {
 			setKanbanLoading(false);
 			return;
@@ -212,6 +226,7 @@ export default function TodayKanban({
 					? { group, subtask: { ...prev.subtask, status: nextStatus } }
 					: prev,
 			);
+			onSubtaskMutated?.();
 			toast.success(nextLabels[nextStatus] ?? nextStatus);
 		} catch {
 			toast.error("No se pudo actualizar la tarea.");
@@ -232,13 +247,35 @@ export default function TodayKanban({
 		}
 		const updated = await updateSubtask(activityId, subtask.id, fields);
 		const merged: Subtask = { ...subtask, ...updated };
-		setKanban((prev) => ({
-			...prev,
-			[group]: prev[group].map((s) => (s.id === subtask.id ? merged : s)),
-		}));
+		const newKanban = {
+			...kanban,
+			[group]: kanban[group].map((s) => (s.id === subtask.id ? merged : s)),
+		};
+		setKanban(newKanban);
 		setSelectedSubtask((prev) =>
 			prev?.subtask.id === subtask.id ? { group, subtask: merged } : prev,
 		);
+		toast.success("Tarea actualizada");
+		if (
+			onConflict &&
+			maxDailyHours > 0 &&
+			(fields.estimated_hours !== undefined || fields.target_date !== undefined)
+		) {
+			const conflict = checkDailyConflicts(
+				[...newKanban.overdue, ...newKanban.today, ...newKanban.upcoming],
+				maxDailyHours,
+			);
+			if (conflict) {
+				onConflict({
+					activityTitle:
+						merged.activity?.title ?? subtask.activity?.title ?? "Tu planificación del día",
+					date: conflict.date,
+					totalHours: conflict.totalHours,
+					maxHours: maxDailyHours,
+				});
+			}
+		}
+		onSubtaskMutated?.();
 		toast.success("Tarea actualizada");
 	}
 
@@ -1074,6 +1111,7 @@ export default function TodayKanban({
 					onCreated={(k) => {
 						setKanban(k);
 						onDataRefresh(k);
+						onSubtaskMutated?.();
 					}}
 				/>
 			)}

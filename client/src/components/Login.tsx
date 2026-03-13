@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import client from "../api/client";
+import { setAuthTokens } from "../api/auth";
 import "./Login.css";
 import lumaLogoFull from "../assets/luma.png";
 import heroIllustration from "../assets/login.png";
@@ -51,8 +52,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 			const response = await client.post("/api/token/", { username, password });
 			const { access, refresh } = response.data as { access: string; refresh: string };
 
-			localStorage.setItem("access_token", access);
-			localStorage.setItem("refresh_token", refresh);
+			setAuthTokens(access, refresh);
 			client.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
 			setCardState("success");

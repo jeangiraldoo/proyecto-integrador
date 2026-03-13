@@ -51,6 +51,15 @@ export interface Subject {
 	creation_date: string;
 }
 
+export interface Conflict {
+	id: number;
+	affected_date: string;
+	planned_hours: number;
+	max_allowed_hours: number;
+	status: string;
+	detected_at: string;
+}
+
 /* ============ API CALLS ============ */
 
 export async function fetchMe(): Promise<User> {
@@ -148,4 +157,11 @@ export async function updateSubject(id: number, name: string): Promise<Subject> 
 
 export async function deleteSubject(id: number): Promise<void> {
 	await client.delete(`/subjects/${id}/`);
+}
+
+/* -- Conflict endpoints -- */
+
+export async function fetchConflicts(): Promise<Conflict[]> {
+	const { data } = await client.get<Conflict[]>("/conflicts/");
+	return data;
 }

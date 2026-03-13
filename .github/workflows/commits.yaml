@@ -27,7 +27,7 @@ jobs:
           cache: npm
 
       - name: Install commitlint
-        run: npm install -D @commitlint/cli @commitlint/config-conventional
+        run: npm install -D @commitlint/cli @commitlint/config-conventional tinyexec
       - name: Print versions
         run: |
           git --version

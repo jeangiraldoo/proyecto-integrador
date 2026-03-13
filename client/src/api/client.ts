@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAuthStorage, getAccessToken, getRefreshToken, setAccessToken } from "./auth";
 
 const baseURL =
 	(import.meta.env.VITE_API_BASE_URL as string) ?? "https://proyecto-integrador-as97.onrender.com/";
@@ -13,7 +14,7 @@ const client = axios.create({
 // Interceptor para añadir el token a las peticiones
 client.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem("access_token");
+		const token = getAccessToken();
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
@@ -31,7 +32,7 @@ client.interceptors.response.use(
 		// Si el error es 401 y no hemos reintentado ya
 		if (error.response?.status === 401 && !originalRequest._retry) {
 			originalRequest._retry = true;
-			const refreshToken = localStorage.getItem("refresh_token");
+			const refreshToken = getRefreshToken();
 
 			if (refreshToken) {
 				try {
@@ -40,15 +41,14 @@ client.interceptors.response.use(
 					});
 
 					const { access } = response.data;
-					localStorage.setItem("access_token", access);
+					setAccessToken(access);
 
 					// Actualizar el header de la petición original y reintentar
 					originalRequest.headers.Authorization = `Bearer ${access}`;
 					return client(originalRequest);
 				} catch (refreshError) {
 					// Si falla el refresh, cerramos sesión
-					localStorage.removeItem("access_token");
-					localStorage.removeItem("refresh_token");
+					clearAuthStorage();
 					window.location.href = "/login";
 					return Promise.reject(refreshError);
 				}

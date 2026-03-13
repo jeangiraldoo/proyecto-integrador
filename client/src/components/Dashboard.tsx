@@ -29,28 +29,41 @@ import {
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../hooks/useTheme";
+import { getAccessToken } from "../api/auth";
 import lumaLogo from "../assets/luma.png";
 import {
 	fetchMe,
 	fetchActivities,
 	fetchTodayView,
+	fetchConflicts,
 	createActivity,
 	deleteActivity,
+	updateSubtask,
 	fetchSubjects,
 	createSubject,
 	updateSubject,
 	deleteSubject,
 	type User,
 	type Activity,
+	type Conflict,
 	type Subtask,
 	type Subject,
 } from "../api/dashboard";
 import { toast } from "sonner";
 import "./Dashboard.css";
 import CreateActivityModal from "./CreateActivityModal";
-import { classifyActivity, type NewActivityPayloadFromModal } from "./dashboardUtils";
+import {
+	checkDailyConflicts,
+	classifyActivity,
+	type NewActivityPayloadFromModal,
+} from "./dashboardUtils";
 import OrganizationView from "./OrganizationView";
 import TodayKanban from "./TodayView";
+import ConflictModal, {
+	type ConflictInfo,
+	type ConflictModalItem,
+	type ConflictModalSubtask,
+} from "./ConflictModal";
 import { SubjectFormModal } from "./OrganizationView";
 
 /* ============ COMPONENT ============ */
@@ -76,7 +89,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const [loading, setLoading] = useState<boolean>(() => {
 		try {
 			if (typeof window === "undefined") return false;
-			return !!localStorage.getItem("access_token");
+			return !!getAccessToken();
 		} catch {
 			return false;
 		}
@@ -103,6 +116,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		}
 	});
 	const [apiSubjects, setApiSubjects] = useState<Subject[]>([]);
+	const [conflicts, setConflicts] = useState<Conflict[]>([]);
+	const [conflictsOpen, setConflictsOpen] = useState(false);
+	const [conflictCount, setConflictCount] = useState(0);
+	const [conflictsLoading, setConflictsLoading] = useState(false);
+	const [hasShownInitialConflictToast, setHasShownInitialConflictToast] = useState(false);
 
 	const subjects = useMemo<string[]>(() => {
 		const fromActivities = activities.map((a) => a.course_name).filter(Boolean);
@@ -149,6 +167,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
 				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
 			setCustomSubjects((prev) => {
@@ -179,6 +198,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
 				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
 			setCustomSubjects((prev) => {
@@ -219,10 +239,212 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		}
 	}, [activeNav]);
 
+	const refreshConflicts = useCallback(async () => {
+		setConflictsLoading(true);
+		try {
+			const conflicts = await fetchConflicts();
+			setConflicts(Array.isArray(conflicts) ? conflicts : []);
+			setConflictCount(Array.isArray(conflicts) ? conflicts.length : 0);
+			return Array.isArray(conflicts) ? conflicts : [];
+		} catch (err) {
+			console.warn("No se pudo cargar el conteo de conflictos:", err);
+			setConflicts([]);
+			return [] as Conflict[];
+		} finally {
+			setConflictsLoading(false);
+		}
+	}, []);
+
+	const notifyConflictToast = useCallback(
+		(count?: number) => {
+			const label =
+				typeof count === "number"
+					? count === 1
+						? "Tienes 1 conflicto pendiente."
+						: `Tienes ${count} conflictos pendientes.`
+					: "Se detecto una sobrecarga de horas.";
+
+			toast.warning(label, {
+				action: {
+					label: "Ver",
+					onClick: () => {
+						setConflictsOpen(true);
+						if (activeNav !== "today") navigate("/hoy");
+					},
+				},
+				duration: 7000,
+			});
+		},
+		[activeNav, navigate],
+	);
+
+	const handleConflictDetected = useCallback(
+		(info: ConflictInfo) => {
+			void refreshConflicts().then((nextConflicts) => {
+				if (nextConflicts.length > 0) {
+					notifyConflictToast(nextConflicts.length);
+					return;
+				}
+				if (info.date) {
+					notifyConflictToast();
+				}
+			});
+		},
+		[notifyConflictToast, refreshConflicts],
+	);
+
+	const conflictModalItems = useMemo<ConflictModalItem[]>(() => {
+		const subtaskPool = activities.flatMap((activity) =>
+			(activity.subtasks ?? [])
+				.filter((subtask) => subtask.status !== "completed")
+				.map((subtask) => ({
+					id: subtask.id,
+					activityId: activity.id,
+					name: subtask.name,
+					activityTitle: activity.title,
+					estimatedHours: Number(subtask.estimated_hours) || 0,
+					targetDate: subtask.target_date,
+					courseName: activity.course_name,
+				})),
+		);
+
+		return conflicts.map((conflict) => {
+			const subtasks = subtaskPool
+				.filter((subtask) => subtask.targetDate === conflict.affected_date)
+				.sort((left, right) => right.estimatedHours - left.estimatedHours)
+				.map((subtask) => ({ ...subtask }));
+
+			const title = "Subtareas en conflicto";
+			const subtitle =
+				subtasks.length > 1
+					? `${subtasks.length} subtareas afectadas en esta fecha`
+					: (subtasks[0]?.name ?? "Sobrecarga reportada por el backend");
+
+			return {
+				id: conflict.id,
+				date: conflict.affected_date,
+				plannedHours: conflict.planned_hours,
+				maxHours: conflict.max_allowed_hours,
+				title,
+				subtitle,
+				subtasks,
+			};
+		});
+	}, [activities, conflicts]);
+
+	const dateLoadMap = useMemo<Record<string, number>>(() => {
+		const next: Record<string, number> = {};
+		for (const activity of activities) {
+			for (const subtask of activity.subtasks ?? []) {
+				if (subtask.status === "completed") continue;
+				const key = subtask.target_date;
+				if (!key) continue;
+				next[key] = (next[key] ?? 0) + (Number(subtask.estimated_hours) || 0);
+			}
+		}
+		return next;
+	}, [activities]);
+
+	const resolveActivityIdForConflictSubtask = useCallback(
+		(subtask: ConflictModalSubtask) => {
+			if (subtask.activityId) return subtask.activityId;
+			return activities.find((activity) =>
+				activity.subtasks?.some((item) => item.id === subtask.id),
+			)?.id;
+		},
+		[activities],
+	);
+
+	const refreshPlannerAfterConflictUpdate = useCallback(async () => {
+		const [acts, today] = await Promise.all([fetchActivities(), fetchTodayView()]);
+		setActivities(Array.isArray(acts) ? acts : []);
+		setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+	}, []);
+
+	const applySubtaskPatchLocally = useCallback(
+		(subtaskId: number, patch: Partial<Pick<Subtask, "estimated_hours" | "target_date">>) => {
+			setActivities((prev) =>
+				prev.map((activity) => {
+					if (!activity.subtasks?.some((subtask) => subtask.id === subtaskId)) return activity;
+
+					const nextSubtasks = activity.subtasks.map((subtask) =>
+						subtask.id === subtaskId ? { ...subtask, ...patch } : subtask,
+					);
+
+					const nextTotalEstimatedHours = nextSubtasks.reduce(
+						(sum, subtask) => sum + (Number(subtask.estimated_hours) || 0),
+						0,
+					);
+
+					return {
+						...activity,
+						subtasks: nextSubtasks,
+						total_estimated_hours: nextTotalEstimatedHours,
+					};
+				}),
+			);
+		},
+		[],
+	);
+
+	const handleConflictDateResolve = useCallback(
+		async ({ subtask, nextDate }: { subtask: ConflictModalSubtask; nextDate: string }) => {
+			const activityId = resolveActivityIdForConflictSubtask(subtask);
+			if (!activityId) {
+				toast.error("No se pudo identificar la actividad de la subtarea.");
+				throw new Error("Activity not found for subtask");
+			}
+
+			try {
+				await updateSubtask(activityId, subtask.id, { target_date: nextDate });
+				applySubtaskPatchLocally(subtask.id, { target_date: nextDate });
+				await refreshConflicts();
+				void refreshPlannerAfterConflictUpdate();
+				toast.success("Fecha de subtarea actualizada.");
+			} catch (error) {
+				toast.error("No se pudo actualizar la fecha.");
+				throw error;
+			}
+		},
+		[
+			applySubtaskPatchLocally,
+			refreshConflicts,
+			refreshPlannerAfterConflictUpdate,
+			resolveActivityIdForConflictSubtask,
+		],
+	);
+
+	const handleConflictHoursResolve = useCallback(
+		async ({ subtask, nextHours }: { subtask: ConflictModalSubtask; nextHours: number }) => {
+			const activityId = resolveActivityIdForConflictSubtask(subtask);
+			if (!activityId) {
+				toast.error("No se pudo identificar la actividad de la subtarea.");
+				throw new Error("Activity not found for subtask");
+			}
+
+			try {
+				await updateSubtask(activityId, subtask.id, { estimated_hours: nextHours });
+				applySubtaskPatchLocally(subtask.id, { estimated_hours: nextHours });
+				await refreshConflicts();
+				void refreshPlannerAfterConflictUpdate();
+				toast.success("Horas de subtarea actualizadas.");
+			} catch (error) {
+				toast.error("No se pudieron actualizar las horas.");
+				throw error;
+			}
+		},
+		[
+			applySubtaskPatchLocally,
+			refreshConflicts,
+			refreshPlannerAfterConflictUpdate,
+			resolveActivityIdForConflictSubtask,
+		],
+	);
+
 	useEffect(() => {
 		let cancelled = false;
 		async function load() {
-			const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+			const token = typeof window !== "undefined" ? getAccessToken() : null;
 
 			if (!token) {
 				if (!cancelled) setLoading(false);
@@ -245,6 +467,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						upcoming: todayView.upcoming,
 					});
 					setApiSubjects(Array.isArray(subs) ? subs : []);
+					const initialConflict = checkDailyConflicts(
+						[...todayView.overdue, ...todayView.today, ...todayView.upcoming],
+						me?.max_daily_hours ?? 0,
+					);
+					if (initialConflict && !hasShownInitialConflictToast) {
+						notifyConflictToast();
+						setHasShownInitialConflictToast(true);
+					}
+					void refreshConflicts();
 				}
 			} catch (err) {
 				console.error("Error cargando datos:", err);
@@ -259,7 +490,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [hasShownInitialConflictToast, notifyConflictToast, refreshConflicts]);
 
 	const { greeting, GreetingIcon } = useMemo(() => {
 		const hour = new Date().getHours();
@@ -334,6 +565,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		try {
 			await deleteActivity(id);
 			setActivities((prev) => prev.filter((a) => a.id !== id));
+			void refreshConflicts();
 			toast.success("Actividad eliminada");
 			setConfirmDelete(null);
 		} catch (err) {
@@ -487,6 +719,18 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					</>,
 					document.body,
 				)}
+			{conflictsOpen && conflictModalItems.length > 0 && (
+				<ConflictModal
+					conflicts={conflictModalItems}
+					dateLoadMap={dateLoadMap}
+					maxDailyHours={user?.max_daily_hours ?? 0}
+					onClose={() => setConflictsOpen(false)}
+					onChangeDate={({ subtask, nextDate }) => handleConflictDateResolve({ subtask, nextDate })}
+					onReduceHours={({ subtask, nextHours }) =>
+						handleConflictHoursResolve({ subtask, nextHours })
+					}
+				/>
+			)}
 			{/* ======= SIDEBAR ======= */}
 			<aside className="sidebar">
 				{/* User profile */}
@@ -586,6 +830,27 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						<div className="capacity-fill" style={{ width: `${capacityPercent}%` }} />
 					</div>
 				</div>
+
+				<button
+					className="sidebar-conflicts-btn"
+					onClick={async () => {
+						const conflicts = await refreshConflicts();
+						if (!conflicts.length) {
+							toast.success("No tienes conflictos pendientes.");
+							return;
+						}
+						setConflictsOpen(true);
+						if (activeNav !== "today") navigate("/hoy");
+					}}
+				>
+					<span className="sidebar-conflicts-label">
+						<AlertTriangle size={14} />
+						Conflictos
+					</span>
+					<span className={`sidebar-conflicts-count ${conflictCount > 0 ? "danger" : "ok"}`}>
+						{conflictsLoading ? "..." : conflictCount}
+					</span>
+				</button>
 
 				{/* Theme toggle */}
 				<div className="sidebar-theme-row theme-toggle-wrap">
@@ -716,6 +981,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											if (subjectName) setPendingExpandSubject({ subject: subjectName });
 										}
 										setCreateOpen(false);
+										const createdConflict = checkDailyConflicts(
+											payload.subtasks?.map((s) => ({
+												target_date: s.target_date,
+												estimated_hours: Number(s.estimated_hours || 0),
+											})) ?? [],
+											user?.max_daily_hours ?? 0,
+										);
+										if (createdConflict) {
+											handleConflictDetected({
+												activityTitle: payload.title,
+												date: createdConflict.date,
+												totalHours: createdConflict.totalHours,
+												maxHours: user?.max_daily_hours ?? 0,
+											});
+										}
+										void refreshConflicts();
 										toast.success("Actividad creada");
 									} catch (err) {
 										console.error("Failed to create activity:", err);
@@ -852,6 +1133,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								initialData={todayData}
 								onDataRefresh={setTodayData}
 								activities={activities}
+								maxDailyHours={user?.max_daily_hours ?? 0}
+								onConflict={handleConflictDetected}
+								onSubtaskMutated={() => {
+									void refreshConflicts();
+									void fetchActivities().then((acts) =>
+										setActivities(Array.isArray(acts) ? acts : []),
+									);
+								}}
 								searchQuery={searchQuery}
 							/>
 						)}

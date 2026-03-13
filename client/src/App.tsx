@@ -6,14 +6,14 @@ import Register from "./components/Register";
 import Landing from "./components/Landing";
 import Dashboard from "./components/Dashboard";
 import client from "./api/client";
-import { isTokenValid, clearAuthStorage } from "./api/auth";
+import { isTokenValid, clearAuthStorage, getAccessToken } from "./api/auth";
 import ThemeProvider from "./context/ThemeProvider";
 import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 
 /** Ruta protegida: redirige a /login si el token no es válido o expiró. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-	const token = localStorage.getItem("access_token");
+	const token = getAccessToken();
 	if (!isTokenValid(token)) {
 		// Limpiar almacenamiento antes de redirigir
 		clearAuthStorage();
@@ -24,7 +24,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 /** Página de registro: redirige a /hoy si ya hay sesión válida. */
 function RegisterPage() {
-	const token = localStorage.getItem("access_token");
+	const token = getAccessToken();
 	if (isTokenValid(token)) {
 		return <Navigate to="/hoy" replace />;
 	}
@@ -35,7 +35,7 @@ function RegisterPage() {
 /** Página de login: redirige a /hoy si ya hay sesión válida. */
 function LoginPage() {
 	const navigate = useNavigate();
-	const token = localStorage.getItem("access_token");
+	const token = getAccessToken();
 	if (isTokenValid(token)) {
 		return <Navigate to="/hoy" replace />;
 	}

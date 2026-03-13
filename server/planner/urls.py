@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
 	ActivityViewSet,
+	ConflictViewSet,
 	MeView,
 	RegisterView,
 	SubjectViewSet,
@@ -14,6 +15,7 @@ from .views import (
 router = DefaultRouter()
 router.register("activities", ActivityViewSet, basename="activity")
 router.register("subjects", SubjectViewSet, basename="subject")
+router.register("conflicts", ConflictViewSet, basename="conflict")
 
 subtask_list = SubtaskViewSet.as_view(
 	{
