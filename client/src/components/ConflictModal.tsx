@@ -80,8 +80,19 @@ function addDays(date: Date, days: number): Date {
 	return next;
 }
 
-function getNextConflictFreeDate(startDate: string, conflictDates: string[]): string | null {
-	const from = parseDate(startDate) ?? new Date();
+function getSearchStartDate(startDate: string, minDate: string): Date {
+	const parsedStart = parseDate(startDate);
+	const parsedMin = parseDate(minDate) ?? new Date();
+	if (!parsedStart || parsedStart < parsedMin) return parsedMin;
+	return parsedStart;
+}
+
+function getNextConflictFreeDate(
+	startDate: string,
+	conflictDates: string[],
+	minDate: string,
+): string | null {
+	const from = getSearchStartDate(startDate, minDate);
 	const blocked = new Set(conflictDates);
 
 	for (let offset = 0; offset <= 90; offset += 1) {
@@ -94,19 +105,24 @@ function getNextConflictFreeDate(startDate: string, conflictDates: string[]): st
 
 function getNextCapacitySafeDate(params: {
 	startDate: string;
+	minDate: string;
 	currentDate: string;
 	movingHours: number;
 	dateLoadMap: Record<string, number>;
 	maxDailyHours: number;
+	blockedDates: string[];
 }): string | null {
-	const { startDate, currentDate, movingHours, dateLoadMap, maxDailyHours } = params;
+	const { startDate, minDate, currentDate, movingHours, dateLoadMap, maxDailyHours, blockedDates } =
+		params;
 	if (!Number.isFinite(maxDailyHours) || maxDailyHours <= 0) return null;
 
-	const from = parseDate(startDate) ?? new Date();
+	const from = getSearchStartDate(startDate, minDate);
 	const safeMovingHours = Math.max(0, movingHours || 0);
+	const blocked = new Set(blockedDates);
 
 	for (let offset = 0; offset <= 120; offset += 1) {
 		const candidate = toIsoDate(addDays(from, offset));
+		if (blocked.has(candidate)) continue;
 		let candidateLoad = dateLoadMap[candidate] ?? 0;
 
 		if (candidate === currentDate) {
@@ -116,6 +132,48 @@ function getNextCapacitySafeDate(params: {
 		if (candidateLoad + safeMovingHours <= maxDailyHours) {
 			return candidate;
 		}
+	}
+
+	return null;
+}
+
+function getNextFutureIdleDate(params: {
+	startDate: string;
+	minDate: string;
+	currentDate: string;
+	movingHours: number;
+	dateLoadMap: Record<string, number>;
+	maxDailyHours: number;
+	conflictDates: string[];
+}): string | null {
+	const {
+		startDate,
+		minDate,
+		currentDate,
+		movingHours,
+		dateLoadMap,
+		maxDailyHours,
+		conflictDates,
+	} = params;
+
+	const safeMovingHours = Math.max(0, movingHours || 0);
+	if (Number.isFinite(maxDailyHours) && maxDailyHours > 0 && safeMovingHours > maxDailyHours) {
+		return null;
+	}
+
+	const from = getSearchStartDate(startDate, minDate);
+	const blocked = new Set(conflictDates);
+
+	for (let offset = 0; offset <= 180; offset += 1) {
+		const candidate = toIsoDate(addDays(from, offset));
+		if (candidate === currentDate) continue;
+		if (blocked.has(candidate)) continue;
+
+		const candidateLoad = Math.max(0, dateLoadMap[candidate] ?? 0);
+		if (candidateLoad > 0) continue;
+		if (maxDailyHours > 0 && candidateLoad + safeMovingHours > maxDailyHours) continue;
+
+		return candidate;
 	}
 
 	return null;
@@ -230,8 +288,8 @@ export default function ConflictModal({
 		}
 
 		const parsed = Number(resolver.value);
-		if (!Number.isFinite(parsed) || parsed < 0) {
-			setResolverError("Ingresa horas validas (0 o mas).");
+		if (!Number.isFinite(parsed) || parsed < 1) {
+			setResolverError("Ingresa horas validas (1 o mas).");
 			return;
 		}
 
@@ -255,19 +313,41 @@ export default function ConflictModal({
 		}
 	}, [onChangeDate, onReduceHours, requestClose, resolver]);
 
+	const todayIso = toIsoDate(new Date());
+	const tomorrowIso = toIsoDate(addDays(new Date(), 1));
+
 	const suggestedDateCandidate =
 		resolver?.mode === "date"
-			? (getNextCapacitySafeDate({
-					startDate: resolver.value || resolver.conflict.date,
-					currentDate: resolver.subtask.targetDate ?? resolver.conflict.date,
-					movingHours: resolver.subtask.estimatedHours,
-					dateLoadMap,
-					maxDailyHours,
-				}) ??
-				getNextConflictFreeDate(
-					resolver.value || resolver.conflict.date,
-					conflicts.map((item) => item.date),
-				))
+			? (() => {
+					const searchFrom = resolver.value || resolver.conflict.date;
+					const currentDate = resolver.subtask.targetDate ?? resolver.conflict.date;
+					const conflictDates = conflicts.map((item) => item.date);
+					const isOverdueConflict = resolver.conflict.date < todayIso;
+
+					if (isOverdueConflict) {
+						return getNextFutureIdleDate({
+							startDate: searchFrom,
+							minDate: tomorrowIso,
+							currentDate,
+							movingHours: resolver.subtask.estimatedHours,
+							dateLoadMap,
+							maxDailyHours,
+							conflictDates,
+						});
+					}
+
+					return (
+						getNextCapacitySafeDate({
+							startDate: searchFrom,
+							minDate: todayIso,
+							currentDate,
+							movingHours: resolver.subtask.estimatedHours,
+							dateLoadMap,
+							maxDailyHours,
+							blockedDates: conflictDates,
+						}) ?? getNextConflictFreeDate(searchFrom, conflictDates, todayIso)
+					);
+				})()
 			: null;
 
 	const suggestedDate =
@@ -277,10 +357,20 @@ export default function ConflictModal({
 
 	const suggestedHours =
 		resolver?.mode === "hours"
-			? normalizeHourValue(
-					resolver.subtask.estimatedHours -
-						Math.max(resolver.conflict.plannedHours - resolver.conflict.maxHours, 0),
-				)
+			? (() => {
+					const currentHours = Number(resolver.subtask.estimatedHours) || 0;
+					if (currentHours <= 1) return null;
+
+					const overloadHours = Math.max(
+						resolver.conflict.plannedHours - resolver.conflict.maxHours,
+						0,
+					);
+					const reduced = normalizeHourValue(currentHours - overloadHours);
+					const bounded = Math.max(1, reduced);
+
+					if (!Number.isFinite(bounded) || bounded >= currentHours) return null;
+					return bounded;
+				})()
 			: null;
 
 	const suggestedHoursLabel =
@@ -314,8 +404,7 @@ export default function ConflictModal({
 						<div className="cf-header-text">
 							<h2 id="cf-modal-title">Conflictos detectados</h2>
 							<p>
-								Se detectaron sobrecargas de horas en multiples actividades. Revisa cada conflicto
-								antes de continuar.
+								Detectamos sobrecarga de horas. Elige una accion por subtarea para liberar ese dia.
 							</p>
 						</div>
 					</div>
@@ -389,6 +478,7 @@ export default function ConflictModal({
 																}}
 															>
 																<span>Cambiar fecha</span>
+																<em>Mover a un dia mas liviano</em>
 															</button>
 															<button
 																type="button"
@@ -397,7 +487,8 @@ export default function ConflictModal({
 																	openResolver("hours", conflict, subtask);
 																}}
 															>
-																<span>Reducir horas</span>
+																<span>Ajustar horas</span>
+																<em>Reducir carga de esta subtarea</em>
 															</button>
 														</div>
 													</div>
@@ -421,9 +512,7 @@ export default function ConflictModal({
 				</div>
 
 				<footer className="cf-footer">
-					<div className="cf-footer-status">
-						Revisa cada conflicto y aplica una solucion cuando quieras.
-					</div>
+					<div className="cf-footer-status">Puedes resolver ahora o volver luego.</div>
 				</footer>
 
 				{resolver && (
@@ -437,6 +526,11 @@ export default function ConflictModal({
 							<p>
 								<strong>{resolver.subtask.name}</strong> · {resolver.subtask.activityTitle}
 							</p>
+							<div className="cf-resolver-microcopy" role="note">
+								{resolver.mode === "date"
+									? "Tip: moverla a un dia libre suele resolver mas rapido."
+									: "Tip: bajar horas ayuda sin mover tu calendario."}
+							</div>
 
 							<label className="cf-resolver-label">
 								{resolver.mode === "date" ? "Nueva fecha" : "Horas estimadas"}
@@ -454,7 +548,7 @@ export default function ConflictModal({
 							) : (
 								<input
 									type="number"
-									min="0"
+									min="1"
 									step="0.25"
 									className="cf-resolver-input"
 									value={resolver.value}
@@ -519,7 +613,7 @@ export default function ConflictModal({
 									disabled={resolverSaving}
 								>
 									{resolverSaving ? <Loader2 size={14} className="cf-spin" /> : null}
-									Guardar
+									{resolver.mode === "date" ? "Guardar fecha" : "Guardar horas"}
 								</button>
 							</div>
 						</div>

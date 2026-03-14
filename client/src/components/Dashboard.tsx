@@ -459,9 +459,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				applyTodayDataPatchLocally(subtask.id, { target_date: nextDate });
 				await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
-				toast.success("Fecha de subtarea actualizada.");
+				toast.success("Fecha actualizada. Carga recalculada.");
 			} catch (error) {
-				toast.error("No se pudo actualizar la fecha.");
+				toast.error("No pudimos cambiar la fecha. Intenta de nuevo.");
 				throw error;
 			}
 		},
@@ -488,9 +488,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				applyTodayDataPatchLocally(subtask.id, { estimated_hours: nextHours });
 				await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
-				toast.success("Horas de subtarea actualizadas.");
+				toast.success("Horas actualizadas. Carga recalculada.");
 			} catch (error) {
-				toast.error("No se pudieron actualizar las horas.");
+				toast.error("No pudimos ajustar las horas. Intenta de nuevo.");
 				throw error;
 			}
 		},

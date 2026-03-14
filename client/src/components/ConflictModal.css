@@ -170,6 +170,7 @@
 
 .cf-content {
 	overflow: auto;
+	min-height: 0;
 	padding: 18px 22px;
 	display: flex;
 	flex-direction: column;
@@ -312,13 +313,15 @@
 	padding: 9px 11px;
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: flex-start;
+	flex-direction: column;
 	gap: 8px;
 	text-align: left;
 	cursor: pointer;
 	color: #e4e4e7;
 	font-size: 0.8rem;
 	font-weight: 700;
+	min-height: 58px;
 	transition:
 		border-color 0.18s,
 		background 0.18s,
@@ -327,10 +330,11 @@
 
 .cf-solution-btn em {
 	font-style: normal;
-	font-size: 0.62rem;
-	font-weight: 900;
-	letter-spacing: 1px;
-	opacity: 0.78;
+	font-size: 0.64rem;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	opacity: 0.82;
+	line-height: 1.2;
 }
 
 .cf-solution-btn:hover {
@@ -360,6 +364,29 @@
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	max-height: clamp(220px, 42vh, 420px);
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+	padding-right: 4px;
+}
+
+.cf-subtasks::-webkit-scrollbar {
+	width: 8px;
+}
+
+.cf-subtasks::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 999px;
+}
+
+.cf-subtasks::-webkit-scrollbar-thumb {
+	background: rgba(245, 158, 11, 0.45);
+	border-radius: 999px;
+}
+
+.cf-subtasks::-webkit-scrollbar-thumb:hover {
+	background: rgba(245, 158, 11, 0.58);
 }
 
 .cf-subtask-row {
@@ -492,6 +519,17 @@
 	font-size: 0.82rem;
 	line-height: 1.5;
 	color: rgba(255, 255, 255, 0.64);
+}
+
+.cf-resolver-microcopy {
+	margin-top: 8px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	border: 1px solid rgba(245, 158, 11, 0.22);
+	background: rgba(245, 158, 11, 0.08);
+	font-size: 0.73rem;
+	line-height: 1.35;
+	color: rgba(254, 243, 199, 0.9);
 }
 
 .cf-resolver-label {
@@ -633,6 +671,12 @@
 	color: rgba(74, 52, 13, 0.78);
 }
 
+[data-theme="light"] .cf-resolver-microcopy {
+	border-color: rgba(217, 119, 6, 0.25);
+	background: rgba(245, 158, 11, 0.16);
+	color: #7c2d12;
+}
+
 [data-theme="light"] .cf-resolver-input {
 	border-color: rgba(15, 23, 42, 0.16);
 	background: rgba(255, 255, 255, 0.9);
@@ -747,6 +791,10 @@
 		padding: 12px;
 	}
 
+	.cf-subtasks {
+		max-height: min(48vh, 340px);
+	}
+
 	.cf-item-summary,
 	.cf-item-details {
 		padding: 12px;
@@ -754,11 +802,6 @@
 
 	.cf-actions-grid {
 		grid-template-columns: 1fr;
-	}
-
-	.cf-solution-btn {
-		flex-direction: column;
-		align-items: flex-start;
 	}
 
 	.cf-subtask-row {
