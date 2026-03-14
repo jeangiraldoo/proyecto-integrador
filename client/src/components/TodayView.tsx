@@ -60,11 +60,40 @@ function sortSubtasks(group: KanbanGroup, items: Subtask[]): Subtask[] {
 	return copy;
 }
 
+function getKanbanGroupForDate(targetDate: string): KanbanGroup {
+	const difference = daysUntil(targetDate);
+	if (difference < 0) return "overdue";
+	if (difference === 0) return "today";
+	return "upcoming";
+}
+
+function upsertSubtaskAcrossKanban(
+	state: KanbanState,
+	subtaskId: number,
+	nextSubtask: Subtask,
+	fallbackGroup: KanbanGroup,
+): { nextState: KanbanState; nextGroup: KanbanGroup } {
+	const targetGroup = nextSubtask.target_date
+		? getKanbanGroupForDate(nextSubtask.target_date)
+		: fallbackGroup;
+
+	const nextState: KanbanState = {
+		overdue: state.overdue.filter((item) => item.id !== subtaskId),
+		today: state.today.filter((item) => item.id !== subtaskId),
+		upcoming: state.upcoming.filter((item) => item.id !== subtaskId),
+	};
+
+	nextState[targetGroup] = [...nextState[targetGroup], nextSubtask];
+
+	return { nextState, nextGroup: targetGroup };
+}
+
 export default function TodayKanban({
 	initialData,
 	onDataRefresh,
 	activities,
 	maxDailyHours = 0,
+	conflictDates = [],
 	onConflict,
 	onSubtaskMutated,
 	searchQuery = "",
@@ -73,6 +102,7 @@ export default function TodayKanban({
 	onDataRefresh: (data: KanbanState) => void;
 	activities: Activity[];
 	maxDailyHours?: number;
+	conflictDates?: string[];
 	onConflict?: (info: ConflictInfo) => void;
 	onSubtaskMutated?: () => void;
 	searchQuery?: string;
@@ -190,12 +220,33 @@ export default function TodayKanban({
 		};
 	}, [initialData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Keep panel in sync after optimistic toggle
+	// Keep the side panel in sync even when a task moves to another kanban bucket.
 	useEffect(() => {
 		if (!selectedSubtask) return;
+
 		const { subtask, group } = selectedSubtask;
-		const live = kanban[group].find((s) => s.id === subtask.id);
-		if (live && live.status !== subtask.status) setSelectedSubtask({ subtask: live, group });
+		let liveGroup: KanbanGroup = group;
+		let liveSubtask = kanban[group].find((item) => item.id === subtask.id);
+
+		if (!liveSubtask) {
+			for (const candidate of ["overdue", "today", "upcoming"] as const) {
+				const match = kanban[candidate].find((item) => item.id === subtask.id);
+				if (match) {
+					liveGroup = candidate;
+					liveSubtask = match;
+					break;
+				}
+			}
+		}
+
+		if (!liveSubtask) {
+			setSelectedSubtask(null);
+			return;
+		}
+
+		if (liveGroup !== group || liveSubtask !== subtask) {
+			setSelectedSubtask({ subtask: liveSubtask, group: liveGroup });
+		}
 	}, [kanban]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	function resolveActivityId(subtask: Subtask): number | undefined {
@@ -223,10 +274,14 @@ export default function TodayKanban({
 		setTogglingId(subtask.id);
 		try {
 			await updateSubtask(activityId, subtask.id, { status: nextStatus });
-			setKanban((prev) => ({
-				...prev,
-				[group]: prev[group].map((s) => (s.id === subtask.id ? { ...s, status: nextStatus } : s)),
-			}));
+			setKanban((prev) => {
+				const nextKanban = {
+					...prev,
+					[group]: prev[group].map((s) => (s.id === subtask.id ? { ...s, status: nextStatus } : s)),
+				};
+				onDataRefresh(nextKanban);
+				return nextKanban;
+			});
 			setSelectedSubtask((prev) =>
 				prev?.subtask.id === subtask.id
 					? { group, subtask: { ...prev.subtask, status: nextStatus } }
@@ -253,22 +308,35 @@ export default function TodayKanban({
 		}
 		const updated = await updateSubtask(activityId, subtask.id, fields);
 		const merged: Subtask = { ...subtask, ...updated };
-		const newKanban = {
-			...kanban,
-			[group]: kanban[group].map((s) => (s.id === subtask.id ? merged : s)),
-		};
-		setKanban(newKanban);
+
+		let nextKanbanSnapshot: KanbanState | null = null;
+		let nextGroup: KanbanGroup = group;
+
+		setKanban((prev) => {
+			const { nextState, nextGroup: resolvedGroup } = upsertSubtaskAcrossKanban(
+				prev,
+				subtask.id,
+				merged,
+				group,
+			);
+			nextKanbanSnapshot = nextState;
+			nextGroup = resolvedGroup;
+			onDataRefresh(nextState);
+			return nextState;
+		});
+
 		setSelectedSubtask((prev) =>
-			prev?.subtask.id === subtask.id ? { group, subtask: merged } : prev,
+			prev?.subtask.id === subtask.id ? { group: nextGroup, subtask: merged } : prev,
 		);
-		toast.success("Tarea actualizada");
+
+		const conflictSource = nextKanbanSnapshot ?? kanban;
 		if (
 			onConflict &&
 			maxDailyHours > 0 &&
 			(fields.estimated_hours !== undefined || fields.target_date !== undefined)
 		) {
 			const conflict = checkDailyConflicts(
-				[...newKanban.overdue, ...newKanban.today, ...newKanban.upcoming],
+				[...conflictSource.overdue, ...conflictSource.today, ...conflictSource.upcoming],
 				maxDailyHours,
 			);
 			if (conflict) {
@@ -292,11 +360,16 @@ export default function TodayKanban({
 			return;
 		}
 		await deleteSubtask(activityId, subtask.id);
-		setKanban((prev) => ({
-			...prev,
-			[group]: prev[group].filter((s) => s.id !== subtask.id),
-		}));
+		setKanban((prev) => {
+			const nextKanban = {
+				...prev,
+				[group]: prev[group].filter((s) => s.id !== subtask.id),
+			};
+			onDataRefresh(nextKanban);
+			return nextKanban;
+		});
 		setSelectedSubtask(null);
+		onSubtaskMutated?.();
 		toast.success("Tarea eliminada");
 	}
 
@@ -315,6 +388,19 @@ export default function TodayKanban({
 		}
 		return Array.from(names).sort((a, b) => a.localeCompare(b));
 	}, [allItems, activities]);
+
+	const calendarDateLoadMap = useMemo(() => {
+		const next: Record<string, number> = {};
+		for (const activity of activities) {
+			for (const subtask of activity.subtasks ?? []) {
+				if (subtask.status === "completed") continue;
+				if (!subtask.target_date) continue;
+				next[subtask.target_date] =
+					(next[subtask.target_date] ?? 0) + (Number(subtask.estimated_hours) || 0);
+			}
+		}
+		return next;
+	}, [activities]);
 
 	if (kanbanLoading) {
 		return (
@@ -352,31 +438,31 @@ export default function TodayKanban({
 		icon: React.JSX.Element;
 		sortHint: { icon: React.JSX.Element; text: string };
 	}[] = [
-			{
-				group: "overdue" as KanbanGroup,
-				label: "Vencidas",
-				items: sortSubtasks("overdue", kanban.overdue),
-				accent: "#f87171",
-				icon: <AlertTriangle size={13} />,
-				sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
-			},
-			{
-				group: "today" as KanbanGroup,
-				label: "Para hoy",
-				items: sortSubtasks("today", kanban.today),
-				accent: "#c084fc",
-				icon: <CalendarCheck size={13} />,
-				sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
-			},
-			{
-				group: "upcoming" as KanbanGroup,
-				label: "Próximas",
-				items: sortSubtasks("upcoming", kanban.upcoming),
-				accent: "#60a5fa",
-				icon: <CalendarClock size={13} />,
-				sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
-			},
-		];
+		{
+			group: "overdue" as KanbanGroup,
+			label: "Vencidas",
+			items: sortSubtasks("overdue", kanban.overdue),
+			accent: "#f87171",
+			icon: <AlertTriangle size={13} />,
+			sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
+		},
+		{
+			group: "today" as KanbanGroup,
+			label: "Para hoy",
+			items: sortSubtasks("today", kanban.today),
+			accent: "#c084fc",
+			icon: <CalendarCheck size={13} />,
+			sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
+		},
+		{
+			group: "upcoming" as KanbanGroup,
+			label: "Próximas",
+			items: sortSubtasks("upcoming", kanban.upcoming),
+			accent: "#60a5fa",
+			icon: <CalendarClock size={13} />,
+			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
+		},
+	];
 
 	return (
 		<>
@@ -422,9 +508,7 @@ export default function TodayKanban({
 								)}
 							</>
 						) : (
-							<span style={{ color: tv.pillIdle }}>
-								Sin tareas urgentes — ¡todo bajo control!
-							</span>
+							<span style={{ color: tv.pillIdle }}>Sin tareas urgentes — ¡todo bajo control!</span>
 						)}
 					</span>
 				</div>
@@ -929,9 +1013,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-															group,
-														},
+																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+																group,
+															},
 												)
 											}
 											onKeyDown={(e) => {
@@ -1266,6 +1350,9 @@ export default function TodayKanban({
 				<SubtaskDetailPanel
 					subtask={selectedSubtask.subtask}
 					group={selectedSubtask.group}
+					dateLoadMap={calendarDateLoadMap}
+					conflictDates={conflictDates}
+					maxDailyHours={maxDailyHours}
 					onClose={() => setSelectedSubtask(null)}
 					onToggle={() =>
 						void handleToggle(
@@ -1282,6 +1369,9 @@ export default function TodayKanban({
 			{createModalOpen && (
 				<CreateSubtaskModal
 					activities={activities}
+					dateLoadMap={calendarDateLoadMap}
+					conflictDates={conflictDates}
+					maxDailyHours={maxDailyHours}
 					onClose={() => setCreateModalOpen(false)}
 					onCreated={(k) => {
 						setKanban(k);
