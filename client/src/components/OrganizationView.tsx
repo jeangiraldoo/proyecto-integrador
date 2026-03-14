@@ -31,6 +31,10 @@ interface OrgViewProps {
 	onRemoveSubject: (name: string) => Promise<void>;
 	onRenameSubject: (oldName: string, newName: string) => Promise<void>;
 	onActivityUpdate: (updated: Activity) => void;
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
+	onActivitySaved?: (updated: Activity, previous: Activity) => void;
 	onOpenCreate: (subject?: string) => void;
 	activeFilters: string[];
 	searchQuery: string;
@@ -45,6 +49,10 @@ export default function OrganizationView({
 	onRemoveSubject,
 	onRenameSubject,
 	onActivityUpdate,
+	dateLoadMap = {},
+	conflictDates = [],
+	maxDailyHours = 0,
+	onActivitySaved,
 	onOpenCreate,
 	activeFilters,
 	searchQuery,
@@ -1329,10 +1337,14 @@ export default function OrganizationView({
 						<EditActivityForm
 							activity={orgEditActivity}
 							subjects={subjects}
+							dateLoadMap={dateLoadMap}
+							conflictDates={conflictDates}
+							maxDailyHours={maxDailyHours}
 							onClose={() => setOrgEditActivity(null)}
 							onSave={async (id, payload) => {
 								const updated = await updateActivity(id, payload);
 								onActivityUpdate(updated);
+								onActivitySaved?.(updated, orgEditActivity);
 								setOrgEditActivity(null);
 								toast.success("Actividad actualizada");
 							}}

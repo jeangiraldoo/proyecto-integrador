@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X, BookOpen, Loader2, CheckCircle2, Pencil } from "lucide-react";
 import { type Activity } from "../api/dashboard";
 import { useTheme } from "../hooks/useTheme";
@@ -204,6 +204,9 @@ export function SubjectFormModal({
 interface EditActivityFormProps {
 	activity: Activity;
 	subjects: string[];
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
 	onClose: () => void;
 	onSave: (
 		id: number,
@@ -212,7 +215,15 @@ interface EditActivityFormProps {
 		>,
 	) => Promise<void>;
 }
-export function EditActivityForm({ activity, subjects, onClose, onSave }: EditActivityFormProps) {
+export function EditActivityForm({
+	activity,
+	subjects,
+	dateLoadMap = {},
+	conflictDates = [],
+	maxDailyHours = 0,
+	onClose,
+	onSave,
+}: EditActivityFormProps) {
 	const [title, setTitle] = useState(activity.title);
 	const [description, setDescription] = useState(activity.description || "");
 	const [dueDate, setDueDate] = useState(activity.due_date);
@@ -230,6 +241,13 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 	const eaLabelClr = isDark ? "#64748b" : "#7a62c9";
 	const eaCancelBdr = isDark ? "#334155" : "rgba(124,92,255,0.22)";
 	const eaCancelClr = isDark ? "#94a3b8" : "#7a62c9";
+	const conflictDateSet = useMemo(() => new Set(conflictDates), [conflictDates]);
+	const selectedDateLoad = dueDate ? (dateLoadMap[dueDate] ?? 0) : 0;
+	const dueDateHasConflict =
+		!!dueDate &&
+		(conflictDateSet.has(dueDate) || (maxDailyHours > 0 && selectedDateLoad > maxDailyHours));
+	const dueDateCapacityPercent =
+		maxDailyHours > 0 ? Math.min((selectedDateLoad / maxDailyHours) * 100, 100) : 0;
 
 	const fld: React.CSSProperties = {
 		fontFamily: "inherit",
@@ -243,6 +261,13 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 		width: "100%",
 		boxSizing: "border-box",
 	};
+
+	function formatHours(value: number): string {
+		if (!Number.isFinite(value)) return "0";
+		return Number.isInteger(value)
+			? String(value)
+			: value.toFixed(2).replace(/\.00$/, "").replace(/0$/, "");
+	}
 
 	async function handleSubmit() {
 		if (!title.trim()) {
@@ -375,6 +400,77 @@ export function EditActivityForm({ activity, subjects, onClose, onSave }: EditAc
 						onChange={(e) => setDueDate(e.target.value)}
 						style={fld}
 					/>
+					{dueDate && (
+						<div
+							style={{
+								marginTop: "8px",
+								padding: "8px 10px",
+								borderRadius: "8px",
+								border: dueDateHasConflict
+									? "1px solid rgba(248,113,113,0.35)"
+									: "1px solid rgba(124,92,255,0.2)",
+								background: dueDateHasConflict
+									? "rgba(248,113,113,0.08)"
+									: isDark
+										? "rgba(124,92,255,0.08)"
+										: "rgba(124,92,255,0.07)",
+							}}
+						>
+							<div
+								style={{
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "center",
+									gap: "8px",
+									fontSize: "11px",
+									color: isDark ? "#cbd5e1" : "#5b4a8e",
+									fontWeight: 600,
+								}}
+							>
+								<span>Capacidad para esta fecha</span>
+								<strong style={{ color: dueDateHasConflict ? "#f87171" : "#7c3aed" }}>
+									{maxDailyHours > 0
+										? `${formatHours(selectedDateLoad)}h / ${formatHours(maxDailyHours)}h`
+										: `${formatHours(selectedDateLoad)}h`}
+								</strong>
+							</div>
+							{maxDailyHours > 0 && (
+								<div
+									style={{
+										marginTop: "6px",
+										height: "6px",
+										borderRadius: "999px",
+										background: isDark ? "rgba(148,163,184,0.22)" : "rgba(124,92,255,0.14)",
+										overflow: "hidden",
+									}}
+								>
+									<div
+										style={{
+											height: "100%",
+											width: `${dueDateCapacityPercent}%`,
+											background: dueDateHasConflict
+												? "linear-gradient(90deg,#ef4444,#f97316)"
+												: "linear-gradient(90deg,#7c3aed,#a78bfa)",
+											transition: "width 320ms cubic-bezier(0.22,1,0.36,1), background 220ms ease",
+											willChange: "width",
+										}}
+									/>
+								</div>
+							)}
+							<p
+								style={{
+									margin: "7px 0 0",
+									fontSize: "11px",
+									lineHeight: 1.35,
+									color: dueDateHasConflict ? "#ef4444" : isDark ? "#a78bfa" : "#6d28d9",
+								}}
+							>
+								{dueDateHasConflict
+									? "Hay un conflicto de carga para esta fecha. Puedes guardar y resolverlo despues en Conflictos."
+									: "No hay conflicto detectado para esa fecha."}
+							</p>
+						</div>
+					)}
 				</label>
 				<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 					<span
