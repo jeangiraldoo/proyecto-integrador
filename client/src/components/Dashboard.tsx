@@ -234,7 +234,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					title: "Hoy",
 					TitleIcon: CalendarCheck,
 					tipText:
-						"Tus subtareas más urgentes, ordenadas para que puedas avanzar rápido. Marca cada una al terminar.",
+						"Tus tareas más urgentes, ordenadas para que puedas avanzar rápido. Marca cada una al terminar.",
 				};
 		}
 	}, [activeNav]);
@@ -937,13 +937,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												payload.total_estimated_hours ??
 												(payload.subtasks
 													? payload.subtasks.reduce(
-															(acc, s) =>
-																acc +
-																(typeof s.estimated_hours === "number"
-																	? s.estimated_hours
-																	: Number(s.estimated_hours || 0)),
-															0,
-														)
+														(acc, s) =>
+															acc +
+															(typeof s.estimated_hours === "number"
+																? s.estimated_hours
+																: Number(s.estimated_hours || 0)),
+														0,
+													)
 													: 0),
 											subtasks: payload.subtasks?.map((s) => ({
 												name: s.title,
@@ -959,13 +959,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											payload.total_estimated_hours ??
 											(payload.subtasks
 												? payload.subtasks.reduce(
-														(acc, s) =>
-															acc +
-															(typeof s.estimated_hours === "number"
-																? s.estimated_hours
-																: Number(s.estimated_hours || 0)),
-														0,
-													)
+													(acc, s) =>
+														acc +
+														(typeof s.estimated_hours === "number"
+															? s.estimated_hours
+															: Number(s.estimated_hours || 0)),
+													0,
+												)
 												: 0);
 
 										const created: Activity = {

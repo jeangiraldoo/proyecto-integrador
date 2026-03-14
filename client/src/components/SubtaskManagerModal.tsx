@@ -45,7 +45,7 @@ export default function SubtaskManagerModal({
 			setSubtasks(data);
 		} catch (error) {
 			console.error("Error fetching subtasks:", error);
-			toast.error("No se pudieron cargar las subtareas.");
+			toast.error("No se pudieron cargar las tareas.");
 		} finally {
 			setIsLoading(false);
 		}
@@ -97,7 +97,7 @@ export default function SubtaskManagerModal({
 				onSubtasksChange?.(next);
 				return next;
 			});
-			toast.success("Subtarea añadida al plan.");
+			toast.success("Tarea añadida al plan.");
 
 			// Clear form inputs
 			setName("");
@@ -124,10 +124,10 @@ export default function SubtaskManagerModal({
 				onSubtasksChange?.(next);
 				return next;
 			});
-			toast.success("Subtarea eliminada.");
+			toast.success("Tarea eliminada.");
 		} catch (error) {
 			console.error("Error deleting subtask:", error);
-			toast.error("No se pudo eliminar la subtarea.");
+			toast.error("No se pudo eliminar la tarea.");
 		}
 	};
 
@@ -186,7 +186,7 @@ export default function SubtaskManagerModal({
 						</div>
 						<button type="submit" className="stm-btn-add" disabled={isSubmitting}>
 							{isSubmitting ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
-							{isSubmitting ? "Guardando..." : "Añadir subtarea"}
+							{isSubmitting ? "Guardando..." : "Añadir tarea"}
 						</button>
 					</form>
 
@@ -200,14 +200,14 @@ export default function SubtaskManagerModal({
 						) : subtasks.length === 0 ? (
 							<div className="stm-empty">
 								<Layers size={32} />
-								<p>Esta actividad aún no tiene subtareas asociadas.</p>
+								<p>Esta actividad aún no tiene tareas asociadas.</p>
 							</div>
 						) : (
 							<table className="stm-table">
 								<thead>
 									<tr>
 										<th style={{ width: "40px", textAlign: "center" }}>#</th>
-										<th>Subtarea</th>
+										<th>Tarea</th>
 										<th>Fecha</th>
 										<th>Horas</th>
 										<th style={{ width: "50px", textAlign: "center" }}>Acción</th>
@@ -233,7 +233,7 @@ export default function SubtaskManagerModal({
 													type="button"
 													className="stm-btn-delete"
 													onClick={() => handleDelete(st.id)}
-													title="Eliminar subtarea"
+													title="Eliminar tarea"
 												>
 													<Trash2 size={16} />
 												</button>

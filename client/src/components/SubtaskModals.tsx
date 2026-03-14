@@ -152,7 +152,7 @@ export function EditSubtaskModal({
 							</div>
 							<div>
 								<p style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: smTitleClr }}>
-									Editar subtarea
+									Editar tarea
 								</p>
 								<p
 									style={{
@@ -186,7 +186,7 @@ export function EditSubtaskModal({
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+								(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
 								}
 							/>
 						</div>
@@ -202,9 +202,9 @@ export function EditSubtaskModal({
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark
-											? "#334155"
-											: "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark
+										? "#334155"
+										: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -217,9 +217,9 @@ export function EditSubtaskModal({
 									onChange={(e) => setDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark
-											? "#334155"
-											: "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark
+										? "#334155"
+										: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -378,7 +378,7 @@ export function DeleteConfirmModal({
 						<Trash2 size={22} color="#f87171" />
 					</div>
 					<p style={{ margin: "0 0 8px", fontSize: "17px", fontWeight: 700, color: dcTitleClr }}>
-						¿Eliminar subtarea?
+						¿Eliminar tarea?
 					</p>
 					<p style={{ margin: "0 0 24px", fontSize: "13px", color: dcTextClr, lineHeight: 1.6 }}>
 						Se eliminará permanentemente{" "}
@@ -541,10 +541,10 @@ export function CreateSubtaskModal({
 				upcoming: todayView.upcoming,
 			};
 			onCreated(k);
-			toast.success("Subtarea creada");
+			toast.success("Tarea creada");
 			onClose();
 		} catch {
-			toast.error("Error al crear la subtarea.");
+			toast.error("Error al crear la tarea.");
 		} finally {
 			setSaving(false);
 		}
@@ -600,7 +600,7 @@ export function CreateSubtaskModal({
 				<div
 					role="dialog"
 					aria-modal="true"
-					aria-label="Crear subtarea"
+					aria-label="Crear tarea"
 					style={{
 						pointerEvents: "auto",
 						position: "relative",
@@ -671,7 +671,7 @@ export function CreateSubtaskModal({
 										color: isDark ? "#f1f5f9" : "#1e1a33",
 									}}
 								>
-									Nueva subtarea
+									Nueva tarea
 								</h2>
 								<p style={{ margin: 0, fontSize: "11px", color: "#475569" }}>
 									Asóciala a una actividad existente
@@ -890,7 +890,7 @@ export function CreateSubtaskModal({
 															lineHeight: 1.4,
 														}}
 													>
-														Esta actividad ya superó su fecha límite. La subtarea se creará de todas
+														Esta actividad ya superó su fecha límite. La tarea se creará de todas
 														formas.
 													</p>
 												</div>
@@ -936,8 +936,8 @@ export function CreateSubtaskModal({
 													}}
 												>
 													{actIsOverdue
-														? "Puedes asignar cualquier fecha futura para esta subtarea."
-														: "La subtarea debe completarse dentro de este mismo plazo."}
+														? "Puedes asignar cualquier fecha futura para esta tarea."
+														: "La tarea debe completarse dentro de este mismo plazo."}
 												</p>
 											</div>
 										</div>
@@ -946,7 +946,7 @@ export function CreateSubtaskModal({
 							})()}
 						{/* Name */}
 						<div>
-							<label style={labelStyle}>Nombre de la subtarea</label>
+							<label style={labelStyle}>Nombre de la tarea</label>
 							<input
 								style={inputStyle}
 								placeholder="ej. Revisar capítulo 3..."
@@ -956,7 +956,7 @@ export function CreateSubtaskModal({
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+								(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
 								}
 							/>
 						</div>
@@ -977,9 +977,9 @@ export function CreateSubtaskModal({
 									onChange={(e) => setTargetDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark
-											? "#334155"
-											: "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark
+										? "#334155"
+										: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -994,9 +994,9 @@ export function CreateSubtaskModal({
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark
-											? "#334155"
-											: "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark
+										? "#334155"
+										: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -1039,7 +1039,7 @@ export function CreateSubtaskModal({
 							}}
 						>
 							{saving ? <Loader2 size={14} className="spinner" /> : <Plus size={14} />}
-							{saving ? "Creando..." : "Crear subtarea"}
+							{saving ? "Creando..." : "Crear tarea"}
 						</button>
 						<button
 							onClick={onClose}

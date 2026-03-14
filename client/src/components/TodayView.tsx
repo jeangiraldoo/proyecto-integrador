@@ -235,7 +235,7 @@ export default function TodayKanban({
 			onSubtaskMutated?.();
 			toast.success(nextLabels[nextStatus] ?? nextStatus);
 		} catch {
-			toast.error("No se pudo actualizar la subtarea.");
+			toast.error("No se pudo actualizar la tarea.");
 		} finally {
 			setTogglingId(null);
 		}
@@ -261,6 +261,7 @@ export default function TodayKanban({
 		setSelectedSubtask((prev) =>
 			prev?.subtask.id === subtask.id ? { group, subtask: merged } : prev,
 		);
+		toast.success("Tarea actualizada");
 		if (
 			onConflict &&
 			maxDailyHours > 0 &&
@@ -281,7 +282,7 @@ export default function TodayKanban({
 			}
 		}
 		onSubtaskMutated?.();
-		toast.success("Subtarea actualizada");
+		toast.success("Tarea actualizada");
 	}
 
 	async function handleDelete(subtask: Subtask, group: KanbanGroup) {
@@ -296,8 +297,7 @@ export default function TodayKanban({
 			[group]: prev[group].filter((s) => s.id !== subtask.id),
 		}));
 		setSelectedSubtask(null);
-		onSubtaskMutated?.();
-		toast.success("Subtarea eliminada");
+		toast.success("Tarea eliminada");
 	}
 
 	const allItems = useMemo(
@@ -330,7 +330,7 @@ export default function TodayKanban({
 				}}
 			>
 				<Loader2 size={20} className="spinner" />
-				<span style={{ fontSize: "14px" }}>Cargando subtareas...</span>
+				<span style={{ fontSize: "14px" }}>Cargando tareas...</span>
 			</div>
 		);
 	}
@@ -352,31 +352,31 @@ export default function TodayKanban({
 		icon: React.JSX.Element;
 		sortHint: { icon: React.JSX.Element; text: string };
 	}[] = [
-		{
-			group: "overdue" as KanbanGroup,
-			label: "Vencidas",
-			items: sortSubtasks("overdue", kanban.overdue),
-			accent: "#f87171",
-			icon: <AlertTriangle size={13} />,
-			sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
-		},
-		{
-			group: "today" as KanbanGroup,
-			label: "Para hoy",
-			items: sortSubtasks("today", kanban.today),
-			accent: "#c084fc",
-			icon: <CalendarCheck size={13} />,
-			sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
-		},
-		{
-			group: "upcoming" as KanbanGroup,
-			label: "Próximas",
-			items: sortSubtasks("upcoming", kanban.upcoming),
-			accent: "#60a5fa",
-			icon: <CalendarClock size={13} />,
-			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
-		},
-	];
+			{
+				group: "overdue" as KanbanGroup,
+				label: "Vencidas",
+				items: sortSubtasks("overdue", kanban.overdue),
+				accent: "#f87171",
+				icon: <AlertTriangle size={13} />,
+				sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
+			},
+			{
+				group: "today" as KanbanGroup,
+				label: "Para hoy",
+				items: sortSubtasks("today", kanban.today),
+				accent: "#c084fc",
+				icon: <CalendarCheck size={13} />,
+				sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
+			},
+			{
+				group: "upcoming" as KanbanGroup,
+				label: "Próximas",
+				items: sortSubtasks("upcoming", kanban.upcoming),
+				accent: "#60a5fa",
+				icon: <CalendarClock size={13} />,
+				sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
+			},
+		];
 
 	return (
 		<>
@@ -413,7 +413,7 @@ export default function TodayKanban({
 					>
 						{allItems.length > 0 ? (
 							<>
-								Tienes <strong style={{ color: tv.pillStrong }}>{pendingCount}</strong> subtarea
+								Tienes <strong style={{ color: tv.pillStrong }}>{pendingCount}</strong> tarea
 								{pendingCount !== 1 ? "s" : ""} pendiente{pendingCount !== 1 ? "s" : ""}.
 								{hasOverdueOpen && (
 									<span style={{ marginLeft: "10px", color: "#f87171", fontWeight: 600 }}>
@@ -423,7 +423,7 @@ export default function TodayKanban({
 							</>
 						) : (
 							<span style={{ color: tv.pillIdle }}>
-								Sin subtareas urgentes — ¡todo bajo control!
+								Sin tareas urgentes — ¡todo bajo control!
 							</span>
 						)}
 					</span>
@@ -460,7 +460,7 @@ export default function TodayKanban({
 						e.currentTarget.style.transform = "translateY(0)";
 					}}
 				>
-					<Plus size={13} /> Nueva subtarea
+					<Plus size={13} /> Nueva tarea
 				</button>
 
 				<div
@@ -929,9 +929,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-																group,
-															},
+															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+															group,
+														},
 												)
 											}
 											onKeyDown={(e) => {
