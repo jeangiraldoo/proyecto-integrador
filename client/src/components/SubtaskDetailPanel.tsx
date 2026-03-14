@@ -23,6 +23,9 @@ import { EditSubtaskModal, DeleteConfirmModal } from "./SubtaskModals";
 export function SubtaskDetailPanel({
 	subtask,
 	group,
+	dateLoadMap,
+	conflictDates,
+	maxDailyHours,
 	onClose,
 	onToggle,
 	toggling,
@@ -31,6 +34,9 @@ export function SubtaskDetailPanel({
 }: {
 	subtask: Subtask;
 	group: KanbanGroup;
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
 	onClose: () => void;
 	onToggle: () => void;
 	toggling: boolean;
@@ -551,6 +557,9 @@ export function SubtaskDetailPanel({
 					initialHours={editHours}
 					initialDate={editDate}
 					initialStatus={editStatus}
+					dateLoadMap={dateLoadMap}
+					conflictDates={conflictDates}
+					maxDailyHours={maxDailyHours}
 					setName={setEditName}
 					setHours={setEditHours}
 					setDate={setEditDate}

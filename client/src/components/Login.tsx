@@ -1,5 +1,5 @@
-﻿import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	User,
 	Lock,
@@ -26,11 +26,15 @@ interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
+	const navigate = useNavigate();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [cardState, setCardState] = useState<"idle" | "success" | "error">("idle");
+	const [entryAnimationClass, setEntryAnimationClass] = useState("lp-card--enter-soft");
+	const [switchingToRegister, setSwitchingToRegister] = useState(false);
+	const switchTimerRef = useRef<number | null>(null);
 
 	const greeting = useMemo(() => {
 		const hour = new Date().getHours();
@@ -38,6 +42,29 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 		if (hour >= 12 && hour < 19) return { text: "Buenas tardes", Icon: CloudSun };
 		return { text: "Buenas noches", Icon: Moon };
 	}, []);
+
+	useEffect(() => {
+		const timer = window.setTimeout(() => setEntryAnimationClass(""), 220);
+		return () => window.clearTimeout(timer);
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (switchTimerRef.current !== null) {
+				window.clearTimeout(switchTimerRef.current);
+			}
+		};
+	}, []);
+
+	const formDisabled = isLoading || switchingToRegister;
+
+	const handleSwitchToRegister = () => {
+		if (formDisabled) return;
+		setSwitchingToRegister(true);
+		switchTimerRef.current = window.setTimeout(() => {
+			navigate("/registro");
+		}, 240);
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -79,6 +106,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 	};
 
 	const { Icon: GreetingIcon } = greeting;
+	const cardClasses = [
+		"lp-card",
+		cardState !== "idle" ? `lp-card--${cardState}` : "",
+		entryAnimationClass,
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	return (
 		<div className="lp-scene">
@@ -140,7 +174,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
 			{/* ── Login card ── */}
 			<div
-				className={`lp-card${cardState !== "idle" ? ` lp-card--${cardState}` : ""}`}
+				className={cardClasses}
 				onAnimationEnd={() => {
 					if (cardState === "error") setCardState("idle");
 				}}
@@ -148,6 +182,29 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 			>
 				<div className="lp-card__shine" />
 				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo" />
+
+				<nav
+					className={`lp-auth-switch lp-auth-switch--login${switchingToRegister ? " lp-auth-switch--to-register" : ""}`}
+					aria-label="Cambiar formulario"
+				>
+					<span className="lp-auth-switch__thumb" aria-hidden="true" />
+					<button
+						type="button"
+						className="lp-auth-switch__option lp-auth-switch__option--active"
+						disabled
+						aria-current="page"
+					>
+						Iniciar sesion
+					</button>
+					<button
+						type="button"
+						className="lp-auth-switch__option"
+						onClick={handleSwitchToRegister}
+						disabled={formDisabled}
+					>
+						Crear cuenta
+					</button>
+				</nav>
 
 				<header className="lp-card__header">
 					<p className="lp-greeting">
@@ -181,21 +238,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								placeholder="Tu usuario o correo"
 								value={username}
 								onChange={(e) => setUsername(e.target.value)}
-								disabled={isLoading}
+								disabled={formDisabled}
 								autoComplete="username"
 							/>
 						</div>
 					</div>
 
 					<div className="lp-field">
-						<div className="lp-field__label-row">
-							<label className="lp-field__label" htmlFor="password">
-								Contraseña
-							</label>
-							<a href="#" className="lp-field__forgot">
-								¿Olvidaste tu contraseña?
-							</a>
-						</div>
+						<label className="lp-field__label" htmlFor="password">
+							Contraseña
+						</label>
 						<div className="lp-field__wrap">
 							<Lock className="lp-field__icon" size={16} strokeWidth={1.5} aria-hidden="true" />
 							<input
@@ -205,7 +257,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								placeholder="••••••••"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
-								disabled={isLoading}
+								disabled={formDisabled}
 								autoComplete="current-password"
 							/>
 							<button
@@ -214,6 +266,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								onClick={() => setShowPassword((v) => !v)}
 								tabIndex={-1}
 								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+								disabled={formDisabled}
 							>
 								{showPassword ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -224,7 +277,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 						</div>
 					</div>
 
-					<button type="submit" className="lp-btn" disabled={isLoading}>
+					<button type="submit" className="lp-btn" disabled={formDisabled}>
 						{isLoading ? (
 							<Loader2 className="lp-btn__spinner" size={18} aria-label="Cargando" />
 						) : (
@@ -235,13 +288,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 						)}
 					</button>
 				</form>
-
-				<footer className="lp-card__footer">
-					¿Primera vez por aquí?{" "}
-					<Link to="/registro" className="lp-card__signup">
-						Crea una cuenta
-					</Link>
-				</footer>
 			</div>
 		</div>
 	);

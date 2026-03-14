@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
 	X,
 	Plus,
@@ -43,6 +43,9 @@ interface Props {
 	onClose: () => void;
 	onCreate: (payload: NewActivityPayload) => Promise<void>;
 	knownSubjects?: string[];
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
 }
 
 /* ---- Helpers ---- */
@@ -58,6 +61,13 @@ function todayIso() {
 	const m = String(now.getMonth() + 1).padStart(2, "0");
 	const d = String(now.getDate()).padStart(2, "0");
 	return `${y}-${m}-${d}`;
+}
+
+function formatHours(value: number): string {
+	if (!Number.isFinite(value)) return "0";
+	return Number.isInteger(value)
+		? String(value)
+		: value.toFixed(2).replace(/\.00$/, "").replace(/0$/, "");
 }
 
 let nextId = 1;
@@ -289,6 +299,9 @@ export default function CreateActivityModal({
 	onCreate,
 	knownSubjects = [],
 	initialSubject,
+	dateLoadMap = {},
+	conflictDates = [],
+	maxDailyHours = 0,
 }: Props) {
 	/* Wizard */
 	const [step, setStep] = useState<1 | 2>(1);
@@ -362,6 +375,20 @@ export default function CreateActivityModal({
 
 	const step1Valid = !subjectError && !titleError && !dueDateError;
 	const missingCount = (subjectError ? 1 : 0) + (titleError ? 1 : 0) + (dueDateError ? 1 : 0);
+	const conflictDateSet = useMemo(() => new Set(conflictDates), [conflictDates]);
+	const dueDateBaseLoad = dueDate ? (dateLoadMap[dueDate] ?? 0) : 0;
+	const dueDateDraftLoad = dueDate
+		? subtasks.reduce((sum, subtask) => {
+				if (subtask.target_date !== dueDate) return sum;
+				return sum + Number(subtask.estimated_hours || 0);
+			}, 0)
+		: 0;
+	const dueDateProjectedLoad = dueDateBaseLoad + dueDateDraftLoad;
+	const dueDateHasConflict =
+		!!dueDate &&
+		(conflictDateSet.has(dueDate) || (maxDailyHours > 0 && dueDateProjectedLoad > maxDailyHours));
+	const dueDateCapacityPercent =
+		maxDailyHours > 0 ? Math.min((dueDateProjectedLoad / maxDailyHours) * 100, 100) : 0;
 
 	/* suppress unused warning */
 	void step2Submitted;
@@ -542,6 +569,78 @@ export default function CreateActivityModal({
 											hasError={step1Submitted && !!dueDateError}
 										/>
 										{step1Submitted && dueDateError && <FieldError msg={dueDateError} />}
+										{dueDate && (
+											<div
+												style={{
+													marginTop: "8px",
+													padding: "8px 10px",
+													borderRadius: "8px",
+													border: dueDateHasConflict
+														? "1px solid rgba(248,113,113,0.35)"
+														: "1px solid rgba(124,92,255,0.2)",
+													background: dueDateHasConflict
+														? "rgba(248,113,113,0.08)"
+														: "rgba(124,92,255,0.08)",
+												}}
+											>
+												<div
+													style={{
+														display: "flex",
+														justifyContent: "space-between",
+														alignItems: "center",
+														gap: "8px",
+														fontSize: "11px",
+														color: "#cbd5e1",
+														fontWeight: 600,
+													}}
+												>
+													<span>Capacidad para {formatDate(dueDate)}</span>
+													<strong style={{ color: dueDateHasConflict ? "#fca5a5" : "#c4b5fd" }}>
+														{maxDailyHours > 0
+															? `${formatHours(dueDateProjectedLoad)}h / ${formatHours(maxDailyHours)}h`
+															: `${formatHours(dueDateProjectedLoad)}h`}
+													</strong>
+												</div>
+												{maxDailyHours > 0 && (
+													<div
+														style={{
+															marginTop: "6px",
+															height: "6px",
+															borderRadius: "999px",
+															background: "rgba(148,163,184,0.22)",
+															overflow: "hidden",
+														}}
+													>
+														<div
+															style={{
+																height: "100%",
+																width: `${dueDateCapacityPercent}%`,
+																background: dueDateHasConflict
+																	? "linear-gradient(90deg,#ef4444,#f97316)"
+																	: "linear-gradient(90deg,#7c3aed,#a78bfa)",
+																transition:
+																	"width 320ms cubic-bezier(0.22,1,0.36,1), background 220ms ease",
+																willChange: "width",
+															}}
+														/>
+													</div>
+												)}
+												<p
+													style={{
+														margin: "7px 0 0",
+														fontSize: "11px",
+														lineHeight: 1.35,
+														color: dueDateHasConflict ? "#fca5a5" : "#a78bfa",
+													}}
+												>
+													{dueDateHasConflict
+														? "Hay un conflicto de carga para esa fecha. Puedes continuar y resolverlo despues en Conflictos."
+														: dueDateDraftLoad > 0
+															? `Incluye ${formatHours(dueDateDraftLoad)}h nuevas de tus subtareas.`
+															: "Sin conflicto detectado para esa fecha."}
+												</p>
+											</div>
+										)}
 									</div>
 								</div>
 

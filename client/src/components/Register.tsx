@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	User,
 	Lock,
@@ -8,6 +8,9 @@ import {
 	ArrowRight,
 	Eye,
 	EyeOff,
+	Sun,
+	CloudSun,
+	Moon,
 	CalendarDays,
 	TrendingUp,
 } from "lucide-react";
@@ -31,6 +34,38 @@ export default function Register() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [cardState, setCardState] = useState<"idle" | "success" | "error">("idle");
+	const [entryAnimationClass, setEntryAnimationClass] = useState("lp-card--enter-soft");
+	const [switchingToLogin, setSwitchingToLogin] = useState(false);
+	const switchTimerRef = useRef<number | null>(null);
+	const formDisabled = isLoading || switchingToLogin;
+
+	const greeting = useMemo(() => {
+		const hour = new Date().getHours();
+		if (hour >= 5 && hour < 12) return { text: "Buenos días", Icon: Sun };
+		if (hour >= 12 && hour < 19) return { text: "Buenas tardes", Icon: CloudSun };
+		return { text: "Buenas noches", Icon: Moon };
+	}, []);
+
+	useEffect(() => {
+		const timer = window.setTimeout(() => setEntryAnimationClass(""), 220);
+		return () => window.clearTimeout(timer);
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (switchTimerRef.current !== null) {
+				window.clearTimeout(switchTimerRef.current);
+			}
+		};
+	}, []);
+
+	const handleSwitchToLogin = () => {
+		if (formDisabled) return;
+		setSwitchingToLogin(true);
+		switchTimerRef.current = window.setTimeout(() => {
+			navigate("/login");
+		}, 240);
+	};
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -96,6 +131,15 @@ export default function Register() {
 		}
 	};
 
+	const cardClasses = [
+		"lp-card",
+		cardState !== "idle" ? `lp-card--${cardState}` : "",
+		entryAnimationClass,
+	]
+		.filter(Boolean)
+		.join(" ");
+	const { Icon: GreetingIcon } = greeting;
+
 	return (
 		<div className="lp-scene">
 			{/* ── Theme toggle ── */}
@@ -156,7 +200,7 @@ export default function Register() {
 
 			{/* ── Register card ── */}
 			<div
-				className={`lp-card${cardState !== "idle" ? ` lp-card--${cardState}` : ""}`}
+				className={cardClasses}
 				onAnimationEnd={() => {
 					if (cardState === "error") setCardState("idle");
 				}}
@@ -165,7 +209,39 @@ export default function Register() {
 				<div className="lp-card__shine" />
 				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo" />
 
+				<nav
+					className={`lp-auth-switch lp-auth-switch--register${switchingToLogin ? " lp-auth-switch--to-login" : ""}`}
+					aria-label="Cambiar formulario"
+				>
+					<span className="lp-auth-switch__thumb" aria-hidden="true" />
+					<button
+						type="button"
+						className="lp-auth-switch__option"
+						onClick={handleSwitchToLogin}
+						disabled={formDisabled}
+					>
+						Iniciar sesion
+					</button>
+					<button
+						type="button"
+						className="lp-auth-switch__option lp-auth-switch__option--active"
+						disabled
+						aria-current="page"
+					>
+						Crear cuenta
+					</button>
+				</nav>
+
 				<header className="lp-card__header">
+					<p className="lp-greeting">
+						<GreetingIcon
+							className="lp-greeting__icon"
+							size={14}
+							strokeWidth={1.5}
+							aria-hidden="true"
+						/>
+						{greeting.text}
+					</p>
 					<h1 className="lp-card__title">
 						Crea tu cuenta
 						<br />
@@ -189,7 +265,7 @@ export default function Register() {
 								placeholder="Tu usuario"
 								value={form.username}
 								onChange={handleChange}
-								disabled={isLoading}
+								disabled={formDisabled}
 								autoComplete="username"
 							/>
 						</div>
@@ -209,7 +285,7 @@ export default function Register() {
 								placeholder="tu@email.com"
 								value={form.email}
 								onChange={handleChange}
-								disabled={isLoading}
+								disabled={formDisabled}
 								required
 								autoComplete="email"
 							/>
@@ -230,7 +306,7 @@ export default function Register() {
 								placeholder="Mínimo 8 caracteres"
 								value={form.password}
 								onChange={handleChange}
-								disabled={isLoading}
+								disabled={formDisabled}
 								autoComplete="new-password"
 							/>
 							<button
@@ -239,6 +315,7 @@ export default function Register() {
 								onClick={() => setShowPassword((v) => !v)}
 								tabIndex={-1}
 								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+								disabled={formDisabled}
 							>
 								{showPassword ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -263,7 +340,7 @@ export default function Register() {
 								placeholder="Repite tu contraseña"
 								value={form.passwordConfirm}
 								onChange={handleChange}
-								disabled={isLoading}
+								disabled={formDisabled}
 								autoComplete="new-password"
 							/>
 							<button
@@ -272,6 +349,7 @@ export default function Register() {
 								onClick={() => setShowConfirm((v) => !v)}
 								tabIndex={-1}
 								aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
+								disabled={formDisabled}
 							>
 								{showConfirm ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -282,7 +360,7 @@ export default function Register() {
 						</div>
 					</div>
 
-					<button type="submit" className="lp-btn" disabled={isLoading}>
+					<button type="submit" className="lp-btn" disabled={formDisabled}>
 						{isLoading ? (
 							<Loader2 className="lp-btn__spinner" size={18} aria-label="Cargando" />
 						) : (
@@ -293,13 +371,6 @@ export default function Register() {
 						)}
 					</button>
 				</form>
-
-				<footer className="lp-card__footer">
-					¿Ya tienes una cuenta?{" "}
-					<Link to="/login" className="lp-card__signup">
-						Inicia sesión
-					</Link>
-				</footer>
 			</div>
 		</div>
 	);

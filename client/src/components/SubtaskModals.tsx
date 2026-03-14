@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
 	AlertTriangle,
@@ -17,12 +17,22 @@ import "./Dashboard.css";
 import { formatDate, type KanbanState } from "./dashboardUtils";
 import { useTheme } from "../hooks/useTheme";
 
+function formatHours(value: number): string {
+	if (!Number.isFinite(value)) return "0";
+	return Number.isInteger(value)
+		? String(value)
+		: value.toFixed(2).replace(/\.00$/, "").replace(/0$/, "");
+}
+
 interface EditSubtaskModalProps {
 	subtask: Subtask;
 	initialName: string;
 	initialHours: string;
 	initialDate: string;
 	initialStatus: Subtask["status"];
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
 	setName: (v: string) => void;
 	setHours: (v: string) => void;
 	setDate: (v: string) => void;
@@ -37,6 +47,9 @@ export function EditSubtaskModal({
 	initialHours,
 	initialDate,
 	initialStatus,
+	dateLoadMap = {},
+	conflictDates = [],
+	maxDailyHours = 0,
 	setName,
 	setHours,
 	setDate,
@@ -54,9 +67,30 @@ export function EditSubtaskModal({
 	}, [onClose]);
 
 	const { isDark } = useTheme();
+	const conflictDateSet = useMemo(() => new Set(conflictDates), [conflictDates]);
+	const parsedHours = Number.parseFloat(initialHours);
+	const draftHours = Number.isFinite(parsedHours) ? Math.max(0, parsedHours) : 0;
+	const initialSubtaskHours = Number(subtask.estimated_hours) || 0;
+	const countsNow = initialStatus !== "completed";
+	const countedBefore = subtask.status !== "completed";
+	const baseDateLoad = initialDate ? (dateLoadMap[initialDate] ?? 0) : 0;
+	let projectedDateLoad = baseDateLoad;
+	if (countedBefore && subtask.target_date === initialDate) {
+		projectedDateLoad -= initialSubtaskHours;
+	}
+	if (countsNow) {
+		projectedDateLoad += draftHours;
+	}
+	projectedDateLoad = Math.max(0, projectedDateLoad);
+	const hasConflictOnDate =
+		!!initialDate &&
+		(conflictDateSet.has(initialDate) || (maxDailyHours > 0 && projectedDateLoad > maxDailyHours));
+	const capacityPercent =
+		maxDailyHours > 0 ? Math.min((projectedDateLoad / maxDailyHours) * 100, 100) : 0;
+
 	const smModalBg = isDark
-		? "linear-gradient(155deg,#141f35 0%,#0f172a 55%,#09111e 100%)"
-		: "linear-gradient(155deg,#f8f5ff 0%,#f0ecfb 60%,#ebe5f7 100%)";
+		? "linear-gradient(152deg,#0c1731 0%,#14274f 34%,#101f40 66%,#0a132a 100%)"
+		: "linear-gradient(152deg,#f7f3ff 0%,#efe9ff 34%,#ece6ff 66%,#e8e2ff 100%)";
 	const smModalBdr = isDark ? "#1e293b" : "rgba(124,92,255,0.2)";
 	const smTitleClr = isDark ? "#f1f5f9" : "#1e1a33";
 	const smSubClr = isDark ? "#64748b" : "#7a62c9";
@@ -186,7 +220,7 @@ export function EditSubtaskModal({
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
-								(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
 								}
 							/>
 						</div>
@@ -202,9 +236,9 @@ export function EditSubtaskModal({
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark
-										? "#334155"
-										: "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -217,13 +251,85 @@ export function EditSubtaskModal({
 									onChange={(e) => setDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark
-										? "#334155"
-										: "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
 						</div>
+						{initialDate && (
+							<div
+								style={{
+									marginTop: "-4px",
+									padding: "10px 12px",
+									borderRadius: "9px",
+									border: hasConflictOnDate
+										? "1px solid rgba(248,113,113,0.36)"
+										: "1px solid rgba(124,92,255,0.24)",
+									background: hasConflictOnDate
+										? "rgba(248,113,113,0.08)"
+										: isDark
+											? "rgba(124,92,255,0.09)"
+											: "rgba(124,92,255,0.08)",
+								}}
+							>
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "space-between",
+										alignItems: "center",
+										gap: "8px",
+										fontSize: "11px",
+										fontWeight: 700,
+										color: isDark ? "#cbd5e1" : "#5b4a8e",
+									}}
+								>
+									<span>Capacidad para {formatDate(initialDate)}</span>
+									<strong style={{ color: hasConflictOnDate ? "#f87171" : "#7c3aed" }}>
+										{maxDailyHours > 0
+											? `${formatHours(projectedDateLoad)}h / ${formatHours(maxDailyHours)}h`
+											: `${formatHours(projectedDateLoad)}h`}
+									</strong>
+								</div>
+								{maxDailyHours > 0 && (
+									<div
+										style={{
+											marginTop: "7px",
+											height: "6px",
+											borderRadius: "999px",
+											background: isDark ? "rgba(148,163,184,0.22)" : "rgba(124,92,255,0.14)",
+											overflow: "hidden",
+										}}
+									>
+										<div
+											style={{
+												height: "100%",
+												width: `${capacityPercent}%`,
+												background: hasConflictOnDate
+													? "linear-gradient(90deg,#ef4444,#f97316)"
+													: "linear-gradient(90deg,#7c3aed,#a78bfa)",
+												transition:
+													"width 320ms cubic-bezier(0.22,1,0.36,1), background 220ms ease",
+												willChange: "width",
+											}}
+										/>
+									</div>
+								)}
+								<p
+									style={{
+										margin: "8px 0 0",
+										fontSize: "11px",
+										lineHeight: 1.35,
+										color: hasConflictOnDate ? "#f87171" : isDark ? "#a78bfa" : "#6d28d9",
+									}}
+								>
+									{hasConflictOnDate
+										? "Hay un conflicto de carga para esta fecha. Puedes guardar y resolverlo despues en Conflictos."
+										: "Sin conflicto detectado para esa fecha."}
+								</p>
+							</div>
+						)}
 						<div>
 							<label style={labelStyle}>Estado</label>
 							<StatusPicker value={initialStatus} onChange={setStatus} />
@@ -481,10 +587,16 @@ export function StatusPicker({
 /* ============ CREATE SUBTASK MODAL ============ */
 export function CreateSubtaskModal({
 	activities,
+	dateLoadMap = {},
+	conflictDates = [],
+	maxDailyHours = 0,
 	onClose,
 	onCreated,
 }: {
 	activities: Activity[];
+	dateLoadMap?: Record<string, number>;
+	conflictDates?: string[];
+	maxDailyHours?: number;
 	onClose: () => void;
 	onCreated: (kanban: KanbanState) => void;
 }) {
@@ -551,6 +663,18 @@ export function CreateSubtaskModal({
 	}
 
 	const selectedActivity = activities.find((a) => a.id === selectedActivityId);
+	const conflictDateSet = useMemo(() => new Set(conflictDates), [conflictDates]);
+	const parsedHours = Number.parseFloat(hours);
+	const draftHours = Number.isFinite(parsedHours) ? Math.max(0, parsedHours) : 0;
+	const targetBaseLoad = targetDate ? (dateLoadMap[targetDate] ?? 0) : 0;
+	const newHoursForTargetDate = status === "completed" ? 0 : draftHours;
+	const projectedTargetLoad = targetBaseLoad + newHoursForTargetDate;
+	const hasConflictOnTargetDate =
+		!!targetDate &&
+		(conflictDateSet.has(targetDate) || (maxDailyHours > 0 && projectedTargetLoad > maxDailyHours));
+	const targetCapacityPercent =
+		maxDailyHours > 0 ? Math.min((projectedTargetLoad / maxDailyHours) * 100, 100) : 0;
+
 	const inputStyle: React.CSSProperties = {
 		background: isDark ? "#1e293b" : "#ffffff",
 		border: `1px solid ${isDark ? "#334155" : "rgba(124,92,255,0.22)"}`,
@@ -956,7 +1080,7 @@ export function CreateSubtaskModal({
 								autoFocus
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
-								(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
 								}
 							/>
 						</div>
@@ -977,9 +1101,9 @@ export function CreateSubtaskModal({
 									onChange={(e) => setTargetDate(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark
-										? "#334155"
-										: "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -994,13 +1118,85 @@ export function CreateSubtaskModal({
 									onChange={(e) => setHours(e.target.value)}
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-									(e.currentTarget.style.borderColor = isDark
-										? "#334155"
-										: "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
 						</div>
+						{targetDate && (
+							<div
+								style={{
+									marginTop: "-4px",
+									padding: "10px 12px",
+									borderRadius: "9px",
+									border: hasConflictOnTargetDate
+										? "1px solid rgba(248,113,113,0.36)"
+										: "1px solid rgba(124,92,255,0.24)",
+									background: hasConflictOnTargetDate
+										? "rgba(248,113,113,0.08)"
+										: isDark
+											? "rgba(124,92,255,0.09)"
+											: "rgba(124,92,255,0.08)",
+								}}
+							>
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "space-between",
+										alignItems: "center",
+										gap: "8px",
+										fontSize: "11px",
+										fontWeight: 700,
+										color: isDark ? "#cbd5e1" : "#5b4a8e",
+									}}
+								>
+									<span>Capacidad para {formatDate(targetDate)}</span>
+									<strong style={{ color: hasConflictOnTargetDate ? "#f87171" : "#7c3aed" }}>
+										{maxDailyHours > 0
+											? `${formatHours(projectedTargetLoad)}h / ${formatHours(maxDailyHours)}h`
+											: `${formatHours(projectedTargetLoad)}h`}
+									</strong>
+								</div>
+								{maxDailyHours > 0 && (
+									<div
+										style={{
+											marginTop: "7px",
+											height: "6px",
+											borderRadius: "999px",
+											background: isDark ? "rgba(148,163,184,0.22)" : "rgba(124,92,255,0.14)",
+											overflow: "hidden",
+										}}
+									>
+										<div
+											style={{
+												height: "100%",
+												width: `${targetCapacityPercent}%`,
+												background: hasConflictOnTargetDate
+													? "linear-gradient(90deg,#ef4444,#f97316)"
+													: "linear-gradient(90deg,#7c3aed,#a78bfa)",
+												transition:
+													"width 320ms cubic-bezier(0.22,1,0.36,1), background 220ms ease",
+												willChange: "width",
+											}}
+										/>
+									</div>
+								)}
+								<p
+									style={{
+										margin: "8px 0 0",
+										fontSize: "11px",
+										lineHeight: 1.35,
+										color: hasConflictOnTargetDate ? "#f87171" : isDark ? "#a78bfa" : "#6d28d9",
+									}}
+								>
+									{hasConflictOnTargetDate
+										? "Hay un conflicto de carga para esta fecha. Puedes guardar y resolverlo despues en Conflictos."
+										: "Sin conflicto detectado para esa fecha."}
+								</p>
+							</div>
+						)}
 						{/* Status */}
 						<div>
 							<label style={labelStyle}>Estado inicial</label>

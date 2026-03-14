@@ -81,6 +81,11 @@ export async function fetchMe(): Promise<User> {
 	return data;
 }
 
+export async function updateMe(payload: Partial<Pick<User, "max_daily_hours">>): Promise<User> {
+	const { data } = await client.patch<User>("/me/", payload);
+	return data;
+}
+
 export async function fetchActivities(): Promise<Activity[]> {
 	const { data } = await client.get<Activity[]>("/activities/");
 	return data;

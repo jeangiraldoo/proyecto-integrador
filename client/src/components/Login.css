@@ -597,6 +597,80 @@
 	}
 }
 
+.lp-card--switching-out {
+	animation: card-switch-out 170ms ease-out forwards;
+	pointer-events: none;
+}
+
+@keyframes card-switch-out {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0.9;
+		transform: translateY(4px);
+	}
+}
+
+.lp-card--enter-soft,
+.lp-card--enter-from-left {
+	animation: card-enter-soft 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lp-card--enter-from-right {
+	animation: card-enter-soft 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-enter-soft {
+	from {
+		opacity: 0.86;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@supports (view-transition-name: auth-card) {
+	.lp-card {
+		view-transition-name: auth-card;
+	}
+
+	::view-transition-old(auth-card),
+	::view-transition-new(auth-card) {
+		animation-duration: 180ms;
+		animation-timing-function: ease-out;
+	}
+
+	::view-transition-old(auth-card) {
+		animation-name: auth-vt-old;
+	}
+
+	::view-transition-new(auth-card) {
+		animation-name: auth-vt-new;
+	}
+
+	@keyframes auth-vt-old {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0.94;
+		}
+	}
+
+	@keyframes auth-vt-new {
+		from {
+			opacity: 0.86;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+}
+
 /* Top shimmer highlight */
 .lp-card__shine {
 	position: absolute;
@@ -615,6 +689,101 @@
 	object-fit: contain;
 	display: block;
 	margin-bottom: 1.75rem;
+}
+
+/* Auth mode switch */
+.lp-auth-switch {
+	--lp-switch-pad: 4px;
+	position: relative;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	align-items: center;
+	gap: 0;
+	padding: var(--lp-switch-pad);
+	margin: 0 0 1.35rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.045);
+	border: 1px solid var(--lp-border);
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.lp-auth-switch__thumb {
+	position: absolute;
+	top: var(--lp-switch-pad);
+	bottom: var(--lp-switch-pad);
+	left: var(--lp-switch-pad);
+	width: calc((100% - (var(--lp-switch-pad) * 2)) / 2);
+	border-radius: 999px;
+	background: linear-gradient(135deg, #7c6ceb 0%, #5540c8 100%);
+	box-shadow: 0 8px 20px rgba(124, 108, 235, 0.35);
+	transition:
+		transform 260ms cubic-bezier(0.25, 0.8, 0.25, 1),
+		background 280ms ease,
+		box-shadow 280ms ease;
+	will-change: transform;
+	z-index: 0;
+}
+
+.lp-auth-switch--login .lp-auth-switch__thumb {
+	transform: translateX(0);
+}
+
+.lp-auth-switch--register .lp-auth-switch__thumb {
+	transform: translateX(100%);
+}
+
+.lp-auth-switch--to-register .lp-auth-switch__thumb {
+	transform: translateX(100%);
+}
+
+.lp-auth-switch--to-login .lp-auth-switch__thumb {
+	transform: translateX(0);
+}
+
+.lp-auth-switch__option {
+	position: relative;
+	z-index: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 36px;
+	padding: 0.5rem 0.55rem;
+	border-radius: 999px;
+	text-decoration: none;
+	font-size: 0.76rem;
+	font-weight: 700;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	color: var(--lp-text-sub);
+	opacity: 0.92;
+	font-family: inherit;
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	appearance: none;
+	transition:
+		color var(--lp-t),
+		opacity var(--lp-t);
+}
+
+.lp-auth-switch__option:disabled {
+	cursor: default;
+	opacity: 1;
+}
+
+.lp-auth-switch__option:hover {
+	color: var(--lp-text);
+}
+
+.lp-auth-switch__option--active {
+	color: #f8f5ff;
+	opacity: 1;
+}
+
+.lp-auth-switch__option:focus-visible {
+	outline: 2px solid rgba(196, 181, 253, 0.5);
+	outline-offset: 1px;
 }
 
 /* ── Card header ── */
@@ -1007,6 +1176,28 @@
 	color: #6258a0;
 }
 
+[data-theme="light"] .lp-auth-switch {
+	background: rgba(124, 108, 235, 0.06);
+	border-color: rgba(124, 108, 235, 0.18);
+}
+
+[data-theme="light"] .lp-auth-switch__thumb {
+	background: linear-gradient(135deg, #7c6ceb 0%, #5f4ad3 100%);
+	box-shadow: 0 8px 18px rgba(124, 108, 235, 0.24);
+}
+
+[data-theme="light"] .lp-auth-switch__option {
+	color: #665f8b;
+}
+
+[data-theme="light"] .lp-auth-switch__option:hover {
+	color: #2f255f;
+}
+
+[data-theme="light"] .lp-auth-switch__option--active {
+	color: #ffffff;
+}
+
 /* Theme toggle button in login — top-right corner */
 .lp-theme-toggle-btn {
 	position: absolute;
@@ -1029,5 +1220,13 @@
 
 	.lp-card__shine {
 		display: none;
+	}
+
+	.lp-auth-switch {
+		margin-bottom: 1.1rem;
+	}
+
+	.lp-auth-switch__option {
+		font-size: 0.75rem;
 	}
 }

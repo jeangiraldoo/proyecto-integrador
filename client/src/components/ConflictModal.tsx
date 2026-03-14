@@ -84,7 +84,7 @@ function getNextConflictFreeDate(startDate: string, conflictDates: string[]): st
 	const from = parseDate(startDate) ?? new Date();
 	const blocked = new Set(conflictDates);
 
-	for (let offset = 1; offset <= 90; offset += 1) {
+	for (let offset = 0; offset <= 90; offset += 1) {
 		const candidate = toIsoDate(addDays(from, offset));
 		if (!blocked.has(candidate)) return candidate;
 	}
@@ -105,7 +105,7 @@ function getNextCapacitySafeDate(params: {
 	const from = parseDate(startDate) ?? new Date();
 	const safeMovingHours = Math.max(0, movingHours || 0);
 
-	for (let offset = 1; offset <= 120; offset += 1) {
+	for (let offset = 0; offset <= 120; offset += 1) {
 		const candidate = toIsoDate(addDays(from, offset));
 		let candidateLoad = dateLoadMap[candidate] ?? 0;
 
@@ -255,7 +255,7 @@ export default function ConflictModal({
 		}
 	}, [onChangeDate, onReduceHours, requestClose, resolver]);
 
-	const suggestedDate =
+	const suggestedDateCandidate =
 		resolver?.mode === "date"
 			? (getNextCapacitySafeDate({
 					startDate: resolver.value || resolver.conflict.date,
@@ -268,6 +268,11 @@ export default function ConflictModal({
 					resolver.value || resolver.conflict.date,
 					conflicts.map((item) => item.date),
 				))
+			: null;
+
+	const suggestedDate =
+		resolver?.mode === "date" && suggestedDateCandidate && suggestedDateCandidate !== resolver.value
+			? suggestedDateCandidate
 			: null;
 
 	const suggestedHours =

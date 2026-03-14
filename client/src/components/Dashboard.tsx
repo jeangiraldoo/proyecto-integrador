@@ -20,12 +20,12 @@ import {
 	X,
 	Clock,
 	Tag,
+	Check,
 	ArrowUpDown,
 	Loader2,
 	Trash2,
 	Folder,
 	BookOpen,
-	Palette,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../hooks/useTheme";
@@ -33,6 +33,7 @@ import { getAccessToken } from "../api/auth";
 import lumaLogo from "../assets/luma.png";
 import {
 	fetchMe,
+	updateMe,
 	fetchActivities,
 	fetchTodayView,
 	fetchConflicts,
@@ -54,7 +55,8 @@ import "./Dashboard.css";
 import CreateActivityModal from "./CreateActivityModal";
 import {
 	checkDailyConflicts,
-	classifyActivity,
+	type KanbanGroup,
+	type KanbanState,
 	type NewActivityPayloadFromModal,
 } from "./dashboardUtils";
 import OrganizationView from "./OrganizationView";
@@ -69,6 +71,19 @@ import { SubjectFormModal } from "./OrganizationView";
 /* ============ COMPONENT ============ */
 interface DashboardProps {
 	onLogout: () => void;
+}
+
+function getLocalDateKey(date: Date = new Date()): string {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
+function getKanbanGroupForDate(targetDate: string, todayDateKey: string): KanbanGroup {
+	if (targetDate < todayDateKey) return "overdue";
+	if (targetDate === todayDateKey) return "today";
+	return "upcoming";
 }
 
 export default function Dashboard({ onLogout }: DashboardProps) {
@@ -94,11 +109,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			return false;
 		}
 	});
-	const [todayData, setTodayData] = useState<{
-		overdue: Subtask[];
-		today: Subtask[];
-		upcoming: Subtask[];
-	} | null>(null);
+	const [todayData, setTodayData] = useState<KanbanState | null>(null);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [prefilledSubject, setPrefilledSubject] = useState("");
 	const [pendingExpandSubject, setPendingExpandSubject] = useState<{ subject: string } | null>(
@@ -120,7 +131,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const [conflictsOpen, setConflictsOpen] = useState(false);
 	const [conflictCount, setConflictCount] = useState(0);
 	const [conflictsLoading, setConflictsLoading] = useState(false);
-	const [hasShownInitialConflictToast, setHasShownInitialConflictToast] = useState(false);
+	const [capacityEditorOpen, setCapacityEditorOpen] = useState(false);
+	const [dailyLimitDraft, setDailyLimitDraft] = useState("");
+	const [dailyLimitSaving, setDailyLimitSaving] = useState(false);
+	const [capacityPopoverPosition, setCapacityPopoverPosition] = useState<{
+		top: number;
+		left: number;
+		side: "right" | "left";
+	}>({ top: 0, left: 0, side: "right" });
+	const capacityEditorButtonRef = useRef<HTMLButtonElement>(null);
+	const capacityPopoverRef = useRef<HTMLDivElement>(null);
+	const dailyLimitInputRef = useRef<HTMLInputElement>(null);
 
 	const subjects = useMemo<string[]>(() => {
 		const fromActivities = activities.map((a) => a.course_name).filter(Boolean);
@@ -255,42 +276,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		}
 	}, []);
 
-	const notifyConflictToast = useCallback(
-		(count?: number) => {
-			const label =
-				typeof count === "number"
-					? count === 1
-						? "Tienes 1 conflicto pendiente."
-						: `Tienes ${count} conflictos pendientes.`
-					: "Se detecto una sobrecarga de horas.";
-
-			toast.warning(label, {
-				action: {
-					label: "Ver",
-					onClick: () => {
-						setConflictsOpen(true);
-						if (activeNav !== "today") navigate("/hoy");
-					},
-				},
-				duration: 7000,
-			});
-		},
-		[activeNav, navigate],
-	);
-
 	const handleConflictDetected = useCallback(
-		(info: ConflictInfo) => {
-			void refreshConflicts().then((nextConflicts) => {
-				if (nextConflicts.length > 0) {
-					notifyConflictToast(nextConflicts.length);
-					return;
-				}
-				if (info.date) {
-					notifyConflictToast();
-				}
-			});
+		(_info: ConflictInfo) => {
+			void _info;
+			void refreshConflicts();
 		},
-		[notifyConflictToast, refreshConflicts],
+		[refreshConflicts],
 	);
 
 	const conflictModalItems = useMemo<ConflictModalItem[]>(() => {
@@ -387,6 +378,58 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		[],
 	);
 
+	const applyTodayDataPatchLocally = useCallback(
+		(subtaskId: number, patch: Partial<Pick<Subtask, "estimated_hours" | "target_date">>) => {
+			setTodayData((prev) => {
+				if (!prev) return prev;
+
+				let currentGroup: KanbanGroup | null = null;
+				let baseSubtask: Subtask | null = null;
+
+				for (const group of ["overdue", "today", "upcoming"] as const) {
+					const found = prev[group].find((subtask) => subtask.id === subtaskId);
+					if (found) {
+						currentGroup = group;
+						baseSubtask = found;
+						break;
+					}
+				}
+
+				if (!baseSubtask) {
+					for (const activity of activities) {
+						const found = activity.subtasks?.find((subtask) => subtask.id === subtaskId);
+						if (!found) continue;
+
+						baseSubtask = {
+							...found,
+							activity: found.activity ?? { id: activity.id, title: activity.title },
+							course_name: found.course_name ?? activity.course_name,
+						};
+						break;
+					}
+				}
+
+				if (!baseSubtask) return prev;
+
+				const nextSubtask: Subtask = { ...baseSubtask, ...patch };
+				const fallbackGroup = currentGroup ?? "upcoming";
+				const targetGroup = nextSubtask.target_date
+					? getKanbanGroupForDate(nextSubtask.target_date, getLocalDateKey())
+					: fallbackGroup;
+
+				const nextState: KanbanState = {
+					overdue: prev.overdue.filter((subtask) => subtask.id !== subtaskId),
+					today: prev.today.filter((subtask) => subtask.id !== subtaskId),
+					upcoming: prev.upcoming.filter((subtask) => subtask.id !== subtaskId),
+				};
+
+				nextState[targetGroup] = [...nextState[targetGroup], nextSubtask];
+				return nextState;
+			});
+		},
+		[activities],
+	);
+
 	const handleConflictDateResolve = useCallback(
 		async ({ subtask, nextDate }: { subtask: ConflictModalSubtask; nextDate: string }) => {
 			const activityId = resolveActivityIdForConflictSubtask(subtask);
@@ -398,6 +441,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			try {
 				await updateSubtask(activityId, subtask.id, { target_date: nextDate });
 				applySubtaskPatchLocally(subtask.id, { target_date: nextDate });
+				applyTodayDataPatchLocally(subtask.id, { target_date: nextDate });
 				await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
 				toast.success("Fecha de subtarea actualizada.");
@@ -408,6 +452,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		},
 		[
 			applySubtaskPatchLocally,
+			applyTodayDataPatchLocally,
 			refreshConflicts,
 			refreshPlannerAfterConflictUpdate,
 			resolveActivityIdForConflictSubtask,
@@ -425,6 +470,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			try {
 				await updateSubtask(activityId, subtask.id, { estimated_hours: nextHours });
 				applySubtaskPatchLocally(subtask.id, { estimated_hours: nextHours });
+				applyTodayDataPatchLocally(subtask.id, { estimated_hours: nextHours });
 				await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
 				toast.success("Horas de subtarea actualizadas.");
@@ -435,6 +481,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		},
 		[
 			applySubtaskPatchLocally,
+			applyTodayDataPatchLocally,
 			refreshConflicts,
 			refreshPlannerAfterConflictUpdate,
 			resolveActivityIdForConflictSubtask,
@@ -467,14 +514,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						upcoming: todayView.upcoming,
 					});
 					setApiSubjects(Array.isArray(subs) ? subs : []);
-					const initialConflict = checkDailyConflicts(
-						[...todayView.overdue, ...todayView.today, ...todayView.upcoming],
-						me?.max_daily_hours ?? 0,
-					);
-					if (initialConflict && !hasShownInitialConflictToast) {
-						notifyConflictToast();
-						setHasShownInitialConflictToast(true);
-					}
 					void refreshConflicts();
 				}
 			} catch (err) {
@@ -490,7 +529,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		return () => {
 			cancelled = true;
 		};
-	}, [hasShownInitialConflictToast, notifyConflictToast, refreshConflicts]);
+	}, [refreshConflicts]);
 
 	const { greeting, GreetingIcon } = useMemo(() => {
 		const hour = new Date().getHours();
@@ -530,27 +569,175 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		return () => document.removeEventListener("mousedown", handleClick);
 	}, [filtersOpen]);
 
+	const updateCapacityPopoverPosition = useCallback(() => {
+		const trigger = capacityEditorButtonRef.current;
+		if (!trigger) return;
+
+		const rect = trigger.getBoundingClientRect();
+		const popoverWidth = Math.min(318, Math.max(272, window.innerWidth - 24));
+		const popoverHeight = 88;
+		const gap = -2;
+
+		const canOpenRight = rect.right + gap + popoverWidth <= window.innerWidth - 8;
+		const side: "right" | "left" = canOpenRight ? "right" : "left";
+
+		const left =
+			side === "right"
+				? Math.min(rect.right + gap, window.innerWidth - popoverWidth - 8)
+				: Math.max(8, rect.left - popoverWidth - gap);
+
+		const centeredTop = rect.top + rect.height / 2 - popoverHeight / 2;
+		const top = Math.max(8, Math.min(centeredTop, window.innerHeight - popoverHeight - 8));
+
+		setCapacityPopoverPosition({ top, left, side });
+	}, []);
+
+	useEffect(() => {
+		if (!capacityEditorOpen) return;
+
+		function handleOutsideClick(event: MouseEvent) {
+			const target = event.target as Node;
+			if (capacityPopoverRef.current?.contains(target)) return;
+			if (capacityEditorButtonRef.current?.contains(target)) return;
+			setCapacityEditorOpen(false);
+		}
+
+		function handleEscape(event: KeyboardEvent) {
+			if (event.key === "Escape" && !dailyLimitSaving) {
+				setCapacityEditorOpen(false);
+			}
+		}
+
+		function handleViewportChange() {
+			updateCapacityPopoverPosition();
+		}
+
+		updateCapacityPopoverPosition();
+		document.addEventListener("mousedown", handleOutsideClick);
+		document.addEventListener("keydown", handleEscape);
+		window.addEventListener("resize", handleViewportChange);
+		window.addEventListener("scroll", handleViewportChange, true);
+		return () => {
+			document.removeEventListener("mousedown", handleOutsideClick);
+			document.removeEventListener("keydown", handleEscape);
+			window.removeEventListener("resize", handleViewportChange);
+			window.removeEventListener("scroll", handleViewportChange, true);
+		};
+	}, [capacityEditorOpen, dailyLimitSaving, updateCapacityPopoverPosition]);
+
+	useEffect(() => {
+		if (!capacityEditorOpen) return;
+
+		const frame = window.requestAnimationFrame(() => {
+			updateCapacityPopoverPosition();
+			dailyLimitInputRef.current?.focus();
+			dailyLimitInputRef.current?.select();
+		});
+
+		return () => window.cancelAnimationFrame(frame);
+	}, [capacityEditorOpen, updateCapacityPopoverPosition]);
+
 	const toggleFilter = useCallback((id: string) => {
 		setActiveFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
 	}, []);
 
-	const today = useMemo(
-		() => (activities || []).filter((a) => classifyActivity(a.due_date) === "today"),
-		[activities],
-	);
+	const todayDateKey = getLocalDateKey();
 
-	const capacityUsed = useMemo(
-		() => today.reduce((sum, a) => sum + a.total_estimated_hours, 0),
-		[today],
-	);
+	const capacityUsed = useMemo(() => {
+		if (!todayData) return dateLoadMap[todayDateKey] ?? 0;
+		return todayData.today.reduce((sum, subtask) => {
+			if (subtask.status === "completed") return sum;
+			return sum + (Number(subtask.estimated_hours) || 0);
+		}, 0);
+	}, [dateLoadMap, todayData, todayDateKey]);
 
 	const knownSubjects = useMemo(
 		() => [...new Set(activities.map((a) => a.course_name).filter(Boolean))].sort(),
 		[activities],
 	);
 	const capacityTotal = user?.max_daily_hours ?? 0;
+	const capacityOverloaded = capacityTotal > 0 && capacityUsed > capacityTotal;
+	const todayPendingConflict = useMemo(
+		() => conflicts.find((conflict) => conflict.affected_date === todayDateKey) ?? null,
+		[conflicts, todayDateKey],
+	);
+	const conflictDates = useMemo(
+		() => conflicts.map((conflict) => conflict.affected_date),
+		[conflicts],
+	);
 	const capacityPercent =
 		capacityTotal > 0 ? Math.min((capacityUsed / capacityTotal) * 100, 100) : 0;
+	const sidebarCapacityLoading = loading || !user;
+	const sidebarConflictsLoading = loading || conflictsLoading;
+
+	const warnTodayConflictAfterScheduling = useCallback(
+		(action: "crear" | "editar") => {
+			toast.warning(
+				action === "crear"
+					? "Aviso: esta historia quedo para hoy y ya existe un conflicto de carga. Puedes resolverlo despues en Conflictos."
+					: "Aviso: la historia quedo para hoy y ya existe un conflicto de carga. Puedes resolverlo despues en Conflictos.",
+				{
+					duration: 7000,
+					action: {
+						label: "Ver conflictos",
+						onClick: () => {
+							setConflictsOpen(true);
+							if (activeNav !== "today") navigate("/hoy");
+						},
+					},
+				},
+			);
+		},
+		[activeNav, navigate],
+	);
+
+	function closeCapacityEditor() {
+		if (dailyLimitSaving) return;
+		setCapacityEditorOpen(false);
+	}
+
+	function toggleCapacityEditor() {
+		if (!user || dailyLimitSaving) return;
+		setCapacityEditorOpen((prev) => {
+			if (!prev) setDailyLimitDraft(String(user.max_daily_hours));
+			return !prev;
+		});
+	}
+
+	async function handleCapacityLimitSave() {
+		const parsedLimit = Number(dailyLimitDraft);
+		if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+			toast.error("Ingresa un limite diario valido (1h o mas).");
+			return;
+		}
+
+		setDailyLimitSaving(true);
+		try {
+			const updatedUser = await updateMe({ max_daily_hours: parsedLimit });
+			await refreshConflicts();
+			setCapacityEditorOpen(false);
+			toast.success("Limite diario actualizado.");
+			window.requestAnimationFrame(() => {
+				setUser(updatedUser);
+			});
+		} catch (error) {
+			const responseData =
+				typeof error === "object" && error !== null
+					? (error as { response?: { data?: Record<string, unknown> } }).response?.data
+					: null;
+			const rawLimitError = responseData?.max_daily_hours;
+			const limitError =
+				typeof rawLimitError === "string"
+					? rawLimitError
+					: Array.isArray(rawLimitError) && typeof rawLimitError[0] === "string"
+						? rawLimitError[0]
+						: null;
+
+			toast.error(limitError ?? "No se pudo actualizar el limite diario.");
+		} finally {
+			setDailyLimitSaving(false);
+		}
+	}
 
 	// Delete flow: request (opens modal) -> perform (calls API)
 	const [confirmDelete, setConfirmDelete] = useState<{ id: number; title: string } | null>(null);
@@ -719,6 +906,72 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					</>,
 					document.body,
 				)}
+			{capacityEditorOpen &&
+				createPortal(
+					<div className="capacity-popover-layer" role="presentation">
+						<div
+							id="capacity-quick-editor"
+							ref={capacityPopoverRef}
+							className={`capacity-popover is-${capacityPopoverPosition.side}`}
+							role="dialog"
+							aria-modal="false"
+							aria-label="Editor rapido de limite diario"
+							style={{
+								top: `${capacityPopoverPosition.top}px`,
+								left: `${capacityPopoverPosition.left}px`,
+							}}
+						>
+							<form
+								className="capacity-inline-form"
+								onSubmit={(event) => {
+									event.preventDefault();
+									void handleCapacityLimitSave();
+								}}
+							>
+								<label className="capacity-inline-prefix" htmlFor="daily-hours-input-floating">
+									Limite
+								</label>
+								<div className="capacity-inline-input-wrap">
+									<input
+										id="daily-hours-input-floating"
+										type="number"
+										min={1}
+										step={1}
+										className="capacity-inline-input"
+										value={dailyLimitDraft}
+										onChange={(event) => setDailyLimitDraft(event.target.value)}
+										disabled={dailyLimitSaving}
+										ref={dailyLimitInputRef}
+										aria-label="Horas por dia"
+									/>
+									<span className="capacity-inline-unit">h</span>
+								</div>
+								<button
+									type="submit"
+									className="capacity-inline-save"
+									disabled={dailyLimitSaving}
+									aria-label="Guardar limite"
+								>
+									{dailyLimitSaving ? (
+										<Loader2 size={14} className="spinner" />
+									) : (
+										<Check size={14} />
+									)}
+								</button>
+								<button
+									type="button"
+									className="capacity-inline-cancel"
+									onClick={closeCapacityEditor}
+									disabled={dailyLimitSaving}
+									aria-label="Cancelar"
+								>
+									<X size={14} />
+								</button>
+							</form>
+						</div>
+					</div>,
+					document.body,
+				)}
 			{conflictsOpen && conflictModalItems.length > 0 && (
 				<ConflictModal
 					conflicts={conflictModalItems}
@@ -820,20 +1073,63 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				<div className="sidebar-capacity">
 					<div className="capacity-header">
 						<span className="capacity-label">Capacidad</span>
-						<span className="capacity-numbers">
-							<span className="capacity-used">{capacityUsed}h</span>
-							<span className="capacity-sep">/</span>
-							<span className="capacity-total">{capacityTotal}h</span>
-						</span>
+						{sidebarCapacityLoading ? (
+							<span className="capacity-loading-value">
+								<Loader2 size={12} className="spinner" />
+								Cargando...
+							</span>
+						) : (
+							<span className="capacity-numbers">
+								<span className="capacity-used">{capacityUsed}h</span>
+								<span className="capacity-sep">/</span>
+								<span className="capacity-total">{capacityTotal}h</span>
+							</span>
+						)}
 					</div>
 					<div className="capacity-bar">
-						<div className="capacity-fill" style={{ width: `${capacityPercent}%` }} />
+						<div
+							className={`capacity-fill ${capacityOverloaded ? "is-overloaded" : ""} ${sidebarCapacityLoading ? "is-loading" : ""}`}
+							style={{ width: sidebarCapacityLoading ? "42%" : `${capacityPercent}%` }}
+						/>
 					</div>
+					<button
+						type="button"
+						className={`capacity-edit-btn ${capacityEditorOpen ? "is-open" : ""}`}
+						onClick={toggleCapacityEditor}
+						ref={capacityEditorButtonRef}
+						disabled={!user || sidebarCapacityLoading}
+						aria-expanded={capacityEditorOpen}
+						aria-controls="capacity-quick-editor"
+					>
+						{sidebarCapacityLoading ? "Cargando capacidad..." : "Editar limite diario"}
+					</button>
 				</div>
+
+				{todayPendingConflict && (
+					<div className="today-conflict-banner" role="status" aria-live="polite">
+						<AlertTriangle size={12} className="today-conflict-icon-inline" />
+						<span className="today-conflict-inline-text">
+							Conflicto hoy: {todayPendingConflict.planned_hours}h/
+							{todayPendingConflict.max_allowed_hours}h
+						</span>
+						<button
+							type="button"
+							className="today-conflict-action"
+							onClick={() => {
+								setConflictsOpen(true);
+								if (activeNav !== "today") navigate("/hoy");
+							}}
+						>
+							Revisar
+						</button>
+					</div>
+				)}
 
 				<button
 					className="sidebar-conflicts-btn"
+					disabled={sidebarConflictsLoading}
 					onClick={async () => {
+						if (sidebarConflictsLoading) return;
 						const conflicts = await refreshConflicts();
 						if (!conflicts.length) {
 							toast.success("No tienes conflictos pendientes.");
@@ -847,19 +1143,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						<AlertTriangle size={14} />
 						Conflictos
 					</span>
-					<span className={`sidebar-conflicts-count ${conflictCount > 0 ? "danger" : "ok"}`}>
-						{conflictsLoading ? "..." : conflictCount}
+					<span
+						className={`sidebar-conflicts-count ${sidebarConflictsLoading ? "ok is-loading" : conflictCount > 0 ? "danger" : "ok"}`}
+					>
+						{sidebarConflictsLoading ? <Loader2 size={12} className="spinner" /> : conflictCount}
 					</span>
 				</button>
-
-				{/* Theme toggle */}
-				<div className="sidebar-theme-row theme-toggle-wrap">
-					<span className="sidebar-theme-label">
-						<Palette size={14} strokeWidth={1.75} />
-						Apariencia
-					</span>
-					<ThemeToggle />
-				</div>
 
 				{/* Logout */}
 				<button className="logout-btn" onClick={onLogout}>
@@ -870,6 +1159,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				{/* Branding */}
 				<div className="sidebar-brand">
 					<img src={lumaLogo} alt="Luma" className="sidebar-logo" />
+					<ThemeToggle className="sidebar-brand-toggle" />
 				</div>
 			</aside>
 
@@ -925,6 +1215,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onClose={() => setCreateOpen(false)}
 								initialSubject={prefilledSubject}
 								knownSubjects={knownSubjects}
+								dateLoadMap={dateLoadMap}
+								conflictDates={conflictDates}
+								maxDailyHours={capacityTotal}
 								onCreate={async (payload: NewActivityPayloadFromModal) => {
 									try {
 										const apiPayload = {
@@ -937,13 +1230,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												payload.total_estimated_hours ??
 												(payload.subtasks
 													? payload.subtasks.reduce(
-														(acc, s) =>
-															acc +
-															(typeof s.estimated_hours === "number"
-																? s.estimated_hours
-																: Number(s.estimated_hours || 0)),
-														0,
-													)
+															(acc, s) =>
+																acc +
+																(typeof s.estimated_hours === "number"
+																	? s.estimated_hours
+																	: Number(s.estimated_hours || 0)),
+															0,
+														)
 													: 0),
 											subtasks: payload.subtasks?.map((s) => ({
 												name: s.title,
@@ -959,13 +1252,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											payload.total_estimated_hours ??
 											(payload.subtasks
 												? payload.subtasks.reduce(
-													(acc, s) =>
-														acc +
-														(typeof s.estimated_hours === "number"
-															? s.estimated_hours
-															: Number(s.estimated_hours || 0)),
-													0,
-												)
+														(acc, s) =>
+															acc +
+															(typeof s.estimated_hours === "number"
+																? s.estimated_hours
+																: Number(s.estimated_hours || 0)),
+														0,
+													)
 												: 0);
 
 										const created: Activity = {
@@ -981,6 +1274,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											if (subjectName) setPendingExpandSubject({ subject: subjectName });
 										}
 										setCreateOpen(false);
+
+										const newTodayHours =
+											payload.subtasks
+												?.filter((s) => s.target_date === todayDateKey)
+												.reduce((sum, s) => sum + Number(s.estimated_hours || 0), 0) ?? 0;
+										const projectedTodayHours = (dateLoadMap[todayDateKey] ?? 0) + newTodayHours;
+										const hasProjectedTodayConflict =
+											payload.due_date === todayDateKey &&
+											(!!todayPendingConflict ||
+												(capacityTotal > 0 && projectedTodayHours > capacityTotal));
+
+										if (hasProjectedTodayConflict) {
+											warnTodayConflictAfterScheduling("crear");
+										}
+
 										const createdConflict = checkDailyConflicts(
 											payload.subtasks?.map((s) => ({
 												target_date: s.target_date,
@@ -1134,6 +1442,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onDataRefresh={setTodayData}
 								activities={activities}
 								maxDailyHours={user?.max_daily_hours ?? 0}
+								conflictDates={conflictDates}
 								onConflict={handleConflictDetected}
 								onSubtaskMutated={() => {
 									void refreshConflicts();
@@ -1156,6 +1465,23 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								onActivityUpdate={(updated) =>
 									setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
 								}
+								dateLoadMap={dateLoadMap}
+								conflictDates={conflictDates}
+								maxDailyHours={capacityTotal}
+								onActivitySaved={(updated, previous) => {
+									void previous;
+									const dueInToday = updated.due_date === todayDateKey;
+									if (!dueInToday) return;
+
+									const currentTodayHours = dateLoadMap[todayDateKey] ?? 0;
+									const hasTodayConflict =
+										!!todayPendingConflict ||
+										(capacityTotal > 0 && currentTodayHours > capacityTotal);
+
+									if (hasTodayConflict) {
+										warnTodayConflictAfterScheduling("editar");
+									}
+								}}
 								activeFilters={activeFilters}
 								searchQuery={searchQuery}
 								expandSubject={pendingExpandSubject}
