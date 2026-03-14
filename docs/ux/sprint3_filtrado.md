@@ -1,9 +1,9 @@
 # Diagrama de flujo de decisiones para Filtrado (US-5)
 
-Este diagrama documenta la interacción del usuario con la barra de filtros en la vista `/hoy`, asegurando que la lista se actualice en tiempo real sin perder las reglas de prioridad del sistema.
+Este diagrama documenta la interacción del usuario con la barra de filtros en la vista `/hoy`,
+asegurando que la lista se actualice en tiempo real sin perder las reglas de prioridad del sistema.
 
-
-```mermaid
+````mermaid
 flowchart TD
     subgraph USER["Usuario (Interacción)"]
         A(["Inicio: Vista /hoy"])
@@ -51,3 +51,4 @@ flowchart TD
     style RESET fill:#d5f5e3,color:#1e8449,stroke:#27ae60
     style UI fill:#d5f5e3,color:#1e8449,stroke:#27ae60
     ```
+````
