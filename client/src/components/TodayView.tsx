@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTheme } from "../hooks/useTheme";
 import {
@@ -10,7 +10,6 @@ import {
 	Sparkles,
 	Clock,
 	Loader2,
-	Check,
 	CheckCircle2,
 	ArrowUp,
 	Zap,
@@ -138,6 +137,13 @@ export default function TodayKanban({
 	const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in_progress" | "completed">(
 		"all",
 	);
+	const [courseFilter, setCourseFilter] = useState<string>("all");
+	const [toolbarSelect, setToolbarSelect] = useState<{
+		type: "status" | "course";
+		top: number;
+		left: number;
+		width: number;
+	} | null>(null);
 	const [openSelect, setOpenSelect] = useState<{ id: number; top: number; left: number } | null>(
 		null,
 	);
@@ -294,6 +300,22 @@ export default function TodayKanban({
 		toast.success("Subtarea eliminada");
 	}
 
+	const allItems = useMemo(
+		() => [...kanban.overdue, ...kanban.today, ...kanban.upcoming],
+		[kanban.overdue, kanban.today, kanban.upcoming],
+	);
+	const availableCourseNames = useMemo(() => {
+		const names = new Set<string>();
+		for (const subtask of allItems) {
+			const resolvedName =
+				subtask.course_name ??
+				activities.find((a) => a.id === subtask.activity?.id)?.course_name ??
+				"Sin materia";
+			names.add(resolvedName);
+		}
+		return Array.from(names).sort((a, b) => a.localeCompare(b));
+	}, [allItems, activities]);
+
 	if (kanbanLoading) {
 		return (
 			<div
@@ -313,9 +335,14 @@ export default function TodayKanban({
 		);
 	}
 
-	const allItems = [...kanban.overdue, ...kanban.today, ...kanban.upcoming];
 	const pendingCount = allItems.filter((s) => s.status !== "completed").length;
 	const hasOverdueOpen = kanban.overdue.some((s) => s.status !== "completed");
+	const statusFilterLabel: Record<"all" | "pending" | "in_progress" | "completed", string> = {
+		all: "Todos",
+		pending: "Pendiente",
+		in_progress: "En progreso",
+		completed: "Completada",
+	};
 
 	const columns: {
 		group: KanbanGroup;
@@ -325,31 +352,31 @@ export default function TodayKanban({
 		icon: React.JSX.Element;
 		sortHint: { icon: React.JSX.Element; text: string };
 	}[] = [
-		{
-			group: "overdue" as KanbanGroup,
-			label: "Vencidas",
-			items: sortSubtasks("overdue", kanban.overdue),
-			accent: "#f87171",
-			icon: <AlertTriangle size={13} />,
-			sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
-		},
-		{
-			group: "today" as KanbanGroup,
-			label: "Para hoy",
-			items: sortSubtasks("today", kanban.today),
-			accent: "#c084fc",
-			icon: <CalendarCheck size={13} />,
-			sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
-		},
-		{
-			group: "upcoming" as KanbanGroup,
-			label: "Próximas",
-			items: sortSubtasks("upcoming", kanban.upcoming),
-			accent: "#60a5fa",
-			icon: <CalendarClock size={13} />,
-			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
-		},
-	];
+			{
+				group: "overdue" as KanbanGroup,
+				label: "Vencidas",
+				items: sortSubtasks("overdue", kanban.overdue),
+				accent: "#f87171",
+				icon: <AlertTriangle size={13} />,
+				sortHint: { icon: <ArrowUp size={12} />, text: "más antiguas primero" },
+			},
+			{
+				group: "today" as KanbanGroup,
+				label: "Para hoy",
+				items: sortSubtasks("today", kanban.today),
+				accent: "#c084fc",
+				icon: <CalendarCheck size={13} />,
+				sortHint: { icon: <Zap size={12} />, text: "más rápidas primero" },
+			},
+			{
+				group: "upcoming" as KanbanGroup,
+				label: "Próximas",
+				items: sortSubtasks("upcoming", kanban.upcoming),
+				accent: "#60a5fa",
+				icon: <CalendarClock size={13} />,
+				sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
+			},
+		];
 
 	return (
 		<>
@@ -436,59 +463,188 @@ export default function TodayKanban({
 					<Plus size={13} /> Nueva subtarea
 				</button>
 
-				{/* Status filter chips */}
-				<div style={{ display: "flex", gap: "5px", flexShrink: 0, alignItems: "center" }}>
-					{(
-						[
-							["all", "Todos", "#94a3b8"],
-							["pending", "Pendientes", "#94a3b8"],
-							["in_progress", "En progreso", "#60a5fa"],
-							["completed", "Completadas", "#34d399"],
-						] as const
-					).map(([val, label, accent]) => {
-						const active = statusFilter === val;
-						return (
-							<button
-								key={val}
-								onClick={() => setStatusFilter(val)}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: "5px",
-									padding: "5px 10px 5px 8px",
-									borderRadius: "20px",
-									border: active ? `1px solid ${accent}55` : `1px solid ${tv.chipBorder}`,
-									background: active ? `${accent}18` : tv.chipBg,
-									color: active ? accent : tv.chipColor,
-									fontSize: "11px",
-									fontWeight: active ? 600 : 400,
-									cursor: "pointer",
-									fontFamily: "inherit",
-									transition: "all 0.15s",
-									whiteSpace: "nowrap",
-									letterSpacing: "0.01em",
-								}}
-							>
-								<span
+				<div
+					style={{
+						display: "flex",
+						gap: "8px",
+						alignItems: "center",
+						flexShrink: 0,
+						flexWrap: "wrap",
+						justifyContent: "flex-end",
+					}}
+				>
+					<button
+						type="button"
+						onClick={(e) => {
+							const rect = e.currentTarget.getBoundingClientRect();
+							setToolbarSelect((prev) =>
+								prev?.type === "status"
+									? null
+									: { type: "status", top: rect.bottom + 6, left: rect.left, width: rect.width },
+							);
+						}}
+						style={{
+							height: "34px",
+							borderRadius: "8px",
+							padding: "0 12px",
+							border: `1px solid ${tv.dropBdr}`,
+							background: tv.dropBg,
+							color: tv.dropTxt,
+							fontSize: "12px",
+							fontFamily: "inherit",
+							minWidth: "160px",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							gap: "8px",
+							cursor: "pointer",
+						}}
+					>
+						<span>Estado: {statusFilterLabel[statusFilter]}</span>
+						<ChevronDown size={12} />
+					</button>
+
+					<button
+						type="button"
+						onClick={(e) => {
+							const rect = e.currentTarget.getBoundingClientRect();
+							setToolbarSelect((prev) =>
+								prev?.type === "course"
+									? null
+									: { type: "course", top: rect.bottom + 6, left: rect.left, width: rect.width },
+							);
+						}}
+						style={{
+							height: "34px",
+							borderRadius: "8px",
+							padding: "0 12px",
+							border: `1px solid ${tv.dropBdr}`,
+							background: tv.dropBg,
+							color: tv.dropTxt,
+							fontSize: "12px",
+							fontFamily: "inherit",
+							minWidth: "170px",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							gap: "8px",
+							cursor: "pointer",
+						}}
+					>
+						<span>Curso: {courseFilter === "all" ? "Todos" : courseFilter}</span>
+						<ChevronDown size={12} />
+					</button>
+
+					<button
+						type="button"
+						onClick={() => {
+							setStatusFilter("all");
+							setCourseFilter("all");
+							setToolbarSelect(null);
+						}}
+						style={{
+							height: "34px",
+							borderRadius: "8px",
+							padding: "0 12px",
+							border: `1px solid ${tv.dropBdr}`,
+							background: "transparent",
+							color: tv.dropTxt,
+							fontSize: "12px",
+							fontWeight: 600,
+							cursor: "pointer",
+							fontFamily: "inherit",
+						}}
+					>
+						Limpiar
+					</button>
+
+					{toolbarSelect &&
+						createPortal(
+							<>
+								<div
+									style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+									onClick={() => setToolbarSelect(null)}
+								/>
+								<div
 									style={{
-										width: "14px",
-										height: "14px",
-										borderRadius: "4px",
-										border: active ? `1.5px solid ${accent}` : `1.5px solid ${tv.chipChkBdr}`,
-										background: active ? `${accent}22` : "transparent",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										flexShrink: 0,
-										transition: "all 0.15s",
+										position: "fixed",
+										top: toolbarSelect.top,
+										left: toolbarSelect.left,
+										minWidth: toolbarSelect.width,
+										maxWidth: "280px",
+										zIndex: 9999,
+										background: tv.dropBg,
+										border: `1px solid ${tv.dropBdr}`,
+										borderRadius: "10px",
+										overflow: "hidden",
+										boxShadow: tv.dropSh,
+										animation: "dropdownOpen 0.15s cubic-bezier(0.16,1,0.3,1)",
 									}}
 								>
-									{active && <Check size={9} strokeWidth={3} style={{ color: accent }} />}
-								</span>
-								{label}
-							</button>
-						);
-					})}
+									{toolbarSelect.type === "status" ? (
+										([
+											["all", "Todos"],
+											["pending", "Pendiente"],
+											["in_progress", "En progreso"],
+											["completed", "Completada"],
+										] as const).map(([value, label]) => (
+											<button
+												key={value}
+												onClick={() => {
+													setStatusFilter(value);
+													setToolbarSelect(null);
+												}}
+												style={{
+													width: "100%",
+													padding: "9px 12px",
+													border: "none",
+													textAlign: "left",
+													fontSize: "12px",
+													fontFamily: "inherit",
+													cursor: "pointer",
+													background: statusFilter === value ? "rgba(124,92,255,0.18)" : "transparent",
+													color: statusFilter === value ? (isDark ? "#e9d5ff" : "#5b21b6") : tv.dropTxt,
+												}}
+											>
+												Estado: {label}
+											</button>
+										))
+									) : (
+										[
+											{ value: "all", label: "Todos" },
+											...availableCourseNames.map((name) => ({ value: name, label: name })),
+										].map((item) => (
+											<button
+												key={item.value}
+												onClick={() => {
+													setCourseFilter(item.value);
+													setToolbarSelect(null);
+												}}
+												style={{
+													width: "100%",
+													padding: "9px 12px",
+													border: "none",
+													textAlign: "left",
+													fontSize: "12px",
+													fontFamily: "inherit",
+													cursor: "pointer",
+													background: courseFilter === item.value ? "rgba(124,92,255,0.18)" : "transparent",
+													color: courseFilter === item.value ? (isDark ? "#e9d5ff" : "#5b21b6") : tv.dropTxt,
+													maxWidth: "280px",
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													whiteSpace: "nowrap",
+												}}
+												title={item.value === "all" ? "Todos" : item.value}
+											>
+												Curso: {item.label}
+											</button>
+										))
+									)}
+								</div>
+							</>,
+							document.body,
+						)}
 				</div>
 			</div>
 
@@ -700,6 +856,13 @@ export default function TodayKanban({
 								.filter((s) => statusFilter === "all" || s.status === statusFilter)
 								.filter(
 									(s) =>
+										courseFilter === "all" ||
+										(s.course_name ??
+											activities.find((a) => a.id === s.activity?.id)?.course_name ??
+											"Sin materia") === courseFilter,
+								)
+								.filter(
+									(s) =>
 										!searchQuery.trim() ||
 										s.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
 								)
@@ -754,9 +917,9 @@ export default function TodayKanban({
 													isSelected
 														? null
 														: {
-																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-																group,
-															},
+															subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+															group,
+														},
 												)
 											}
 											onKeyDown={(e) => {
