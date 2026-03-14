@@ -431,7 +431,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const handleConflictDateResolve = useCallback(
-		async ({ subtask, nextDate }: { subtask: ConflictModalSubtask; nextDate: string }) => {
+		async ({
+			subtask,
+			nextDate,
+			conflictId,
+		}: {
+			subtask: ConflictModalSubtask;
+			nextDate: string;
+			conflictId: number;
+		}) => {
 			const activityId = resolveActivityIdForConflictSubtask(subtask);
 			if (!activityId) {
 				toast.error("No se pudo identificar la actividad de la subtarea.");
@@ -442,9 +450,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				await updateSubtask(activityId, subtask.id, { target_date: nextDate });
 				applySubtaskPatchLocally(subtask.id, { target_date: nextDate });
 				applyTodayDataPatchLocally(subtask.id, { target_date: nextDate });
-				await refreshConflicts();
+				const nextConflicts = await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
-				toast.success("Fecha de subtarea actualizada.");
+				const conflictResolved = !nextConflicts.some((conflict) => conflict.id === conflictId);
+				toast.success(
+					conflictResolved
+						? "Conflicto resuelto correctamente."
+						: "Fecha actualizada. Revisa conflictos restantes.",
+				);
 			} catch (error) {
 				toast.error("No se pudo actualizar la fecha.");
 				throw error;
@@ -460,7 +473,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const handleConflictHoursResolve = useCallback(
-		async ({ subtask, nextHours }: { subtask: ConflictModalSubtask; nextHours: number }) => {
+		async ({
+			subtask,
+			nextHours,
+			conflictId,
+		}: {
+			subtask: ConflictModalSubtask;
+			nextHours: number;
+			conflictId: number;
+		}) => {
 			const activityId = resolveActivityIdForConflictSubtask(subtask);
 			if (!activityId) {
 				toast.error("No se pudo identificar la actividad de la subtarea.");
@@ -471,9 +492,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				await updateSubtask(activityId, subtask.id, { estimated_hours: nextHours });
 				applySubtaskPatchLocally(subtask.id, { estimated_hours: nextHours });
 				applyTodayDataPatchLocally(subtask.id, { estimated_hours: nextHours });
-				await refreshConflicts();
+				const nextConflicts = await refreshConflicts();
 				void refreshPlannerAfterConflictUpdate();
-				toast.success("Horas de subtarea actualizadas.");
+				const conflictResolved = !nextConflicts.some((conflict) => conflict.id === conflictId);
+				toast.success(
+					conflictResolved
+						? "Conflicto resuelto correctamente."
+						: "Horas actualizadas. Revisa conflictos restantes.",
+				);
 			} catch (error) {
 				toast.error("No se pudieron actualizar las horas.");
 				throw error;
@@ -978,9 +1004,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					dateLoadMap={dateLoadMap}
 					maxDailyHours={user?.max_daily_hours ?? 0}
 					onClose={() => setConflictsOpen(false)}
-					onChangeDate={({ subtask, nextDate }) => handleConflictDateResolve({ subtask, nextDate })}
-					onReduceHours={({ subtask, nextHours }) =>
-						handleConflictHoursResolve({ subtask, nextHours })
+					onChangeDate={({ conflict, subtask, nextDate }) =>
+						handleConflictDateResolve({ subtask, nextDate, conflictId: conflict.id })
+					}
+					onReduceHours={({ conflict, subtask, nextHours }) =>
+						handleConflictHoursResolve({ subtask, nextHours, conflictId: conflict.id })
 					}
 				/>
 			)}
@@ -1104,26 +1132,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						{sidebarCapacityLoading ? "Cargando capacidad..." : "Editar limite diario"}
 					</button>
 				</div>
-
-				{todayPendingConflict && (
-					<div className="today-conflict-banner" role="status" aria-live="polite">
-						<AlertTriangle size={12} className="today-conflict-icon-inline" />
-						<span className="today-conflict-inline-text">
-							Conflicto hoy: {todayPendingConflict.planned_hours}h/
-							{todayPendingConflict.max_allowed_hours}h
-						</span>
-						<button
-							type="button"
-							className="today-conflict-action"
-							onClick={() => {
-								setConflictsOpen(true);
-								if (activeNav !== "today") navigate("/hoy");
-							}}
-						>
-							Revisar
-						</button>
-					</div>
-				)}
 
 				<button
 					className="sidebar-conflicts-btn"
