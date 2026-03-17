@@ -367,7 +367,9 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 	@extend_schema(
 		summary="List activities",
-		description="Return a list of activities for the authenticated user, including progress counters.",
+		description=(
+			"Return a list of activities for the authenticated user, including progress counters."
+		),
 		responses=ActivitySerializer(many=True),
 		examples=[
 			OpenApiExample(
