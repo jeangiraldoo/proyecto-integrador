@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, TrendingUp } from "lucide-react";
-import "./Login.css";
 import "./Landing.css";
-import lumaLogoFull from "../assets/luma.png";
-import heroIllustration from "../assets/login.png";
-import ThemeToggle from "./ThemeToggle";
+import "@/pages/LoginPage/Login.css";
+import lumaLogoFull from "@/assets/luma.png";
+import heroIllustration from "@/assets/login.png";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function Landing() {
 	return (

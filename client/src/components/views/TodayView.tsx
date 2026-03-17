@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useTheme } from "../hooks/useTheme";
+import { useTheme } from "@/hooks/useTheme";
 import {
 	CalendarCheck,
 	CalendarClock,
@@ -21,20 +21,20 @@ import {
 	deleteSubtask,
 	type Activity,
 	type Subtask,
-} from "../api/dashboard";
+} from "@/api/dashboard";
 import { toast } from "sonner";
-import { getAccessToken } from "../api/auth";
-import "./Dashboard.css";
+import { getAccessToken } from "@/api/auth";
+import "@/pages/Dashboard/Dashboard.css";
 import {
 	checkDailyConflicts,
 	daysUntil,
 	type KanbanGroup,
 	type KanbanState,
 	EMPTY_KANBAN,
-} from "./dashboardUtils";
-import { type ConflictInfo } from "./ConflictModal";
-import { SubtaskDetailPanel } from "./SubtaskDetailPanel";
-import { CreateSubtaskModal } from "./SubtaskModals";
+} from "@/pages/Dashboard/dashboardUtils";
+import { type ConflictInfo } from "@/components/modals/ConflictModal";
+import { SubtaskDetailPanel } from "@/components/shared/SubtaskDetailPanel";
+import { CreateSubtaskModal } from "@/components/modals/SubtaskModals";
 
 /** Sorting rule ("Regla de Oro"):
  *  - Overdue  → chronological, oldest first (target_date ASC)

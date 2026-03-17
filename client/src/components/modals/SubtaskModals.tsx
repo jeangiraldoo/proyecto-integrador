@@ -11,11 +11,11 @@ import {
 	ClipboardList,
 	Pencil,
 } from "lucide-react";
-import { fetchTodayView, createSubtask, type Activity, type Subtask } from "../api/dashboard";
+import { fetchTodayView, createSubtask, type Activity, type Subtask } from "@/api/dashboard";
 import { toast } from "sonner";
-import "./Dashboard.css";
-import { formatDate, type KanbanState } from "./dashboardUtils";
-import { useTheme } from "../hooks/useTheme";
+import "@/pages/Dashboard/Dashboard.css";
+import { formatDate, type KanbanState } from "@/pages/Dashboard/dashboardUtils";
+import { useTheme } from "@/hooks/useTheme";
 
 function formatHours(value: number): string {
 	if (!Number.isFinite(value)) return "0";

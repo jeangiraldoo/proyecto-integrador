@@ -36,7 +36,7 @@ export function classifyActivity(dueDateIso: string): SectionVariant {
 	return "upcoming";
 }
 
-import type { Subtask } from "../api/dashboard";
+import type { Subtask } from "@/api/dashboard";
 
 export type KanbanGroup = "overdue" | "today" | "upcoming";
 export type KanbanState = { overdue: Subtask[]; today: Subtask[]; upcoming: Subtask[] };

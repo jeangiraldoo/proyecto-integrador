@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, BookOpen, Loader2, CheckCircle2, Pencil } from "lucide-react";
-import { type Activity } from "../api/dashboard";
-import { useTheme } from "../hooks/useTheme";
-import "./Dashboard.css";
+import { type Activity } from "@/api/dashboard";
+import { useTheme } from "@/hooks/useTheme";
+import "@/pages/Dashboard/Dashboard.css";
 
 interface SubjectFormModalProps {
 	mode: "add" | "rename";

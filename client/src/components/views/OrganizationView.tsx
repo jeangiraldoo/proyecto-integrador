@@ -15,13 +15,13 @@ import {
 	ClipboardList,
 	Pencil,
 } from "lucide-react";
-import { updateActivity, fetchSubtasks, type Activity, type Subtask } from "../api/dashboard";
+import { updateActivity, fetchSubtasks, type Activity, type Subtask } from "@/api/dashboard";
 import { toast } from "sonner";
-import "./Dashboard.css";
-import { formatDate, daysUntil } from "./dashboardUtils";
-import { EditActivityForm, SubjectFormModal } from "./OrgModals";
-import SubtaskManagerModal from "./SubtaskManagerModal";
-import { useTheme } from "../hooks/useTheme";
+import "@/pages/Dashboard/Dashboard.css";
+import { formatDate, daysUntil } from "@/pages/Dashboard/dashboardUtils";
+import { EditActivityForm, SubjectFormModal } from "@/components/modals/OrgModals";
+import SubtaskManagerModal from "@/components/modals/SubtaskManagerModal";
+import { useTheme } from "@/hooks/useTheme";
 
 interface OrgViewProps {
 	activities: Activity[];
@@ -125,7 +125,7 @@ export default function OrganizationView({
 	async function loadSubtasks(
 		activityId: number,
 		force = false,
-	): Promise<import("../api/dashboard").Subtask[]> {
+	): Promise<import("@/api/dashboard").Subtask[]> {
 		if (!force && subtaskStateByActivity[activityId]?.items.length)
 			return subtaskStateByActivity[activityId].items;
 		setSubtaskStateByActivity((prev) => ({
@@ -1364,4 +1364,4 @@ export default function OrganizationView({
 }
 
 // re-export so Dashboard.tsx doesn't need updating
-export { SubjectFormModal } from "./OrgModals";
+export { SubjectFormModal } from "@/components/modals/OrgModals";
