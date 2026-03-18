@@ -4,7 +4,10 @@ import { toast, Toaster } from "sonner";
 import Login from "@/pages/LoginPage/Login";
 import Register from "@/pages/RegisterPage/Register";
 import Landing from "@/pages/Landing/Landing";
-import Dashboard from "@/pages/Dashboard/Dashboard";
+import Layout from "@/components/layout/Layout";
+import Hoy from "@/pages/Hoy/Hoy";
+import Organizacion from "@/pages/Organizacion/Organizacion";
+import Progreso from "@/pages/Progreso/Progreso";
 import client from "@/api/client";
 import { isTokenValid, clearAuthStorage, getAccessToken } from "@/api/auth";
 import ThemeProvider from "@/context/ThemeProvider";
@@ -46,8 +49,8 @@ function LoginPage() {
 	return <Login onLoginSuccess={handleLoginSuccess} />;
 }
 
-/** Página del dashboard con manejo de logout. */
-function DashboardPage() {
+/** Página del Layout con manejo de logout. */
+function LayoutPage() {
 	const navigate = useNavigate();
 	const handleLogout = () => {
 		clearAuthStorage();
@@ -55,7 +58,7 @@ function DashboardPage() {
 		toast.success("Sesión cerrada correctamente");
 		navigate("/login");
 	};
-	return <Dashboard onLogout={handleLogout} />;
+	return <Layout onLogout={handleLogout} />;
 }
 
 function App() {
@@ -79,29 +82,16 @@ function AppRoutes() {
 				<Route path="/registro" element={<RegisterPage />} />
 
 				<Route
-					path="/hoy"
 					element={
 						<ProtectedRoute>
-							<DashboardPage />
+							<LayoutPage />
 						</ProtectedRoute>
 					}
-				/>
-				<Route
-					path="/organizacion"
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path="/progreso"
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
+				>
+					<Route path="/hoy" element={<Hoy />} />
+					<Route path="/organizacion" element={<Organizacion />} />
+					<Route path="/progreso" element={<Progreso />} />
+				</Route>
 
 				{/* Cualquier ruta desconocida va a la landing */}
 				<Route path="*" element={<Navigate to="/" replace />} />
