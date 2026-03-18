@@ -26,7 +26,7 @@ export default defineConfig({
 	/* Opciones compartidas por todos los tests */
 	use: {
 		/* URL base — apunta al dev server de Vite */
-		baseURL: "http://localhost:5173",
+		baseURL: "https://proyecto-integrador-five-gamma.vercel.app",
 
 		/* Capturar trace en primer reintento */
 		trace: "on-first-retry",
