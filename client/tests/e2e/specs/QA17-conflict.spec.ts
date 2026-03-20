@@ -23,6 +23,10 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			await page.locator("#daily-hours-input-floating").fill("6");
 			await page.locator(".capacity-inline-save").click();
 			await expect(page.locator(".capacity-total")).toContainText("6h", { timeout: 5000 });
+
+			// FIX: Wait for the update toast to disappear so it doesn't conflict later
+			const updateToast = page.locator("[data-sonner-toast]").filter({ hasText: /actualizado/i });
+			await expect(updateToast).toBeHidden({ timeout: 10000 });
 		});
 	});
 
@@ -57,14 +61,13 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(targetDateStr);
 			await modal.locator('input[id="st-hours"]').fill("6");
 
-			// UI Validation: The capacity indicator should NOT show conflict styling (red)
-			const capacityIndicator = modal.locator(".stm-capacity, .ca-subform-max").or(
-				modal
-					.locator("div")
-					.filter({ hasText: /Capacidad para/i })
-					.last(),
-			);
-			await expect(capacityIndicator).not.toContainText(/conflicto/i);
+			// FIX: Simplified selector for the capacity indicator inside the modal
+			// If it's exactly 6h, the message "Sin conflicto detectado para esa fecha" should appear
+			const capacityIndicatorSafe = modal
+				.locator("p")
+				.filter({ hasText: /Sin conflicto detectado/i })
+				.last();
+			await expect(capacityIndicatorSafe).toBeVisible({ timeout: 5000 });
 
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
 		});
@@ -78,17 +81,22 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(targetDateStr);
 			await modal.locator('input[id="st-hours"]').fill("0.1");
 
-			// Note: DashboardUtils uses 0.25 steps usually, but we test 0.1 to check decimal handling
 			// UI Validation: The capacity indicator MUST show conflict text
-			const capacityIndicator = modal
-				.locator("div")
+			const capacityIndicatorConflict = modal
+				.locator("p")
 				.filter({ hasText: /Hay un conflicto de carga/i })
 				.last();
-			await expect(capacityIndicator).toBeVisible();
+			await expect(capacityIndicatorConflict).toBeVisible({ timeout: 5000 });
 
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
 			await modal.getByRole("button", { name: /Crear actividad/i }).click();
-			await expect(page.locator("[data-sonner-toast]")).toContainText(/creada/i, { timeout: 8000 });
+
+			// FIX: Target specifically the "created" toast to avoid strict mode violations
+			const createToast = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /creada/i })
+				.first();
+			await expect(createToast).toBeVisible({ timeout: 8000 });
 		});
 
 		// 3. Subtarea “Hecha” no cuenta
@@ -109,8 +117,9 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 				timeout: 5000,
 			});
 
-			// Close panel
+			// Close panel safely
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
+			await expect(page.locator('aside[role="dialog"]')).toBeHidden({ timeout: 5000 });
 			await page.waitForTimeout(500); // Wait for backdrop animation
 
 			// Conflict badge should NOT be red, because 6h is completed, only 0.1h is pending (0.1 < 6)
@@ -133,6 +142,10 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			await page.getByRole("button", { name: /Editar limite diario/i }).click();
 			await page.locator("#daily-hours-input-floating").fill("6");
 			await page.locator(".capacity-inline-save").click();
+
+			// Wait for the update toast to disappear
+			const updateToast = page.locator("[data-sonner-toast]").filter({ hasText: /actualizado/i });
+			await expect(updateToast).toBeHidden({ timeout: 10000 });
 		});
 
 		await test.step("Cleanup Functional Tests", async () => {
@@ -140,9 +153,12 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			const actHeader = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 			await actHeader.locator('button[title="Eliminar actividad"]').first().click();
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
-			await expect(page.locator("[data-sonner-toast]")).toContainText(/eliminada/i, {
-				timeout: 8000,
-			});
+
+			const deleteToast = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /eliminada/i })
+				.first();
+			await expect(deleteToast).toBeVisible({ timeout: 8000 });
 		});
 	});
 
@@ -189,7 +205,13 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
 
 			await modal.getByRole("button", { name: /Crear actividad/i }).click();
-			await expect(page.locator("[data-sonner-toast]")).toContainText(/creada/i, { timeout: 8000 });
+
+			// FIX: Target specifically the "created" toast
+			const createToast = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /creada/i })
+				.first();
+			await expect(createToast).toBeVisible({ timeout: 8000 });
 		});
 
 		// ====================================================================
@@ -254,9 +276,12 @@ test.describe("QA-17 | US-7 - Conflict Detection by Daily Overload", () => {
 			const actHeader = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 			await actHeader.locator('button[title="Eliminar actividad"]').first().click();
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
-			await expect(page.locator("[data-sonner-toast]")).toContainText(/eliminada/i, {
-				timeout: 8000,
-			});
+
+			const deleteToast = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /eliminada/i })
+				.first();
+			await expect(deleteToast).toBeVisible({ timeout: 8000 });
 		});
 	});
 });
