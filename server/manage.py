@@ -7,6 +7,9 @@ import sys
 
 def main():
 	"""Run administrative tasks."""
+	if len(sys.argv) > 1 and sys.argv[1] == "test":
+		os.environ["DJANGO_USE_SQLITE_FOR_TESTS"] = "True"
+		os.environ.pop("SUPABASE_DATABASE_URL", None)
 	os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 	try:
 		from django.core.management import execute_from_command_line

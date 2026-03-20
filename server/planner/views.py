@@ -2,11 +2,11 @@ import logging
 from datetime import date, timedelta
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Count, Q, Sum
 from django.http import Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Activity, Conflict, Subject, Subtask, User
+from .models import Activity, Conflict, Progress, Subject, Subtask, User
 from .serializers import (
 	ActivitySerializer,
 	ConflictResolveSerializer,
@@ -228,7 +228,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 	permission_classes = [IsAuthenticated]
 
 	def get_queryset(self):
-		return Activity.objects.filter(user=self.request.user)
+		return Activity.objects.filter(user=self.request.user).annotate(
+			_total_subtasks=Count("subtasks"),
+			_completed_subtasks=Count("subtasks", filter=Q(subtasks__status="completed")),
+		)
 
 	def perform_create(self, serializer):
 		activity = serializer.save(user=self.request.user)
@@ -353,7 +356,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 		serializer = self.get_serializer(
 			activity,
 			data=request.data,
-			partial=True,  # 🔑 PATCH behavior
+			partial=True,  # PATCH behavior
 		)
 
 		if not serializer.is_valid():
@@ -364,7 +367,9 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 	@extend_schema(
 		summary="List activities",
-		description="Return a list of activities for the authenticated user.",
+		description=(
+			"Return a list of activities for the authenticated user, including progress counters."
+		),
 		responses=ActivitySerializer(many=True),
 		examples=[
 			OpenApiExample(
@@ -374,9 +379,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 						"id": 1,
 						"title": "Study",
 						"description": "Read chapters",
-						"estimated_hours": 2,
 						"course_name": "Math",
 						"user": 1,
+						"completed_subtasks_count": 2,
+						"total_subtasks_count": 5,
 					}
 				],
 				response_only=True,
@@ -429,7 +435,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
 	@extend_schema(
 		summary="Retrieve activity",
-		description="Get a single activity by id.",
+		description="Get a single activity by id, including progress counters.",
 		responses=ActivitySerializer,
 		parameters=[
 			OpenApiParameter(
@@ -446,9 +452,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
 					"id": 1,
 					"title": "Study",
 					"description": "Read chapters",
-					"estimated_hours": 2,
 					"course_name": "Math",
 					"user": 1,
+					"completed_subtasks_count": 2,
+					"total_subtasks_count": 5,
 				},
 				response_only=True,
 			),
@@ -671,8 +678,32 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 
 	@extend_schema(
 		summary="Partial update subtask",
-		description="Partially update a subtask's fields.",
-		request=SubtaskSerializer,
+		description=(
+			"Partially update a subtask's fields and record a progress entry.\n\n"
+			"All subtask fields are optional. Additionally accepts:\n"
+			"- `note` *(string, optional)*: free-text note persisted in the Progress history.\n\n"
+			"Valid values for `status`: `pending`, `in_progress`, `completed`, `postponed`.\n\n"
+			"A Progress record is always created when this endpoint is called, "
+			"preserving the status and note at the moment of the update."
+		),
+		request=inline_serializer(
+			name="SubtaskProgressUpdate",
+			fields={
+				"name": drf_serializers.CharField(required=False),
+				"estimated_hours": drf_serializers.IntegerField(required=False),
+				"target_date": drf_serializers.DateField(required=False),
+				"status": drf_serializers.ChoiceField(
+					choices=["pending", "in_progress", "completed", "postponed"],
+					required=False,
+				),
+				"ordering": drf_serializers.IntegerField(required=False),
+				"note": drf_serializers.CharField(
+					required=False,
+					allow_blank=True,
+					help_text="Optional note stored in the Progress history log.",
+				),
+			},
+		),
 		responses={200: SubtaskSerializer},
 		parameters=[
 			OpenApiParameter(
@@ -690,7 +721,12 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 		],
 		examples=[
 			OpenApiExample(
-				"Patch subtask request",
+				"Record progress with note",
+				value={"status": "postponed", "note": "Esperando al profesor"},
+				request_only=True,
+			),
+			OpenApiExample(
+				"Mark completed without note",
 				value={"status": "completed"},
 				request_only=True,
 			),
@@ -701,7 +737,7 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 					"name": "Do exercises",
 					"estimated_hours": 2,
 					"target_date": "2026-03-01",
-					"status": "completed",
+					"status": "postponed",
 					"ordering": 1,
 				},
 				response_only=True,
@@ -723,16 +759,32 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 				}
 			) from err
 
+		# Extract note before passing to SubtaskSerializer (Subtask has no note field)
+		data = request.data.copy()
+		raw_note = data.pop("note", "")
+		# QueryDict.pop returns a list; plain dict returns the value directly
+		if isinstance(raw_note, list):
+			raw_note = raw_note[0] if raw_note else ""
+		note: str = (raw_note or "").strip()
+
 		old_date = subtask.target_date
-		serializer = self.get_serializer(subtask, data=request.data, partial=True)
+		serializer = self.get_serializer(subtask, data=data, partial=True)
 		try:
 			serializer.is_valid(raise_exception=True)
-			serializer.save()
+			with transaction.atomic():
+				serializer.save()
+				Progress.objects.create(
+					user=request.user,
+					activity=subtask.activity_id,
+					subtask=subtask,
+					status=serializer.instance.status,
+					note=note,
+				)
 			new_date: date = serializer.instance.target_date
 			_evaluate_day_conflicts(request.user, new_date)
 			if old_date != new_date:
 				_evaluate_day_conflicts(request.user, old_date)
-			return Response(serializer.data, status=status.HTTP_201_CREATED)
+			return Response(serializer.data, status=status.HTTP_200_OK)
 		except ValidationError as e:
 			logger.warning("Subtask validation error on PATCH", extra={"errors": e.detail})
 			return Response(e.detail, status=status.HTTP_422_UNPROCESSABLE_ENTITY)

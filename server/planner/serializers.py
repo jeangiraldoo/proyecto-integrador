@@ -42,7 +42,7 @@ class SubtaskSerializer(serializers.ModelSerializer):
 
 		if "status" in attrs:
 			status = attrs["status"]
-			allowed_statuses = ["pending", "completed", "in_progress"]
+			allowed_statuses = ["pending", "completed", "in_progress", "postponed"]
 			if status not in allowed_statuses:
 				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
 
@@ -72,6 +72,8 @@ class SubtaskSerializer(serializers.ModelSerializer):
 class ActivitySerializer(serializers.ModelSerializer):
 	total_estimated_hours = serializers.SerializerMethodField()
 	subtask_count = serializers.SerializerMethodField()
+	completed_subtasks_count = serializers.SerializerMethodField()
+	total_subtasks_count = serializers.SerializerMethodField()
 	subtasks = SubtaskSerializer(many=True, required=False)
 
 	description = serializers.CharField(required=False, allow_blank=True)
@@ -89,8 +91,17 @@ class ActivitySerializer(serializers.ModelSerializer):
 			"subtasks",
 			"subtask_count",
 			"total_estimated_hours",
+			"completed_subtasks_count",
+			"total_subtasks_count",
 		]
-		read_only_fields = ["id", "user", "subtask_count", "total_estimated_hours"]
+		read_only_fields = [
+			"id",
+			"user",
+			"subtask_count",
+			"total_estimated_hours",
+			"completed_subtasks_count",
+			"total_subtasks_count",
+		]
 
 	def validate(self, attrs):
 		errors = {}
@@ -101,13 +112,13 @@ class ActivitySerializer(serializers.ModelSerializer):
 				errors["title"] = "Title is required"
 
 		if "course_name" in attrs:
-			title = attrs.get("course_name", "").strip()
-			if not title:
+			course_name = attrs.get("course_name", "").strip()
+			if not course_name:
 				errors["course_name"] = "Course name is required"
 
 		if "status" in attrs:
 			status = attrs.get("status")
-			allowed_statuses = ["pending", "completed", "in_progress"]
+			allowed_statuses = ["pending", "completed", "in_progress", "postponed"]
 			if status not in allowed_statuses:
 				errors["status"] = f"Invalid status type. Must be one of: {allowed_statuses}"
 
@@ -133,8 +144,23 @@ class ActivitySerializer(serializers.ModelSerializer):
 				return 0
 		return 0
 
-	def get_subtask_count(self, obj) -> int:
+	def get_completed_subtasks_count(self, obj) -> int:
+		# Use the annotated value from get_queryset when available (no extra query)
+		annotated = getattr(obj, "_completed_subtasks", None)
+		if annotated is not None:
+			return annotated
+		return obj.subtasks.filter(status="completed").count()
+
+	def get_total_subtasks_count(self, obj) -> int:
+		# Use the annotated value from get_queryset when available (no extra query)
+		annotated = getattr(obj, "_total_subtasks", None)
+		if annotated is not None:
+			return annotated
 		return obj.subtasks.count()
+
+	def get_subtask_count(self, obj) -> int:
+		# Kept for backward compatibility — delegates to total_subtasks_count
+		return self.get_total_subtasks_count(obj)
 
 	#  Moved `create` method to ActivitySerializer to handle nested writes
 	def create(self, validated_data):

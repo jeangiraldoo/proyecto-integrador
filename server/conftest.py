@@ -7,6 +7,7 @@ from planner.models import User
 @pytest.fixture
 def user(db):
 	"""Create and return a test user."""
+	_ = db
 	return User.objects.create_user(
 		username="testuser",
 		password="testpass123",
@@ -18,6 +19,7 @@ def user(db):
 @pytest.fixture
 def other_user(db):
 	"""Create and return a second user for data isolation tests."""
+	_ = db
 	return User.objects.create_user(
 		username="otheruser",
 		password="otherpass123",
