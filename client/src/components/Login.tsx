@@ -115,10 +115,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 		.join(" ");
 
 	return (
-		<div className="lp-scene">
+		<div className="lp-scene" data-testid="login-page">
 			{/* ── Theme toggle — top-right corner ── */}
-			<div className="lp-theme-toggle-btn">
-				<ThemeToggle />
+			<div className="lp-theme-toggle-btn" data-testid="login-theme-toggle-wrap">
+				<ThemeToggle qaId="login-theme-toggle-btn" />
 			</div>
 
 			{/* ── Background atmospheric layer ── */}
@@ -179,6 +179,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 					if (cardState === "error") setCardState("idle");
 				}}
 				role="main"
+				data-testid="login-card"
+				data-qa-state={cardState}
 			>
 				<div className="lp-card__shine" />
 				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo" />
@@ -186,6 +188,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 				<nav
 					className={`lp-auth-switch lp-auth-switch--login${switchingToRegister ? " lp-auth-switch--to-register" : ""}`}
 					aria-label="Cambiar formulario"
+					data-testid="login-auth-switch"
 				>
 					<span className="lp-auth-switch__thumb" aria-hidden="true" />
 					<button
@@ -193,6 +196,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 						className="lp-auth-switch__option lp-auth-switch__option--active"
 						disabled
 						aria-current="page"
+						data-testid="login-current-tab-btn"
 					>
 						Iniciar sesion
 					</button>
@@ -201,6 +205,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 						className="lp-auth-switch__option"
 						onClick={handleSwitchToRegister}
 						disabled={formDisabled}
+						data-testid="login-go-register-btn"
 					>
 						Crear cuenta
 					</button>
@@ -224,7 +229,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 					<p className="lp-card__subtitle">Ingresa tus datos y retoma donde lo dejaste.</p>
 				</header>
 
-				<form onSubmit={handleSubmit} className="lp-form" noValidate>
+				<form onSubmit={handleSubmit} className="lp-form" noValidate data-testid="login-form">
 					<div className="lp-field">
 						<label className="lp-field__label" htmlFor="username">
 							Usuario o correo
@@ -240,6 +245,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								onChange={(e) => setUsername(e.target.value)}
 								disabled={formDisabled}
 								autoComplete="username"
+								data-testid="login-username-input"
 							/>
 						</div>
 					</div>
@@ -259,6 +265,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								onChange={(e) => setPassword(e.target.value)}
 								disabled={formDisabled}
 								autoComplete="current-password"
+								data-testid="login-password-input"
 							/>
 							<button
 								type="button"
@@ -267,6 +274,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 								tabIndex={-1}
 								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 								disabled={formDisabled}
+								data-testid="login-password-toggle-btn"
 							>
 								{showPassword ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -277,9 +285,19 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 						</div>
 					</div>
 
-					<button type="submit" className="lp-btn" disabled={formDisabled}>
+					<button
+						type="submit"
+						className="lp-btn"
+						disabled={formDisabled}
+						data-testid="login-submit-btn"
+					>
 						{isLoading ? (
-							<Loader2 className="lp-btn__spinner" size={18} aria-label="Cargando" />
+							<Loader2
+								className="lp-btn__spinner"
+								size={18}
+								aria-label="Cargando"
+								data-testid="login-submit-spinner"
+							/>
 						) : (
 							<>
 								<span>Iniciar sesión</span>

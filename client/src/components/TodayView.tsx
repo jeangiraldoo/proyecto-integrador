@@ -406,6 +406,7 @@ export default function TodayKanban({
 		return (
 			<div
 				className="fade-in"
+				data-testid="today-loading-state"
 				style={{
 					display: "flex",
 					justifyContent: "center",
@@ -469,6 +470,7 @@ export default function TodayKanban({
 			{/* ─────────────────── Toolbar ─────────────────── */}
 			<div
 				className="fade-in"
+				data-testid="today-toolbar"
 				style={{
 					display: "flex",
 					alignItems: "center",
@@ -479,6 +481,7 @@ export default function TodayKanban({
 			>
 				{/* Summary pill */}
 				<div
+					data-testid="today-summary-pill"
 					style={{
 						flex: 1,
 						display: "flex",
@@ -516,6 +519,7 @@ export default function TodayKanban({
 				{/* Nueva subtarea CTA */}
 				<button
 					onClick={() => setCreateModalOpen(true)}
+					data-testid="today-new-subtask-btn"
 					style={{
 						display: "flex",
 						alignItems: "center",
@@ -567,6 +571,7 @@ export default function TodayKanban({
 									: { type: "status", top: rect.bottom + 6, left: rect.left, width: rect.width },
 							);
 						}}
+						data-testid="today-status-filter-btn"
 						style={{
 							height: "34px",
 							borderRadius: "8px",
@@ -598,6 +603,7 @@ export default function TodayKanban({
 									: { type: "course", top: rect.bottom + 6, left: rect.left, width: rect.width },
 							);
 						}}
+						data-testid="today-course-filter-btn"
 						style={{
 							height: "34px",
 							borderRadius: "8px",
@@ -626,6 +632,7 @@ export default function TodayKanban({
 							setCourseFilter("all");
 							setToolbarSelect(null);
 						}}
+						data-testid="today-clear-filters-btn"
 						style={{
 							height: "34px",
 							borderRadius: "8px",
@@ -646,10 +653,12 @@ export default function TodayKanban({
 						createPortal(
 							<>
 								<div
+									data-testid="today-toolbar-select-overlay"
 									style={{ position: "fixed", inset: 0, zIndex: 9998 }}
 									onClick={() => setToolbarSelect(null)}
 								/>
 								<div
+									data-testid="today-toolbar-select-dropdown"
 									style={{
 										position: "fixed",
 										top: toolbarSelect.top,
@@ -680,6 +689,7 @@ export default function TodayKanban({
 														setStatusFilter(value);
 														setToolbarSelect(null);
 													}}
+													data-testid={`today-status-filter-option-${value}`}
 													style={{
 														width: "100%",
 														padding: "9px 12px",
@@ -711,6 +721,7 @@ export default function TodayKanban({
 														setCourseFilter(item.value);
 														setToolbarSelect(null);
 													}}
+													data-testid={`today-course-filter-option-${item.value === "all" ? "all" : item.value.replace(/[^a-zA-Z0-9_-]+/g, "-").toLowerCase()}`}
 													style={{
 														width: "100%",
 														padding: "9px 12px",
@@ -747,6 +758,7 @@ export default function TodayKanban({
 			{/* ─────────────────── Tab strip ─────────────────── */}
 			<div
 				className="fade-in"
+				data-testid="today-tabs"
 				style={{
 					display: "grid",
 					gridTemplateColumns: "1fr 1fr 1fr",
@@ -762,6 +774,7 @@ export default function TodayKanban({
 						<button
 							key={group}
 							onClick={() => setActiveTab(group)}
+							data-testid={`today-tab-${group}`}
 							style={{
 								position: "relative",
 								display: "flex",
@@ -856,6 +869,7 @@ export default function TodayKanban({
 				const active = columns.find((c) => c.group === activeTab)!;
 				return (
 					<div
+						data-testid="today-sort-hint"
 						style={{
 							display: "flex",
 							alignItems: "center",
@@ -911,6 +925,7 @@ export default function TodayKanban({
 					<div
 						key={group}
 						className="fade-in"
+						data-testid={`today-column-${group}`}
 						style={{
 							display: "flex",
 							flexDirection: "column",
@@ -920,6 +935,7 @@ export default function TodayKanban({
 					>
 						{items.length === 0 ? (
 							<div
+								data-testid={`today-empty-state-${group}`}
 								style={{
 									display: "flex",
 									flexDirection: "column",
@@ -1008,6 +1024,7 @@ export default function TodayKanban({
 											role="button"
 											tabIndex={0}
 											aria-pressed={isSelected}
+											data-testid={`today-subtask-card-${subtask.id}`}
 											onClick={() =>
 												setSelectedSubtask(
 													isSelected
@@ -1095,6 +1112,7 @@ export default function TodayKanban({
 																	left: rect.left,
 																});
 															}}
+															data-testid={`today-subtask-status-btn-${subtask.id}`}
 															style={{
 																display: "inline-flex",
 																alignItems: "center",
@@ -1122,6 +1140,7 @@ export default function TodayKanban({
 															createPortal(
 																<>
 																	<div
+																		data-testid={`today-subtask-status-overlay-${subtask.id}`}
 																		style={{ position: "fixed", inset: 0, zIndex: 9998 }}
 																		onClick={(e) => {
 																			e.stopPropagation();
@@ -1129,6 +1148,7 @@ export default function TodayKanban({
 																		}}
 																	/>
 																	<div
+																		data-testid={`today-subtask-status-dropdown-${subtask.id}`}
 																		style={{
 																			position: "fixed",
 																			top: openSelect!.top,
@@ -1158,6 +1178,7 @@ export default function TodayKanban({
 																					setOpenSelect(null);
 																					void handleToggle(subtask, group, val);
 																				}}
+																				data-testid={`today-subtask-status-option-${subtask.id}-${val}`}
 																				style={{
 																					display: "flex",
 																					alignItems: "center",
@@ -1209,6 +1230,7 @@ export default function TodayKanban({
 											{/* Text content */}
 											<div style={{ flex: 1, minWidth: 0 }}>
 												<p
+													data-testid={`today-subtask-title-${subtask.id}`}
 													style={{
 														fontSize: "14px",
 														fontWeight: 600,
@@ -1235,6 +1257,7 @@ export default function TodayKanban({
 												>
 													{subtask.course_name && (
 														<span
+															data-testid={`today-subtask-course-${subtask.id}`}
 															style={{
 																fontSize: "10px",
 																background: "rgba(192,132,252,0.14)",
@@ -1254,6 +1277,7 @@ export default function TodayKanban({
 													)}
 													{subtask.activity && (
 														<span
+															data-testid={`today-subtask-activity-${subtask.id}`}
 															style={{
 																fontSize: "11px",
 																color: isCompleted ? tv.actDone : tv.actNml,
@@ -1297,6 +1321,7 @@ export default function TodayKanban({
 												<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
 													{subtask.estimated_hours > 0 && (
 														<span
+															data-testid={`today-subtask-hours-${subtask.id}`}
 															style={{
 																fontSize: "11px",
 																color: isCompleted ? tv.hrsDone : tv.hrsNml,
@@ -1311,6 +1336,7 @@ export default function TodayKanban({
 														</span>
 													)}
 													<span
+														data-testid={`today-subtask-status-pill-${subtask.id}`}
 														style={{
 															fontSize: "10px",
 															padding: "2px 8px",

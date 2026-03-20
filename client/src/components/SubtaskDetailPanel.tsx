@@ -167,6 +167,7 @@ export function SubtaskDetailPanel({
 			{/* Backdrop */}
 			<div
 				onClick={onClose}
+				data-testid="subtask-detail-backdrop"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -180,6 +181,7 @@ export function SubtaskDetailPanel({
 				role="dialog"
 				aria-modal="true"
 				aria-label="Detalle de tarea"
+				data-testid="subtask-detail-panel"
 				style={{
 					position: "fixed",
 					top: 0,
@@ -224,6 +226,7 @@ export function SubtaskDetailPanel({
 						<button
 							onClick={() => setEditMode(true)}
 							title="Editar"
+							data-testid="subtask-detail-edit-btn"
 							style={{
 								background: "none",
 								border: "none",
@@ -242,6 +245,7 @@ export function SubtaskDetailPanel({
 						<button
 							onClick={() => setDeleteStep(true)}
 							title="Eliminar"
+							data-testid="subtask-detail-delete-btn"
 							style={{
 								background: "none",
 								border: "none",
@@ -260,6 +264,7 @@ export function SubtaskDetailPanel({
 						<button
 							onClick={onClose}
 							title="Cerrar"
+							data-testid="subtask-detail-close-btn"
 							style={{
 								background: "none",
 								border: "none",
@@ -295,6 +300,7 @@ export function SubtaskDetailPanel({
 					<div>
 						{subtask.course_name && (
 							<div
+								data-testid="subtask-detail-course"
 								style={{
 									display: "inline-flex",
 									alignItems: "center",
@@ -313,6 +319,7 @@ export function SubtaskDetailPanel({
 							</div>
 						)}
 						<h2
+							data-testid="subtask-detail-title"
 							style={{
 								fontSize: "17px",
 								fontWeight: 700,
@@ -351,7 +358,7 @@ export function SubtaskDetailPanel({
 										Actividad
 									</p>
 									<p style={{ fontSize: "13px", color: sdp.metaValue, margin: 0, fontWeight: 500 }}>
-										{subtask.activity.title}
+										<span data-testid="subtask-detail-activity">{subtask.activity.title}</span>
 									</p>
 								</div>
 							</div>
@@ -376,7 +383,7 @@ export function SubtaskDetailPanel({
 									Fecha límite
 								</p>
 								<p style={{ fontSize: "13px", color: sdp.metaValue, margin: 0, fontWeight: 500 }}>
-									{formatDate(subtask.target_date)}
+									<span data-testid="subtask-detail-date">{formatDate(subtask.target_date)}</span>
 								</p>
 							</div>
 						</div>
@@ -400,7 +407,7 @@ export function SubtaskDetailPanel({
 									Tiempo estimado
 								</p>
 								<p style={{ fontSize: "13px", color: "#fbbf24", margin: 0, fontWeight: 700 }}>
-									{subtask.estimated_hours}h
+									<span data-testid="subtask-detail-hours">{subtask.estimated_hours}h</span>
 								</p>
 							</div>
 						</div>
@@ -424,6 +431,7 @@ export function SubtaskDetailPanel({
 									Estado
 								</p>
 								<p
+									data-testid="subtask-detail-status"
 									style={{ fontSize: "13px", color: statusInfo.color, margin: 0, fontWeight: 700 }}
 								>
 									{statusInfo.label}
@@ -513,6 +521,7 @@ export function SubtaskDetailPanel({
 					<button
 						onClick={onToggle}
 						disabled={toggling}
+						data-testid="subtask-detail-toggle-status-btn"
 						style={{
 							width: "100%",
 							display: "flex",

@@ -8,10 +8,10 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function Landing() {
 	return (
-		<div className="lp-scene">
+		<div className="lp-scene" data-testid="landing-page">
 			{/* ── Theme toggle ── */}
-			<div className="lp-theme-toggle-btn">
-				<ThemeToggle />
+			<div className="lp-theme-toggle-btn" data-testid="landing-theme-toggle-wrap">
+				<ThemeToggle qaId="landing-theme-toggle-btn" />
 			</div>
 
 			{/* ── Background ── */}
@@ -66,7 +66,7 @@ export default function Landing() {
 			</div>
 
 			{/* ── Hero ── */}
-			<div className="landing-hero">
+			<div className="landing-hero" data-testid="landing-hero">
 				<div className="landing-hero__shine" />
 				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo landing-hero__logo" />
 
@@ -81,11 +81,19 @@ export default function Landing() {
 				</p>
 
 				<div className="landing-hero__actions">
-					<Link to="/registro" className="lp-btn landing-btn landing-btn--primary">
+					<Link
+						to="/registro"
+						className="lp-btn landing-btn landing-btn--primary"
+						data-testid="landing-register-link"
+					>
 						<span>Crear cuenta gratis</span>
 						<ArrowRight size={15} aria-hidden="true" />
 					</Link>
-					<Link to="/login" className="landing-btn landing-btn--outline">
+					<Link
+						to="/login"
+						className="landing-btn landing-btn--outline"
+						data-testid="landing-login-link"
+					>
 						Iniciar sesión
 					</Link>
 				</div>

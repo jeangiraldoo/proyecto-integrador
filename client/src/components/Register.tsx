@@ -141,10 +141,10 @@ export default function Register() {
 	const { Icon: GreetingIcon } = greeting;
 
 	return (
-		<div className="lp-scene">
+		<div className="lp-scene" data-testid="register-page">
 			{/* ── Theme toggle ── */}
-			<div className="lp-theme-toggle-btn">
-				<ThemeToggle />
+			<div className="lp-theme-toggle-btn" data-testid="register-theme-toggle-wrap">
+				<ThemeToggle qaId="register-theme-toggle-btn" />
 			</div>
 
 			{/* ── Background ── */}
@@ -205,6 +205,8 @@ export default function Register() {
 					if (cardState === "error") setCardState("idle");
 				}}
 				role="main"
+				data-testid="register-card"
+				data-qa-state={cardState}
 			>
 				<div className="lp-card__shine" />
 				<img src={lumaLogoFull} alt="Luma" className="lp-card__logo" />
@@ -212,6 +214,7 @@ export default function Register() {
 				<nav
 					className={`lp-auth-switch lp-auth-switch--register${switchingToLogin ? " lp-auth-switch--to-login" : ""}`}
 					aria-label="Cambiar formulario"
+					data-testid="register-auth-switch"
 				>
 					<span className="lp-auth-switch__thumb" aria-hidden="true" />
 					<button
@@ -219,6 +222,7 @@ export default function Register() {
 						className="lp-auth-switch__option"
 						onClick={handleSwitchToLogin}
 						disabled={formDisabled}
+						data-testid="register-go-login-btn"
 					>
 						Iniciar sesion
 					</button>
@@ -227,6 +231,7 @@ export default function Register() {
 						className="lp-auth-switch__option lp-auth-switch__option--active"
 						disabled
 						aria-current="page"
+						data-testid="register-current-tab-btn"
 					>
 						Crear cuenta
 					</button>
@@ -250,7 +255,7 @@ export default function Register() {
 					<p className="lp-card__subtitle">Empieza a planificar en segundos.</p>
 				</header>
 
-				<form onSubmit={handleSubmit} className="lp-form" noValidate>
+				<form onSubmit={handleSubmit} className="lp-form" noValidate data-testid="register-form">
 					<div className="lp-field">
 						<label className="lp-field__label" htmlFor="reg-username">
 							Usuario *
@@ -267,6 +272,7 @@ export default function Register() {
 								onChange={handleChange}
 								disabled={formDisabled}
 								autoComplete="username"
+								data-testid="register-username-input"
 							/>
 						</div>
 					</div>
@@ -288,6 +294,7 @@ export default function Register() {
 								disabled={formDisabled}
 								required
 								autoComplete="email"
+								data-testid="register-email-input"
 							/>
 						</div>
 					</div>
@@ -308,6 +315,7 @@ export default function Register() {
 								onChange={handleChange}
 								disabled={formDisabled}
 								autoComplete="new-password"
+								data-testid="register-password-input"
 							/>
 							<button
 								type="button"
@@ -316,6 +324,7 @@ export default function Register() {
 								tabIndex={-1}
 								aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
 								disabled={formDisabled}
+								data-testid="register-password-toggle-btn"
 							>
 								{showPassword ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -342,6 +351,7 @@ export default function Register() {
 								onChange={handleChange}
 								disabled={formDisabled}
 								autoComplete="new-password"
+								data-testid="register-confirm-password-input"
 							/>
 							<button
 								type="button"
@@ -350,6 +360,7 @@ export default function Register() {
 								tabIndex={-1}
 								aria-label={showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"}
 								disabled={formDisabled}
+								data-testid="register-confirm-password-toggle-btn"
 							>
 								{showConfirm ? (
 									<EyeOff size={16} strokeWidth={1.5} />
@@ -360,9 +371,19 @@ export default function Register() {
 						</div>
 					</div>
 
-					<button type="submit" className="lp-btn" disabled={formDisabled}>
+					<button
+						type="submit"
+						className="lp-btn"
+						disabled={formDisabled}
+						data-testid="register-submit-btn"
+					>
 						{isLoading ? (
-							<Loader2 className="lp-btn__spinner" size={18} aria-label="Cargando" />
+							<Loader2
+								className="lp-btn__spinner"
+								size={18}
+								aria-label="Cargando"
+								data-testid="register-submit-spinner"
+							/>
 						) : (
 							<>
 								<span>Crear cuenta</span>

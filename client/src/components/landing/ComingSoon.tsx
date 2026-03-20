@@ -60,7 +60,7 @@ export default function ComingSoon() {
 	const navigate = useNavigate();
 
 	return (
-		<div className="cs-scene">
+		<div className="cs-scene" data-testid="coming-soon-page">
 			{/* ── Atmospheric background ── */}
 			<div className="cs-bg" aria-hidden="true">
 				<div className="cs-orb cs-orb--purple" />
@@ -81,7 +81,7 @@ export default function ComingSoon() {
 			</div>
 
 			{/* ── Center content ── */}
-			<main className="cs-content">
+			<main className="cs-content" data-testid="coming-soon-content">
 				{/* Badge */}
 				<div className="cs-badge">
 					<span className="cs-badge__dot" />
@@ -126,7 +126,12 @@ export default function ComingSoon() {
 						Tu dashboard y actividades y tu progreso te están esperando. Inicia sesión para
 						continuar.
 					</p>
-					<button id="cs-login-btn" className="cs-btn" onClick={() => navigate("/login")}>
+					<button
+						id="cs-login-btn"
+						className="cs-btn"
+						onClick={() => navigate("/login")}
+						data-testid="coming-soon-login-btn"
+					>
 						<span className="cs-btn__text">Iniciar sesión</span>
 						<span className="cs-btn__icon">
 							<IconArrow />

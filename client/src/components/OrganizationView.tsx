@@ -42,6 +42,17 @@ interface OrgViewProps {
 	expandSubject?: { subject: string } | null;
 }
 
+function toTestIdToken(value: string): string {
+	return (
+		value
+			.toLowerCase()
+			.normalize("NFD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.replace(/[^a-z0-9_-]+/g, "-")
+			.replace(/^-+|-+$/g, "") || "item"
+	);
+}
+
 export default function OrganizationView({
 	activities,
 	subjects,
@@ -254,6 +265,7 @@ export default function OrganizationView({
 		return (
 			<div
 				className="fade-in"
+				data-testid="org-empty-state"
 				style={{
 					padding: "4rem 2rem",
 					textAlign: "center",
@@ -269,6 +281,7 @@ export default function OrganizationView({
 				<button
 					className="btn-add"
 					style={{ margin: "0 auto", display: "inline-flex" }}
+					data-testid="org-empty-add-subject-btn"
 					onClick={() => {
 						const name = window.prompt("Nombre de la nueva materia:");
 						if (name) onAddSubject(name);
@@ -285,6 +298,7 @@ export default function OrganizationView({
 		<>
 			<div
 				className="fade-in"
+				data-testid="org-view"
 				style={{
 					animationDelay: "0.2s",
 					marginTop: "1.5rem",
@@ -296,12 +310,14 @@ export default function OrganizationView({
 				{allSubjectKeys.map((subject) => {
 					const acts = grouped[subject] ?? [];
 					const isOpen = expandedSubject === subject;
+					const subjectToken = toTestIdToken(subject);
 					const totalHours = acts.reduce((s, a) => s + a.total_estimated_hours, 0);
 					const completedCount = acts.filter((a) => a.status === "completed").length;
 
 					return (
 						<div
 							key={subject}
+							data-testid={`org-subject-card-${subjectToken}`}
 							style={{
 								background: ov.subBg,
 								borderRadius: "12px",
@@ -312,6 +328,7 @@ export default function OrganizationView({
 						>
 							{/* Subject header row */}
 							<div
+								data-testid={`org-subject-header-${subjectToken}`}
 								style={{
 									display: "flex",
 									alignItems: "center",
@@ -374,10 +391,12 @@ export default function OrganizationView({
 								<div
 									style={{ display: "flex", gap: "2px", flexShrink: 0 }}
 									onClick={(e) => e.stopPropagation()}
+									data-testid={`org-subject-actions-${subjectToken}`}
 								>
 									<button
 										title="Renombrar materia"
 										onClick={() => setOrgSubjectModal({ mode: "rename", current: subject })}
+										data-testid={`org-subject-rename-btn-${subjectToken}`}
 										style={{
 											background: "none",
 											border: "none",
@@ -396,6 +415,7 @@ export default function OrganizationView({
 									<button
 										title="Eliminar materia"
 										onClick={() => setOrgConfirmDelete(subject)}
+										data-testid={`org-subject-delete-btn-${subjectToken}`}
 										style={{
 											background: "none",
 											border: "none",
@@ -426,6 +446,7 @@ export default function OrganizationView({
 							{/* Subject body */}
 							{isOpen && (
 								<div
+									data-testid={`org-subject-body-${subjectToken}`}
 									style={{
 										borderTop: `1px solid ${ov.subBodyBdr}`,
 										animation: "orgSlideDown 0.25s cubic-bezier(0.16,1,0.3,1)",
@@ -454,6 +475,7 @@ export default function OrganizationView({
 													gap: "6px",
 												}}
 												onClick={() => onOpenCreate(subject)}
+												data-testid={`org-subject-add-activity-empty-btn-${subjectToken}`}
 												onMouseOver={(e) => {
 													e.currentTarget.style.borderColor = "#94a3b8";
 													e.currentTarget.style.color = "#f1f5f9";
@@ -489,6 +511,7 @@ export default function OrganizationView({
 												return (
 													<div
 														key={act.id}
+														data-testid={`org-activity-card-${act.id}`}
 														style={{
 															borderRadius: "11px",
 															border: isActOpen
@@ -695,6 +718,7 @@ export default function OrganizationView({
 																		whiteSpace: "nowrap",
 																	}}
 																	onClick={() => toggleActivity(act.id)}
+																	data-testid={`org-activity-subtasks-toggle-${act.id}`}
 																	onMouseOver={(e) => {
 																		if (!isActOpen) {
 																			e.currentTarget.style.borderColor = "#c084fc";
@@ -734,6 +758,7 @@ export default function OrganizationView({
 																		transition: "color 0.15s",
 																	}}
 																	onClick={() => setOrgEditActivity(act)}
+																	data-testid={`org-activity-edit-btn-${act.id}`}
 																	onMouseOver={(e) => (e.currentTarget.style.color = "#c084fc")}
 																	onMouseOut={(e) => (e.currentTarget.style.color = "#334155")}
 																	title="Editar actividad"
@@ -752,6 +777,7 @@ export default function OrganizationView({
 																		transition: "color 0.15s",
 																	}}
 																	onClick={() => onDelete(act.id, act.title)}
+																	data-testid={`org-activity-delete-btn-${act.id}`}
 																	onMouseOver={(e) => (e.currentTarget.style.color = "#f87171")}
 																	onMouseOut={(e) => (e.currentTarget.style.color = "#334155")}
 																	title="Eliminar actividad"
@@ -880,6 +906,7 @@ export default function OrganizationView({
 																				return (
 																					<div
 																						key={sub.id}
+																						data-testid={`org-subtask-row-${sub.id}`}
 																						style={{
 																							display: "flex",
 																							alignItems: "center",
@@ -988,6 +1015,7 @@ export default function OrganizationView({
 																			transition: "all 0.15s",
 																		}}
 																		onClick={() => setSubtaskModalActivity(act)}
+																		data-testid={`org-activity-add-subtask-btn-${act.id}`}
 																		onMouseOver={(e) => {
 																			e.currentTarget.style.borderColor = "#c084fc";
 																			e.currentTarget.style.color = "#c084fc";
@@ -1022,6 +1050,7 @@ export default function OrganizationView({
 													transition: "all 0.2s",
 												}}
 												onClick={() => onOpenCreate(subject)}
+												data-testid={`org-subject-add-activity-btn-${subjectToken}`}
 												onMouseOver={(e) => {
 													e.currentTarget.style.borderColor = "#c084fc";
 													e.currentTarget.style.color = "#c084fc";
@@ -1051,6 +1080,7 @@ export default function OrganizationView({
 					dateLoadMap={dateLoadMap}
 					conflictDates={conflictDates}
 					maxDailyHours={maxDailyHours}
+					qaPrefix="org-subtask-manager-modal"
 					open={true}
 					onSubtasksChange={(items) => {
 						setSubtaskStateByActivity((prev) => ({
@@ -1085,6 +1115,7 @@ export default function OrganizationView({
 			{orgSubjectModal &&
 				createPortal(
 					<div
+						data-testid="org-subject-form-layer"
 						style={{
 							position: "fixed",
 							inset: 0,
@@ -1130,6 +1161,7 @@ export default function OrganizationView({
 			{orgConfirmDelete &&
 				createPortal(
 					<div
+						data-testid="org-subject-delete-layer"
 						style={{
 							position: "fixed",
 							inset: 0,
@@ -1146,6 +1178,7 @@ export default function OrganizationView({
 					>
 						<div
 							onClick={(e) => e.stopPropagation()}
+							data-testid="org-subject-delete-modal"
 							style={{
 								fontFamily: "inherit",
 								position: "relative",
@@ -1212,6 +1245,7 @@ export default function OrganizationView({
 									onClick={() => setOrgConfirmDelete(null)}
 									className="modal-close-x"
 									aria-label="Cerrar"
+									data-testid="org-subject-delete-close-btn"
 								>
 									<X size={15} />
 								</button>
@@ -1275,6 +1309,7 @@ export default function OrganizationView({
 									}}
 									disabled={subjectDeleteLoading}
 									className="modal-btn-danger"
+									data-testid="org-subject-delete-confirm-btn"
 									style={{
 										flex: 1,
 										padding: "11px 14px",
@@ -1304,6 +1339,7 @@ export default function OrganizationView({
 									onClick={() => !subjectDeleteLoading && setOrgConfirmDelete(null)}
 									disabled={subjectDeleteLoading}
 									className="modal-btn-cancel"
+									data-testid="org-subject-delete-cancel-btn"
 									style={{
 										padding: "11px 18px",
 										borderRadius: "8px",
@@ -1327,6 +1363,7 @@ export default function OrganizationView({
 			{orgEditActivity &&
 				createPortal(
 					<div
+						data-testid="org-edit-activity-layer"
 						style={{
 							position: "fixed",
 							inset: 0,

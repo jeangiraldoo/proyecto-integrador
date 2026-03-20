@@ -46,6 +46,7 @@ export function SubjectFormModal({
 	return (
 		<div
 			onClick={(e) => e.stopPropagation()}
+			data-testid={mode === "add" ? "subject-form-modal-add" : "subject-form-modal-rename"}
 			style={{
 				fontFamily: "inherit",
 				position: "relative",
@@ -124,7 +125,12 @@ export function SubjectFormModal({
 							: "Escribe el nuevo nombre para esta materia"}
 					</p>
 				</div>
-				<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+				<button
+					onClick={onClose}
+					className="modal-close-x"
+					aria-label="Cerrar"
+					data-testid="subject-form-close-btn"
+				>
 					<X size={15} />
 				</button>
 			</div>
@@ -133,6 +139,7 @@ export function SubjectFormModal({
 				value={value}
 				onChange={(e) => setValue(e.target.value)}
 				placeholder="Nombre de la materia"
+				data-testid="subject-form-input"
 				onKeyDown={(e) => {
 					if (e.key === "Enter") submit();
 					if (e.key === "Escape") onClose();
@@ -156,6 +163,7 @@ export function SubjectFormModal({
 					onClick={submit}
 					disabled={isLoading}
 					className="modal-btn-primary"
+					data-testid="subject-form-save-btn"
 					style={{
 						flex: 1,
 						padding: "10px 14px",
@@ -181,6 +189,7 @@ export function SubjectFormModal({
 				<button
 					onClick={onClose}
 					className="modal-btn-cancel"
+					data-testid="subject-form-cancel-btn"
 					style={{
 						padding: "10px 18px",
 						borderRadius: "8px",
@@ -292,6 +301,7 @@ export function EditActivityForm({
 	return (
 		<div
 			onClick={(e) => e.stopPropagation()}
+			data-testid="edit-activity-modal"
 			style={{
 				fontFamily: "inherit",
 				position: "relative",
@@ -330,7 +340,12 @@ export function EditActivityForm({
 						Editar actividad
 					</p>
 				</div>
-				<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+				<button
+					onClick={onClose}
+					className="modal-close-x"
+					aria-label="Cerrar"
+					data-testid="edit-activity-close-btn"
+				>
 					<X size={15} />
 				</button>
 			</div>
@@ -360,7 +375,12 @@ export function EditActivityForm({
 				>
 					Título *
 				</span>
-				<input value={title} onChange={(e) => setTitle(e.target.value)} style={fld} />
+				<input
+					value={title}
+					onChange={(e) => setTitle(e.target.value)}
+					style={fld}
+					data-testid="edit-activity-title-input"
+				/>
 			</label>
 			<label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
 				<span
@@ -379,6 +399,7 @@ export function EditActivityForm({
 					onChange={(e) => setDescription(e.target.value)}
 					rows={3}
 					style={{ ...fld, resize: "vertical" as const }}
+					data-testid="edit-activity-description-input"
 				/>
 			</label>
 			<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -399,6 +420,7 @@ export function EditActivityForm({
 						value={dueDate}
 						onChange={(e) => setDueDate(e.target.value)}
 						style={fld}
+						data-testid="edit-activity-due-date-input"
 					/>
 					{dueDate && (
 						<div
@@ -488,6 +510,7 @@ export function EditActivityForm({
 						value={status}
 						onChange={(e) => setStatus(e.target.value as Activity["status"])}
 						style={{ ...fld, appearance: "none" as const }}
+						data-testid="edit-activity-status-select"
 					>
 						<option value="pending">Pendiente</option>
 						<option value="in_progress">En progreso</option>
@@ -513,6 +536,7 @@ export function EditActivityForm({
 					list="edit-act-subj"
 					placeholder="Sin materia"
 					style={fld}
+					data-testid="edit-activity-course-input"
 				/>
 				<datalist id="edit-act-subj">
 					{subjects.map((s) => (
@@ -525,6 +549,7 @@ export function EditActivityForm({
 					onClick={handleSubmit}
 					disabled={saving}
 					className="modal-btn-primary"
+					data-testid="edit-activity-save-btn"
 					style={{
 						flex: 1,
 						padding: "10px 14px",
@@ -550,6 +575,7 @@ export function EditActivityForm({
 					onClick={onClose}
 					disabled={saving}
 					className="modal-btn-cancel"
+					data-testid="edit-activity-cancel-btn"
 					style={{
 						padding: "10px 18px",
 						borderRadius: "8px",
