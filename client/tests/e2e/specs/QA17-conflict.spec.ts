@@ -1,8 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-// Escaping characters to safely use the name in a Regular Expression
-const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 const formatLocalDateForInput = (date: Date) => {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
