@@ -204,11 +204,17 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
 			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
 
-			// FIX: The application renders activities in <div> tags, not <li>.
-			// We locate the container div that has the exact ACTIVITY_NAME.
+			// FIX: Click the Subject (Materia) header to expand the accordion.
+			// Activities are conditionally rendered in React and do not exist in the DOM until expanded.
+			await page.getByText(SUBJECT_NAME).click();
+
+			// Now the activity is visible. We locate its block.
 			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 
-			// Use the trash icon button inside that specific activity block
+			// Wait for the accordion animation to finish and the block to be visible
+			await expect(activityBlock).toBeVisible({ timeout: 5000 });
+
+			// Use the trash icon button inside the activity block
 			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
 
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
