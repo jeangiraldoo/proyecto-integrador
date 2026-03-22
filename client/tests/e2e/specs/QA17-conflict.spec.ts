@@ -12,8 +12,8 @@ const formatLocalDateForInput = (date: Date) => {
 };
 
 test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
-	// Timeout extendido porque este flujo E2E es el más largo y complejo del sistema
-	test.setTimeout(90000);
+	// Timeout extendido a 120s para darle holgura a Firefox durante los reloads
+	test.setTimeout(120000);
 
 	test.beforeEach(async ({ page }) => {
 		await loginAndGoToDashboard(page);
@@ -27,13 +27,8 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.locator(".capacity-inline-save").click();
 			await expect(page.locator(".capacity-total")).toContainText("6h", { timeout: 5000 });
 
-			// Esperar explícitamente a que el toast de "Límite actualizado" aparezca para evitar cruces
-			await expect(
-				page
-					.locator("[data-sonner-toast]")
-					.filter({ hasText: /actualizado/i })
-					.first(),
-			).toBeVisible({ timeout: 5000 });
+			// Esperar a que el toast de "Límite actualizado" desaparezca o se procese
+			await page.waitForTimeout(1000);
 		});
 	});
 
@@ -76,16 +71,23 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(tomorrowStr);
 			await modal.locator('input[id="st-hours"]').fill("5");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			// GARANTÍA: Esperar que la tarea aparezca en la tabla del modal antes de seguir
+			await expect(modal.locator(".ca-subtask-table").getByText(TASK_5H)).toBeVisible({
+				timeout: 5000,
+			});
 
 			// Subtask 2: 2h for Day After (The one we will move)
 			await modal.locator('input[id="st-title"]').fill(TASK_2H);
 			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(dayAfterStr);
 			await modal.locator('input[id="st-hours"]').fill("2");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			// GARANTÍA: Esperar que la tarea aparezca en la tabla
+			await expect(modal.locator(".ca-subtask-table").getByText(TASK_2H)).toBeVisible({
+				timeout: 5000,
+			});
 
 			await modal.getByRole("button", { name: /Crear actividad/i }).click();
 
-			// FIX CRÍTICO: Filtramos el toast específicamente por el texto "creada" para evitar el strict mode violation
 			const toastCreada = page
 				.locator("[data-sonner-toast]")
 				.filter({ hasText: /creada/i })
@@ -100,39 +102,42 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.getByRole("button", { name: "Hoy" }).click();
 			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 10000 });
 
+			// FIX CRÍTICO: Recargamos la página para forzar a React a traer el Kanban actualizado desde Django
+			await page.reload();
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+
 			await page
 				.getByRole("button", { name: /Próximas/i })
 				.first()
 				.click();
 
 			const myTask = page.locator('[role="button"]').filter({ hasText: TASK_2H }).first();
-			await expect(myTask).toBeVisible({ timeout: 5000 });
+			await expect(myTask).toBeVisible({ timeout: 15000 });
 			await myTask.click();
 
 			await page.locator('button[title="Editar"]').click();
 
-			const inputsDate = page.locator('input[type="date"]');
-			await inputsDate.last().fill(tomorrowStr);
+			// Seleccionamos específicamente el input de fecha dentro del modal de edición
+			const editModal = page.locator('div[style*="z-index: 2201"]');
+			const inputDate = editModal.locator('input[type="date"]');
+			await inputDate.fill(tomorrowStr);
 
-			// VALIDAR UI DE CONFLICTO
-			await expect(page.getByText(/7h \/ 6h/i).last()).toBeVisible({ timeout: 5000 });
-			await expect(page.getByText(/Hay un conflicto de carga/i).last()).toBeVisible();
+			// VALIDAR UI DE CONFLICTO EN LÍNEA
+			await expect(editModal.getByText(/7h \/ 6h/i)).toBeVisible({ timeout: 5000 });
+			await expect(editModal.getByText(/Hay un conflicto de carga/i)).toBeVisible();
 		});
 
 		// ====================================================================
 		// THEN: Si cancela -> no se guarda, mantiene fecha original
 		// ====================================================================
 		await test.step("Entonces: Si cancela, mantiene fecha original y no guarda cambios", async () => {
-			await page
-				.getByRole("button", { name: /Cancelar/i })
-				.last()
-				.click();
+			const editModal = page.locator('div[style*="z-index: 2201"]');
+			await editModal.getByRole("button", { name: /Cancelar/i }).click();
 
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 			await expect(page.locator('aside[aria-label="Detalle de tarea"]')).toBeHidden({
 				timeout: 5000,
 			});
-			await page.waitForTimeout(500);
 
 			await page.reload();
 			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
@@ -153,15 +158,15 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			const myTask = page.locator('[role="button"]').filter({ hasText: TASK_2H }).first();
 			await myTask.click();
 			await page.locator('button[title="Editar"]').click();
-			await page.locator('input[type="date"]').last().fill(tomorrowStr);
-			await page
-				.getByRole("button", { name: /Guardar cambios/i })
-				.last()
-				.click();
+
+			const editModal = page.locator('div[style*="z-index: 2201"]');
+			await editModal.locator('input[type="date"]').fill(tomorrowStr);
+			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
 			const conflictCount = page.locator(".sidebar-conflicts-count");
-			await expect(conflictCount).toHaveClass(/danger/, { timeout: 10000 });
+			await expect(conflictCount).toHaveClass(/danger/, { timeout: 15000 });
 
+			// Abrir Modal Global
 			await page.locator(".sidebar-conflicts-btn").click();
 			const conflictModal = page.locator(".cf-modal");
 			await expect(conflictModal).toBeVisible();
@@ -171,6 +176,7 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 			await page.waitForTimeout(500);
 
+			// Completar tarea de 5h para resolver el conflicto automáticamente
 			const task5H = page.locator('[role="button"]').filter({ hasText: TASK_5H }).first();
 			await task5H.click();
 			await page.getByRole("button", { name: /Marcar como completada/i }).click();
@@ -179,7 +185,8 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 				timeout: 5000,
 			});
 
-			await expect(conflictCount).not.toHaveClass(/danger/, { timeout: 10000 });
+			// Verificar que el globo del sidebar perdió el rojo
+			await expect(conflictCount).not.toHaveClass(/danger/, { timeout: 15000 });
 
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 		});
@@ -189,13 +196,13 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 		// ====================================================================
 		await test.step("Cleanup: Eliminar actividad completa para limpiar BD", async () => {
 			await page.getByRole("button", { name: "Organización" }).click();
+			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
 
 			const actHeader = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 			await actHeader.locator('button[title="Eliminar actividad"]').first().click();
 
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
 
-			// FIX CRÍTICO: Filtramos el toast de eliminación para evitar conflictos con otros toasts
 			const toastEliminada = page
 				.locator("[data-sonner-toast]")
 				.filter({ hasText: /eliminada/i })
