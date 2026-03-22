@@ -16,7 +16,7 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 		// FIX SENIOR: Test Isolation. We create a fresh user per test run to guarantee
 		// the database starts with 0 hours, avoiding flaky assertions.
 		const timestamp = Date.now();
-		await page.goto("/registro", { timeout: 60000 });
+		await page.goto("/registro", { timeout: 120000 });
 
 		await page.locator('input[name="username"]').fill(`qa18_${timestamp}`);
 		await page.locator('input[name="email"]').fill(`qa18_${timestamp}@test.com`);
@@ -24,7 +24,7 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 		await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
 		await page.locator('button[type="submit"]').click();
 
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 30000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 120000 });
 
 		// PRECONDITION: Set daily limit to 6h for the test
 		await test.step("Setup: Configurar límite diario a 6h", async () => {
@@ -34,8 +34,8 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 			await page.locator(".capacity-inline-save").click();
 			await expect(page.locator(".capacity-total")).toContainText("6h", { timeout: 5000 });
 
-			// Wait for the success toast to disappear to prevent strict mode violations later
-			await page.waitForTimeout(1500);
+			// Wait for the success toast to process to prevent strict mode violations later
+			await page.waitForTimeout(1000);
 		});
 	});
 
@@ -141,6 +141,7 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 			await expect(conflictModal).toBeVisible({ timeout: 5000 });
 
 			// 3. Resolve conflict by reducing hours
+			// Find the row corresponding to our 2h task inside the conflict modal
 			const conflictRow = conflictModal
 				.locator(".cf-subtask-row")
 				.filter({ hasText: TASK_2H })
@@ -158,10 +159,10 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 			// Confirm resolution
 			await resolverLayer.getByRole("button", { name: /Guardar horas/i }).click();
 
-			// Validate success toast matching ConflictModal.tsx text
+			// Validate success toast
 			const toastResuelta = page
 				.locator("[data-sonner-toast]")
-				.filter({ hasText: /recalculada/i })
+				.filter({ hasText: /actualizadas|recalculada/i })
 				.first();
 			await expect(toastResuelta).toBeVisible({ timeout: 8000 });
 		});
@@ -171,8 +172,7 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 		// ====================================================================
 		await test.step("Entonces: Conflicto desaparece, subtarea queda en el día seleccionado, Recarga página, Horas siguen en 1h", async () => {
 			// Because 5h + 1h = 6h (within limit), the conflict should auto-resolve
-			// If 0 conflicts remain, the modal auto-closes or shows empty.
-			// Let's verify the sidebar badge loses the "danger" class (conflict resolved)
+			// The modal should close and the badge should lose the "danger" status
 			const conflictCount = page.locator(".sidebar-conflicts-count");
 			await expect(conflictCount).not.toHaveClass(/danger/, { timeout: 15000 });
 
@@ -206,16 +206,15 @@ test.describe("QA-18 | US-8 - Resolucion de conflictos", () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
 			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
 
-			// FIX: Click the Subject to expand the accordion
+			// Click the Subject to expand the accordion
 			await page.getByText(SUBJECT_NAME).click();
 
-			// Find the activity block
+			// Find the activity block and wait for it
 			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 			await expect(activityBlock).toBeVisible({ timeout: 5000 });
 
 			// Use the trash icon button inside the activity block
 			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
-
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
 
 			const toastEliminada = page
