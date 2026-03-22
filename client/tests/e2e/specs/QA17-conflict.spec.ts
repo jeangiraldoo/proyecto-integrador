@@ -14,7 +14,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 	test.beforeEach(async ({ page }) => {
 		const timestamp = Date.now();
 
-		// FIX 1: Aumentar timeout a 60s para evitar ERR_CONNECTION_TIMED_OUT de Vercel
 		await page.goto("/registro", { timeout: 120000 });
 
 		await page.locator('input[name="username"]').fill(`qa17_${timestamp}`);
@@ -22,7 +21,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 		await page.locator('input[name="password"]').fill("SuperPassword123!");
 		await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
 
-		// FIX 2: Evitar Strict Mode Violation buscando explícitamente el botón de submit
 		await page.locator('button[type="submit"]').click();
 
 		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 120000 });
@@ -53,9 +51,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 		const tomorrowStr = formatLocalDateForInput(tomorrow);
 		const dayAfterStr = formatLocalDateForInput(dayAfter);
 
-		// ====================================================================
-		// GIVEN: Usuario con límite 6h, Día con 5h planificadas
-		// ====================================================================
 		await test.step("Dado: Usuario con límite 6h y día con 5h planificadas", async () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
 			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 10000 });
@@ -93,9 +88,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await expect(toastCreada).toBeVisible({ timeout: 8000 });
 		});
 
-		// ====================================================================
-		// WHEN: Reprograma subtarea de 2h al mismo día (genera 7h)
-		// ====================================================================
 		await test.step("Cuando: Reprograma subtarea de 2h al mismo día (genera 7h)", async () => {
 			await page.getByRole("button", { name: "Hoy" }).click({ force: true });
 			await page.reload();
@@ -123,9 +115,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await expect(editModal).toContainText(/Hay un conflicto de carga/i);
 		});
 
-		// ====================================================================
-		// THEN: Si cancela -> no se guarda, mantiene fecha original
-		// ====================================================================
 		await test.step("Entonces: Si cancela, mantiene fecha original y no guarda cambios", async () => {
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			await editModal.getByRole("button", { name: /Cancelar/i }).click();
@@ -143,9 +132,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await expect(conflictCount).not.toHaveClass(/danger/);
 		});
 
-		// ====================================================================
-		// FUNCIONAL: Guardar conflicto, validar modal global y autolimpiar
-		// ====================================================================
 		await test.step("Funcional: Al guardar aparece Conflicto. Subtarea 'Hecha' lo resuelve.", async () => {
 			await page
 				.getByRole("button", { name: /Próximas/i })
@@ -167,7 +153,6 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 				timeout: 5000,
 			});
 
-			// FIX 3: Usamos force: true para evitar que el desvanecimiento del fondo del panel intercepte el clic
 			await page.waitForTimeout(1000);
 			const conflictCount = page.locator(".sidebar-conflicts-count");
 			await expect(conflictCount).toHaveClass(/danger/, { timeout: 15000 });
@@ -183,7 +168,7 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			const task5H = page.locator('[role="button"]').filter({ hasText: TASK_5H }).first();
 			await task5H.scrollIntoViewIfNeeded();
 			await task5H.click();
-			// Esperar a que se abra el panel de detalles de la tarea
+
 			await expect(page.locator('aside[role="dialog"]')).toBeVisible({ timeout: 10000 });
 			await page.getByRole("button", { name: /Marcar como completada/i }).click();
 			await expect(page.getByRole("button", { name: /Marcar como pendiente/i })).toBeVisible({
@@ -194,24 +179,16 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 		});
 
-		// ====================================================================
-		// CLEANUP: Borramos la actividad completa desde la vista Organización
-		// ====================================================================
 		await test.step("Cleanup: Eliminar actividad completa para limpiar BD", async () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
 			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
 
-			// FIX: Click the Subject (Materia) header to expand the accordion.
-			// Activities are conditionally rendered in React and do not exist in the DOM until expanded.
 			await page.getByText(SUBJECT_NAME).click();
 
-			// Now the activity is visible. We locate its block.
 			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
 
-			// Wait for the accordion animation to finish and the block to be visible
 			await expect(activityBlock).toBeVisible({ timeout: 5000 });
 
-			// Use the trash icon button inside the activity block
 			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
 
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
