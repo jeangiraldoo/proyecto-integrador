@@ -204,12 +204,12 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
 			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
 
-			// FIX: Locate the list item that contains the activity title, and query the delete button inside it
-			const activityBlock = page
-				.locator("li", { has: page.locator(`text="${ACTIVITY_NAME}"`) })
-				.first();
-			// Use the trash icon button
-			await activityBlock.locator('button[title="Eliminar actividad"]').click();
+			// FIX: The application renders activities in <div> tags, not <li>.
+			// We locate the container div that has the exact ACTIVITY_NAME.
+			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
+
+			// Use the trash icon button inside that specific activity block
+			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
 
 			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
 
