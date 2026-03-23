@@ -238,17 +238,8 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /Física/i }).click();
 
-			// Go to upcoming
-			await page
-				.getByRole("button", { name: /Próximas/i })
-				.first()
-				.click();
-
-			// Edit task
-			const myTask = page
-				.locator('[role="button"]')
-				.filter({ hasText: "Mock Task Upcoming" })
-				.first();
+			// Edit task in "Hoy" (since it belongs to Física)
+			const myTask = page.locator('[role="button"]').filter({ hasText: "Mock Task Today" }).first();
 			await myTask.click();
 			await page.locator('button[title="Editar"]').click();
 
