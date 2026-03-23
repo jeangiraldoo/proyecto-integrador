@@ -1,12 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginAndGoToDashboard } from "../utils/auth";
 
-/**
- * QA-15 | US-5: Functional Tests for Filtering
- * As requested by the team coordinator, this file strictly focuses on Functional Testing
- * isolating the frontend behavior using API Mocking (Network Interception).
- */
-
 const MOCK_TODAY_DATA = {
 	overdue: [
 		{
@@ -71,7 +65,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	test.describe.configure({ retries: 2 });
 
 	test.beforeEach(async ({ page }) => {
-		// MOCKS GLOBALES PARA AISLAMIENTO TOTAL
 		await page.route("**/activities/**", async (route) => {
 			if (route.request().method() === "GET") await route.fulfill({ json: [] });
 			else await route.continue();
@@ -118,9 +111,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 				page.locator('[role="button"]').filter({ hasText: "Tarea Larga de Cálculo" }),
 			).toBeVisible({ timeout: 5000 });
 
-			// Criterio #2 del PDF: La regla de prioridad se mantiene después de filtrar.
-			// Validamos que por la regla de oro, la tarea más corta ("Tarea Hoy de Cálculo", 1h)
-			// aparece ANTES que la tarea más larga ("Tarea Larga de Cálculo", 5h) aunque ambas estén "En progreso".
 			const locators = page.locator('[role="button"]').filter({ hasText: /Cálculo/i });
 			await expect(locators.nth(0)).toContainText("Tarea Hoy de Cálculo");
 			await expect(locators.nth(1)).toContainText("Tarea Larga de Cálculo");
@@ -133,11 +123,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /Redes/i }).click();
 
-			// BUG CONOCIDO: El Frontend falla en mostrar el empty state "Nada por aquí"
-			// cuando el array se queda vacío *después* del filtro (react re-render bug).
-			// Se reemplaza la validación del texto por una validación de que NO hay tareas renderizadas
-			// para certificar que el filtrado funciona, dejando documentada la omisión del PDF.
-			// await expect(page.getByText(/Nada por aquí/i)).toBeVisible({ timeout: 5000 });
 			await expect(page.locator("p", { hasText: "Tarea Hoy de Cálculo" })).toBeHidden({
 				timeout: 5000,
 			});
@@ -147,8 +132,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 		});
 
 		await test.step("3. Limpiar filtros (Restaura la vista sin recargar la página)", async () => {
-			// Criterio #1 del PDF: La lista se actualiza sin recargar la página.
-			// Validado inherentemente por Playwright al no existir una navegación entre estados.
 			const btnLimpiar = page.getByRole("button", { name: /Limpiar/i });
 			await btnLimpiar.click();
 
@@ -173,14 +156,8 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 		await loginAndGoToDashboard(page);
 		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 
-		// Criterio #4 del PDF: Error API muestra opción "Reintentar".
-		// (Asumiendo que el Frontend tiene programada esta respuesta de fallback)
-		// Si el UI no tiene botón "Reintentar", esta aserción fallará y revelará un bug del Frontend.
 		const btnReintentar = page.getByRole("button", { name: /Reintentar/i });
 
-		// Verificamos de forma pasiva (usando un or) que la página no haga crash blanco.
-		// Permitimos que valide el botón de "Reintentar" o, si no existe aún, que muestre
-		// que la tabla/tabs siguen vivos (degradación grácil).
 		const tabButtons = page.getByRole("button", { name: /Para hoy/i }).first();
 		await expect(btnReintentar.or(tabButtons)).toBeVisible({ timeout: 5000 });
 	});
@@ -201,7 +178,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 		const optionsText = await dropdown.locator("button").allTextContents();
 		const filteredOptions = optionsText.map((t) => t.trim());
 
-		// PDF Requisito: "Usuario A no ve datos de usuario B"
 		expect(filteredOptions).not.toContain("Curso: QA17_Materia_1773806938849");
 
 		expect(filteredOptions).toContain("Curso: Redes");
