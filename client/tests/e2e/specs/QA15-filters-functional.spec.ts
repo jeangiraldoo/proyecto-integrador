@@ -7,7 +7,6 @@ import { loginAndGoToDashboard } from "../utils/auth";
  * isolating the frontend behavior using API Mocking (Network Interception).
  */
 
-// Mock payload to simulate a controlled environment without relying on the real Database
 const MOCK_TODAY_DATA = {
 	overdue: [
 		{
@@ -51,55 +50,64 @@ const MOCK_TODAY_DATA = {
 };
 
 test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
-	test.describe.configure({ retries: 1 });
+	// FIX 1: Aumentamos el timeout a 120s y añadimos retries para soportar
+	// los Cold Starts (servidor dormido) de Vercel durante el proceso de login real.
+	test.setTimeout(120000);
+	test.describe.configure({ retries: 2 });
+
+	test.beforeEach(async ({ page }) => {
+		// FIX 2: Interceptamos también la llamada a /activities/ para que devuelva vacío.
+		// Esto evita que las actividades creadas en la base de datos real por otros tests (QA16/QA17)
+		// ensucien el dropdown de filtros, garantizando 100% de aislamiento (Isolation).
+		await page.route("**/api/activities/**", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({ json: [] });
+			} else {
+				await route.continue();
+			}
+		});
+	});
 
 	test("Functional: Filtrar por curso, por estado, combinar y limpiar", async ({ page }) => {
-		// 1. MOCK THE API: Intercept the real backend request and fulfill it with our controlled MOCK_TODAY_DATA
 		await page.route("**/api/today/**", async (route) => {
 			await route.fulfill({ json: MOCK_TODAY_DATA });
 		});
 
 		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 
 		await test.step("1. Filtrar por estado (Solo 'En progreso')", async () => {
 			await page.getByRole("button", { name: /Estado:/i }).click();
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /En progreso/i }).click();
 
-			// Only "Tarea Hoy de Cálculo" should be visible across all tabs
 			await page
 				.getByRole("button", { name: /Para hoy/i })
 				.first()
 				.click();
 			await expect(
 				page.locator('[role="button"]').filter({ hasText: "Tarea Hoy de Cálculo" }),
-			).toBeVisible();
+			).toBeVisible({ timeout: 5000 });
 			await expect(
 				page.locator('[role="button"]').filter({ hasText: "Tarea Hoy de Redes" }),
 			).toBeHidden();
 		});
 
 		await test.step("2. Combinar filtros (Estado: En progreso + Curso: Redes) -> Estado Vacío", async () => {
-			// Apply second filter
 			await page.getByRole("button", { name: /Curso:/i }).click();
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /Redes/i }).click();
 
-			// Condition: No task is both "En progreso" AND from "Redes"
-			// Functional requirement: Should show Empty State Message
-			await expect(page.getByText(/Nada por aquí/i)).toBeVisible();
+			await expect(page.getByText(/Nada por aquí/i)).toBeVisible({ timeout: 5000 });
 		});
 
 		await test.step("3. Limpiar filtros (Restaura la vista sin recargar la página)", async () => {
 			const btnLimpiar = page.getByRole("button", { name: /Limpiar/i });
 			await btnLimpiar.click();
 
-			// UI state should be completely restored
 			await expect(page.getByRole("button", { name: "Estado: Todos" }).first()).toBeVisible();
 			await expect(page.getByRole("button", { name: "Curso: Todos" }).first()).toBeVisible();
 
-			// Original mocked tasks should be visible again
 			await expect(
 				page.locator('[role="button"]').filter({ hasText: "Tarea Hoy de Cálculo" }),
 			).toBeVisible();
@@ -110,7 +118,6 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	});
 
 	test("Functional: Error del servidor (Simulado 500)", async ({ page }) => {
-		// MOCK: Simulate a critical backend crash (Requirement from PDF)
 		await page.route("**/api/today/**", async (route) => {
 			await route.fulfill({
 				status: 500,
@@ -121,37 +128,32 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 
 		await loginAndGoToDashboard(page);
 
-		// The application should not completely crash. The header must survive.
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 10000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 
-		// Wait for the Kanban to either show loading or degrade gracefully,
-		// verifying the UI doesn't throw a white screen of death (React Error Boundary).
 		const tabButtons = page.getByRole("button", { name: /Para hoy/i }).first();
-		await expect(tabButtons).toBeVisible();
+		await expect(tabButtons).toBeVisible({ timeout: 5000 });
 	});
 
 	test("Functional: Usuario A no ve datos de usuario B (Data Isolation Check)", async ({
 		page,
 	}) => {
-		// To functionally test isolation in the frontend, we verify that the course dropdown
-		// strictly populates ONLY with the courses returned by the user's specific /today/ payload.
 		await page.route("**/api/today/**", async (route) => {
-			await route.fulfill({ json: MOCK_TODAY_DATA }); // Payload only contains "Redes", "Cálculo", "Física"
+			await route.fulfill({ json: MOCK_TODAY_DATA });
 		});
 
 		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 
 		await page.getByRole("button", { name: /Curso:/i }).click();
 		const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 
 		const optionsText = await dropdown.locator("button").allTextContents();
-
-		// Verify that a malicious/external course like "Filosofía B" is NOT rendered
 		const filteredOptions = optionsText.map((t) => t.trim());
-		expect(filteredOptions).not.toContain("Curso: Filosofía B");
 
-		// Verify that exactly our mocked courses are rendered
+		// Verificamos que las materias generadas por otras pruebas en la BD real NO aparezcan aquí
+		expect(filteredOptions).not.toContain("Curso: QA17_Materia_1773806938849");
+
+		// Verificamos que SOLO aparezcan las materias de nuestra MOCK_DATA
 		expect(filteredOptions).toContain("Curso: Redes");
 		expect(filteredOptions).toContain("Curso: Cálculo");
 		expect(filteredOptions).toContain("Curso: Física");
