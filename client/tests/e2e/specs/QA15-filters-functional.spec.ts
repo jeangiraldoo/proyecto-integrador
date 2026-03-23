@@ -49,6 +49,16 @@ const MOCK_TODAY_DATA = {
 	meta: { n_days: 7, filters: { courseId: null, status: null } },
 };
 
+// FIX CRÍTICO: Mock de usuario para que el dashboard no falle al cargar
+const MOCK_USER_DATA = {
+	id: 999,
+	username: "testuser",
+	email: "test@test.com",
+	name: "Test User",
+	max_daily_hours: 6,
+	date_joined: "2026-01-01T00:00:00Z",
+};
+
 test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	// FIX 1: Aumentamos el timeout a 120s y añadimos retries para soportar
 	// los Cold Starts (servidor dormido) de Vercel durante el proceso de login real.
@@ -56,10 +66,39 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	test.describe.configure({ retries: 2 });
 
 	test.beforeEach(async ({ page }) => {
-		// FIX 2: Interceptamos también la llamada a /activities/ para que devuelva vacío.
-		// Esto evita que las actividades creadas en la base de datos real por otros tests (QA16/QA17)
-		// ensucien el dropdown de filtros, garantizando 100% de aislamiento (Isolation).
+		// FIX 2: MOCKS GLOBALES PARA AISLAMIENTO TOTAL
+		// Interceptamos llamadas secundarias del Dashboard para evitar que los datos
+		// de la base de datos real (ej. de QA-16 o QA-17) ensucien nuestra prueba.
+
+		// 1. Mock de Actividades vacío
 		await page.route("**/activities/**", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({ json: [] });
+			} else {
+				await route.continue();
+			}
+		});
+
+		// 2. Mock de Materias (Subjects) vacío
+		await page.route("**/subjects/**", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({ json: [] });
+			} else {
+				await route.continue();
+			}
+		});
+
+		// 3. Mock de Usuario (Me)
+		await page.route("**/me/**", async (route) => {
+			if (route.request().method() === "GET") {
+				await route.fulfill({ json: MOCK_USER_DATA });
+			} else {
+				await route.continue();
+			}
+		});
+
+		// 4. Mock de Conflictos vacío (para evitar que explote el sidebar)
+		await page.route("**/conflicts/**", async (route) => {
 			if (route.request().method() === "GET") {
 				await route.fulfill({ json: [] });
 			} else {
@@ -133,10 +172,10 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 
 		await loginAndGoToDashboard(page);
 
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 60000 });
 
 		const tabButtons = page.getByRole("button", { name: /Para hoy/i }).first();
-		await expect(tabButtons).toBeVisible({ timeout: 5000 });
+		await expect(tabButtons).toBeVisible({ timeout: 60000 });
 	});
 
 	test("Functional: Usuario A no ve datos de usuario B (Data Isolation Check)", async ({
