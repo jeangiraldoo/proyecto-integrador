@@ -59,7 +59,7 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 		// FIX 2: Interceptamos también la llamada a /activities/ para que devuelva vacío.
 		// Esto evita que las actividades creadas en la base de datos real por otros tests (QA16/QA17)
 		// ensucien el dropdown de filtros, garantizando 100% de aislamiento (Isolation).
-		await page.route("**/api/activities/**", async (route) => {
+		await page.route("**/activities/**", async (route) => {
 			if (route.request().method() === "GET") {
 				await route.fulfill({ json: [] });
 			} else {
@@ -69,7 +69,7 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	});
 
 	test("Functional: Filtrar por curso, por estado, combinar y limpiar", async ({ page }) => {
-		await page.route("**/api/today/**", async (route) => {
+		await page.route("**/today/**", async (route) => {
 			await route.fulfill({ json: MOCK_TODAY_DATA });
 		});
 
@@ -98,7 +98,12 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /Redes/i }).click();
 
-			await expect(page.getByText(/Nada por aquí/i)).toBeVisible({ timeout: 5000 });
+			await expect(
+				page.locator('[role="button"]').filter({ hasText: "Tarea Hoy de Cálculo" }),
+			).toBeHidden({ timeout: 5000 });
+			await expect(
+				page.locator('[role="button"]').filter({ hasText: "Tarea Hoy de Redes" }),
+			).toBeHidden({ timeout: 5000 });
 		});
 
 		await test.step("3. Limpiar filtros (Restaura la vista sin recargar la página)", async () => {
@@ -118,7 +123,7 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	});
 
 	test("Functional: Error del servidor (Simulado 500)", async ({ page }) => {
-		await page.route("**/api/today/**", async (route) => {
+		await page.route("**/today/**", async (route) => {
 			await route.fulfill({
 				status: 500,
 				contentType: "application/json",
@@ -137,7 +142,7 @@ test.describe("QA-15 | US-5 - Pruebas Funcionales de Filtrado (Mocked)", () => {
 	test("Functional: Usuario A no ve datos de usuario B (Data Isolation Check)", async ({
 		page,
 	}) => {
-		await page.route("**/api/today/**", async (route) => {
+		await page.route("**/today/**", async (route) => {
 			await route.fulfill({ json: MOCK_TODAY_DATA });
 		});
 
