@@ -78,7 +78,11 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 		// Default successful PATCH response for rescheduling tasks
 		await page.route("**/activities/*/subtasks/*/", async (route) => {
 			if (route.request().method() === "PATCH") {
-				await route.fulfill({ status: 200, json: { id: 201, status: "pending" } });
+				const body = JSON.parse(route.request().postData() || "{}");
+				await route.fulfill({
+					status: 200,
+					json: { id: 201, ...body, status: body.status || "pending" },
+				});
 			} else {
 				await route.continue();
 			}
@@ -90,7 +94,7 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 
 	test("Functional: Escenarios válidos de reprogramación (Futuro y Pasado)", async ({ page }) => {
 		await test.step("1. Reprogramar a fecha futura (Mueve de Hoy a Próximas)", async () => {
-			await page.getByRole("button", { name: "Hoy" }).click();
+			await page.getByRole("button", { name: "Hoy", exact: true }).click();
 
 			// Open task
 			const myTask = page.locator('[role="button"]').filter({ hasText: "Mock Task Today" }).first();
@@ -101,6 +105,21 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			await page.locator('button[title="Editar"]').click();
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			await editModal.locator('input[type="date"]').fill(FUTURE_STR);
+
+			// Dynamically override the today mock to simulate backend state update
+			await page.route("**/today/**", (route) =>
+				route.fulfill({
+					json: {
+						...MOCK_TODAY_DATA,
+						today: [],
+						upcoming: [
+							...MOCK_TODAY_DATA.upcoming,
+							{ ...MOCK_TODAY_DATA.today[0], target_date: FUTURE_STR },
+						],
+					},
+				}),
+			);
+
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
 			// Validate success and local state update
@@ -132,6 +151,19 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			await page.locator('button[title="Editar"]').click();
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			await editModal.locator('input[type="date"]').fill(PAST_STR);
+
+			// Dynamically override state to move Mock Task Upcoming to overdue
+			await page.route("**/today/**", (route) =>
+				route.fulfill({
+					json: {
+						...MOCK_TODAY_DATA,
+						today: [],
+						upcoming: [{ ...MOCK_TODAY_DATA.today[0], target_date: FUTURE_STR }],
+						overdue: [{ ...MOCK_TODAY_DATA.upcoming[0], target_date: PAST_STR }],
+					},
+				}),
+			);
+
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
 			await expect(
