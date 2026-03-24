@@ -1,12 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginAndGoToDashboard } from "../utils/auth";
 
-/**
- * QA-16 | US-6: Functional Tests for Rescheduling (Reprogramación)
- * As agreed by the team, this file isolates the frontend behavior using API Mocking.
- * It focuses on edge cases, UI validation, sorting retention, and non-interference.
- */
-
 const formatLocalDateForInput = (date: Date) => {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -14,23 +8,21 @@ const formatLocalDateForInput = (date: Date) => {
 	return `${year}-${month}-${day}`;
 };
 
-// Calculate dynamic dates for mocking
 const today = new Date();
 const pastDate = new Date(today);
 pastDate.setDate(today.getDate() - 5);
 
 const nearFutureDate = new Date(today);
-nearFutureDate.setDate(today.getDate() + 2); // A close future date
+nearFutureDate.setDate(today.getDate() + 2);
 
 const farFutureDate = new Date(today);
-farFutureDate.setDate(today.getDate() + 5); // A distant future date
+farFutureDate.setDate(today.getDate() + 5);
 
 const TODAY_STR = formatLocalDateForInput(today);
 const PAST_STR = formatLocalDateForInput(pastDate);
 const NEAR_FUTURE_STR = formatLocalDateForInput(nearFutureDate);
 const FAR_FUTURE_STR = formatLocalDateForInput(farFutureDate);
 
-// Static Mock Data strictly for frontend UI mapping
 const MOCK_USER = {
 	id: 999,
 	username: "testuser",
@@ -80,16 +72,12 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 	test.describe.configure({ retries: 2 });
 
 	test.beforeEach(async ({ page }) => {
-		// ====================================================================
-		// GLOBAL MOCKS FOR STRICT FRONTEND ISOLATION
-		// ====================================================================
 		await page.route("**/me/**", (route) => route.fulfill({ json: MOCK_USER }));
 		await page.route("**/activities/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/subjects/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/today/**", (route) => route.fulfill({ json: MOCK_TODAY_DATA }));
 
-		// Default successful PATCH response for rescheduling tasks
 		await page.route("**/activities/*/subtasks/*/", async (route) => {
 			if (route.request().method() === "PATCH") {
 				const body = JSON.parse(route.request().postData() || "{}");
@@ -110,7 +98,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 		await test.step("1. Reprogramar a fecha futura (Valida 'No rompe orden' y 'No afecta otras')", async () => {
 			await page.getByRole("button", { name: "Hoy", exact: true }).click();
 
-			// Open task to move
 			const myTask = page
 				.locator('[role="button"]')
 				.filter({ hasText: "Mock Task To Move" })
@@ -118,42 +105,32 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			await expect(myTask).toBeVisible();
 			await myTask.click();
 
-			// Edit to Near Future Date (+2 days)
 			await page.locator('button[title="Editar"]').click();
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			await editModal.locator('input[type="date"]').fill(NEAR_FUTURE_STR);
 
-			// Note: No need to override the GET /today/ mock here.
-			// React's applyTodayDataPatchLocally handles the state update internally.
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
-			// Validate success and modal closure
 			await expect(
 				page.locator("[data-sonner-toast]").filter({ hasText: /actualizada/i }),
 			).toBeVisible();
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 
-			// AC 3: No afecta otras subtareas (The untouched task should still be in "Hoy")
 			await expect(
 				page.locator('[role="button"]').filter({ hasText: "Mock Task Untouched" }),
 			).toBeVisible();
 
-			// Verification: Task should move to "Próximas"
 			await page
 				.getByRole("button", { name: /Próximas/i })
 				.first()
 				.click();
 
-			// AC 2: No rompe reglas de prioridad (Order must be respected)
-			// 'Mock Task To Move' is near future (+2d), 'Mock Task Upcoming' is far future (+5d)
-			// The closest one MUST appear first in the UI.
 			const cards = page.locator('[role="button"][tabindex="0"]');
 			await expect(cards.nth(0)).toContainText("Mock Task To Move");
 			await expect(cards.nth(1)).toContainText("Mock Task Upcoming");
 		});
 
 		await test.step("2. Reprogramar a fecha pasada (Mueve a Vencidas)", async () => {
-			// Find the upcoming task
 			const myTask = page
 				.locator('[role="button"]')
 				.filter({ hasText: "Mock Task Upcoming" })
@@ -161,7 +138,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			await expect(myTask).toBeVisible();
 			await myTask.click();
 
-			// Edit to Past Date (-5 days)
 			await page.locator('button[title="Editar"]').click();
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			await editModal.locator('input[type="date"]').fill(PAST_STR);
@@ -173,7 +149,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			).toBeVisible();
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 
-			// Verification: Task should move to "Vencidas"
 			await page
 				.getByRole("button", { name: /Vencidas/i })
 				.first()
@@ -186,7 +161,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 
 	test("Functional: Casos de Error (Fecha inválida y Permisos Backend)", async ({ page }) => {
 		await test.step("1. Fecha inválida (Validación Backend simulada)", async () => {
-			// MOCK OVERRIDE: Simulate global API rejection for empty date (HTTP 400)
 			await page.route("**/activities/*/subtasks/*/", async (route) => {
 				if (route.request().method() === "PATCH") {
 					const body = JSON.parse(route.request().postData() || "{}");
@@ -217,11 +191,9 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 			const dateInput = editModal.locator('input[type="date"]');
 
-			// Fill with empty/invalid date
 			await dateInput.fill("");
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
-			// Check for error text. Use try/catch to satisfy ESLint without empty block errors
 			const errorLocator = page.locator("text=/requerid|error|obligatori|invalid/i").first();
 			try {
 				await expect(errorLocator).toBeVisible({ timeout: 4000 });
@@ -229,16 +201,13 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 				// Fallback for native browser tooltips
 			}
 
-			// Ensure the modal did NOT close
 			await expect(editModal).toBeVisible();
 
-			// Clean up state
 			await editModal.getByRole("button", { name: /Cancelar/i }).click();
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 		});
 
 		await test.step("2. Subtarea de otro usuario (Simulación de error 404 del Backend)", async () => {
-			// MOCK OVERRIDE: Simulate backend rejecting the PATCH request
 			await page.route("**/activities/*/subtasks/*/", async (route) => {
 				if (route.request().method() === "PATCH") {
 					await route.fulfill({
@@ -262,7 +231,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			await editModal.locator('input[type="date"]').fill(FAR_FUTURE_STR);
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
-			// Verification: Frontend must display an error toast and NOT close the modal
 			const toastError = page
 				.locator("[data-sonner-toast]")
 				.filter({ hasText: /Error|no\spudo|404/i })
@@ -280,12 +248,10 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 
 	test("Functional: Mantener filtros activos tras reprogramar", async ({ page }) => {
 		await test.step("1. Aplicar un filtro y reprogramar", async () => {
-			// Apply filter: Course = Física
 			await page.getByRole("button", { name: /Curso:/i }).click();
 			const dropdown = page.locator('div[style*="z-index: 9999"]').first();
 			await dropdown.getByRole("button", { name: /Física/i }).click();
 
-			// Edit task in "Hoy"
 			const myTask = page
 				.locator('[role="button"]')
 				.filter({ hasText: "Mock Task To Move" })
@@ -295,7 +261,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 
 			const editModal = page.locator('div[style*="z-index: 2201"]');
 
-			// Change estimated hours instead of date to keep it in the same tab for visibility
 			await editModal.locator('input[type="number"]').fill("5");
 			await editModal.getByRole("button", { name: /Guardar cambios/i }).click();
 
@@ -304,7 +269,6 @@ test.describe("QA-16 | US-6 - Pruebas Funcionales de Reprogramacion (Mocked)", (
 			).toBeVisible();
 			await page.locator('aside[role="dialog"]').getByRole("button", { name: "Cerrar" }).click();
 
-			// AC: Mantener Filtros Activos
 			await expect(page.getByRole("button", { name: "Curso: Física" }).first()).toBeVisible();
 		});
 	});
