@@ -51,6 +51,15 @@ const MOCK_TODAY_DATA = {
 	meta: { n_days: 7, filters: { courseId: null, status: null } },
 };
 
+const MOCK_ACTIVITIES = [
+	{
+		id: 9991,
+		name: "Mock Activity",
+		subject_name: "Mock Subject",
+		subtasks: MOCK_TODAY_DATA.today,
+	},
+];
+
 test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () => {
 	test.setTimeout(120000);
 	test.describe.configure({ retries: 2 });
@@ -60,7 +69,7 @@ test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () =>
 		// GLOBAL MOCKS FOR STRICT FRONTEND ISOLATION
 		// ====================================================================
 		await page.route("**/me/**", (route) => route.fulfill({ json: MOCK_USER_6H }));
-		await page.route("**/activities/**", (route) => route.fulfill({ json: [] }));
+		await page.route("**/activities/**", (route) => route.fulfill({ json: MOCK_ACTIVITIES }));
 		await page.route("**/subjects/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/today/**", (route) => route.fulfill({ json: MOCK_TODAY_DATA }));
@@ -88,7 +97,7 @@ test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () =>
 			await editModal.locator('input[type="date"]').fill(TODAY_STR);
 
 			// Total is 4h. The modal should show 4h / 6h and NOT be in red.
-			await expect(editModal.locator("strong")).toContainText("4h / 6h");
+			await expect(editModal.locator("strong")).toContainText("4h / 6h", { timeout: 5000 });
 			await expect(editModal.getByText(/Sin conflicto detectado/i)).toBeVisible();
 
 			await editModal.getByRole("button", { name: /Cancelar/i }).click();
