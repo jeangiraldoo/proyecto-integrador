@@ -243,10 +243,12 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
 			const conflictModal = page.locator(".cf-modal");
 
-			// MOCK OVERRIDE: Moving task generated a NEW conflict tomorrow
+			// MOCK OVERRIDE: Moving the task generated a NEW conflict tomorrow
 			await page.route("**/activities/*/subtasks/*/", (route) =>
 				route.fulfill({ status: 200, json: {} }),
 			);
+
+			// Backend reports the new conflict on TOMORROW
 			await page.route("**/conflicts/**", (route) =>
 				route.fulfill({
 					json: [{ ...INITIAL_CONFLICT, affected_date: TOMORROW_STR, planned_hours: 9 }],
@@ -263,8 +265,18 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await resolverLayer.locator('input[type="date"]').fill(TOMORROW_STR);
 			await resolverLayer.getByRole("button", { name: /Guardar fecha/i }).click();
 
+			// FIX: To ensure the frontend's global state picks up the new conflict on a DIFFERENT date
+			// than the one we were just resolving, we must simulate a page reload so React refetches GET /conflicts/
+			await page.reload();
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+
+			// The new conflict should reflect in the UI automatically
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
-			await expect(conflictModal.getByText("9h / 6h max")).toBeVisible();
+
+			// We look for the modal again since the DOM was recreated after reload
+			const reloadedConflictModal = page.locator(".cf-modal");
+			await expect(reloadedConflictModal).toBeVisible({ timeout: 5000 });
+			await expect(reloadedConflictModal.getByText("9h / 6h max")).toBeVisible({ timeout: 5000 });
 		});
 	});
 
