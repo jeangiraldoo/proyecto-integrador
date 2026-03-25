@@ -1,12 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginAndGoToDashboard } from "../utils/auth";
 
-/**
- * QA-18 | US-8: Functional Tests for Conflict Resolution
- * As agreed by the team (Santiago, Jean, Andres), this file strictly isolates the frontend behavior using API Mocking.
- * It tests every resolution outcome (success, persisting conflict, cancellation) directly from the Global Conflict Modal.
- */
-
 const formatLocalDateForInput = (date: Date) => {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -21,9 +15,6 @@ tomorrow.setDate(tomorrow.getDate() + 1);
 const TODAY_STR = formatLocalDateForInput(today);
 const TOMORROW_STR = formatLocalDateForInput(tomorrow);
 
-// ---------------------------------------------------------------------------
-// BASE MOCK DATA
-// ---------------------------------------------------------------------------
 const MOCK_USER_6H = {
 	id: 999,
 	username: "qa18_user",
@@ -32,7 +23,6 @@ const MOCK_USER_6H = {
 	max_daily_hours: 6,
 };
 
-// We simulate a day that has 8h planned (4h + 4h), exceeding the 6h limit
 const MOCK_ACTIVITIES = [
 	{
 		id: 888,
@@ -77,15 +67,11 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 	test.describe.configure({ retries: 2 });
 
 	test.beforeEach(async ({ page }) => {
-		// ====================================================================
-		// GLOBAL MOCKS TO INJECT AN ACTIVE CONFLICT STATE
-		// ====================================================================
 		await page.route("**/me/**", (route) => route.fulfill({ json: MOCK_USER_6H }));
 		await page.route("**/activities/**", (route) => route.fulfill({ json: MOCK_ACTIVITIES }));
 		await page.route("**/subjects/**", (route) => route.fulfill({ json: [] }));
 		await page.route("**/today/**", (route) => route.fulfill({ json: MOCK_TODAY_DATA }));
 
-		// By default, the backend reports an 8h conflict for today
 		await page.route("**/conflicts/**", (route) => {
 			if (route.request().method() === "GET") {
 				route.fulfill({ json: [INITIAL_CONFLICT] });
@@ -106,25 +92,21 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			const conflictModal = page.locator(".cf-modal");
 			await expect(conflictModal).toBeVisible();
 
-			// MOCK OVERRIDE: Simulate successful PATCH and subsequent conflict resolution (Empty conflicts array)
 			await page.route("**/activities/*/subtasks/*/", (route) =>
 				route.fulfill({ status: 200, json: {} }),
 			);
-			await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] })); // Conflict resolved!
+			await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] }));
 
-			// Select the first task in the modal
 			const conflictRow = conflictModal
 				.locator(".cf-subtask-row")
 				.filter({ hasText: "Tarea Pesada" })
 				.first();
 			await conflictRow.getByRole("button", { name: /Ajustar horas/i }).click();
 
-			// Fill 2h (Reducing from 4h to 2h makes total 6h -> Within limits)
 			const resolverLayer = page.locator(".cf-resolver-layer");
 			await resolverLayer.locator('input[type="number"]').fill("2");
 			await resolverLayer.getByRole("button", { name: /Guardar horas/i }).click();
 
-			// The UI should close the modal and show success toast
 			await expect(
 				page
 					.locator("[data-sonner-toast]")
@@ -132,14 +114,10 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 					.first(),
 			).toBeVisible({ timeout: 8000 });
 
-			// Criterio de Aceptación 1: Conflicto desaparece correctamente
 			await expect(page.locator(".sidebar-conflicts-count")).not.toHaveClass(/danger/);
 		});
 
 		await test.step("2. Persistencia tras recargar y Regla de Prioridad (AC #3)", async () => {
-			// Criterio #3: "No rompe reglas de prioridad".
-			// MOCK OVERRIDE: We feed the frontend the tasks out of order.
-			// Since "Tarea Pesada" is now 2h and "Tarea Ligera" is 4h, the frontend MUST sort "Tarea Pesada" first.
 			await page.route("**/today/**", async (route) => {
 				await route.fulfill({
 					json: {
@@ -156,16 +134,13 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 			await expect(page.locator(".sidebar-conflicts-count")).not.toHaveClass(/danger/);
 
-			// FIX CRÍTICO 1: Asegurarnos de estar en la pestaña correcta después de recargar
 			await page
 				.getByRole("button", { name: /Para hoy/i })
 				.first()
 				.click();
 
-			// FIX CRÍTICO 2: Usar el selector correcto para las tarjetas en la vista Kanban (/hoy)
 			const cards = page.locator('div[role="button"][tabindex="0"]');
 
-			// Assert priority: 'Tarea Pesada' (2h) should be placed above 'Tarea Ligera' (4h)
 			await expect(cards.nth(0)).toContainText("Tarea Pesada", { timeout: 10000 });
 			await expect(cards.nth(1)).toContainText("Tarea Ligera", { timeout: 10000 });
 		});
@@ -176,7 +151,6 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
 			const conflictModal = page.locator(".cf-modal");
 
-			// MOCK OVERRIDE: Simulate successful PATCH, but conflict STILL exists (7h > 6h)
 			await page.route("**/activities/*/subtasks/*/", (route) =>
 				route.fulfill({ status: 200, json: {} }),
 			);
@@ -243,12 +217,10 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
 			const conflictModal = page.locator(".cf-modal");
 
-			// MOCK OVERRIDE: Moving the task generated a NEW conflict tomorrow
 			await page.route("**/activities/*/subtasks/*/", (route) =>
 				route.fulfill({ status: 200, json: {} }),
 			);
 
-			// Backend reports the new conflict on TOMORROW
 			await page.route("**/conflicts/**", (route) =>
 				route.fulfill({
 					json: [{ ...INITIAL_CONFLICT, affected_date: TOMORROW_STR, planned_hours: 9 }],
@@ -265,15 +237,11 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			await resolverLayer.locator('input[type="date"]').fill(TOMORROW_STR);
 			await resolverLayer.getByRole("button", { name: /Guardar fecha/i }).click();
 
-			// FIX: To ensure the frontend's global state picks up the new conflict on a DIFFERENT date
-			// than the one we were just resolving, we must simulate a page reload so React refetches GET /conflicts/
 			await page.reload();
 			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 
-			// The new conflict should reflect in the UI automatically
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
 
-			// We look for the modal again since the DOM was recreated after reload
 			const reloadedConflictModal = page.locator(".cf-modal");
 			await expect(reloadedConflictModal).toBeVisible({ timeout: 5000 });
 			await expect(reloadedConflictModal.getByText("9h / 6h max")).toBeVisible({ timeout: 5000 });
