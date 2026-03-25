@@ -182,7 +182,7 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 		});
 	});
 
-	test("Functional: Resolver moviendo -> éxito", async () => {
+	test("Functional: Resolver moviendo -> éxito", async ({ page }) => {
 		await test.step("1. Cambiar fecha a un día libre", async () => {
 			await page.locator(".sidebar-conflicts-btn").click({ force: true });
 			const conflictModal = page.locator(".cf-modal");
