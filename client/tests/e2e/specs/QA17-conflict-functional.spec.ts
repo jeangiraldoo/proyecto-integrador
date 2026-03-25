@@ -208,7 +208,7 @@ test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () =>
 				{
 					id: 500,
 					affected_date: TODAY_STR,
-					planned_hours: 8,
+					planned_hours: 7,
 					max_allowed_hours: 6,
 					status: "pending",
 					title: "Subtareas en conflicto",
@@ -217,6 +217,7 @@ test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () =>
 				},
 			];
 
+			await page.route("**/activities/**", (route) => route.fulfill({ json: [] }));
 			await page.route("**/conflicts/**", (route) => route.fulfill({ json: MOCK_CONFLICTS }));
 
 			await page.reload();
@@ -234,7 +235,7 @@ test.describe("QA-17 | US-7 - Pruebas Funcionales de Conflictos (Mocked)", () =>
 			await expect(conflictModal).toBeVisible({ timeout: 5000 });
 
 			// Criterio PDF: "El mensaje muestra valores correctos"
-			await expect(conflictModal).toContainText("8h / 6h max");
+			await expect(conflictModal).toContainText("7h / 6h max");
 
 			// Criterio PDF: "El exceso calculado es correcto".
 			// En la UI de conflictos, si abres una tarea para reducir, muestra el "exceso".
