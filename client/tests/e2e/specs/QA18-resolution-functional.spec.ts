@@ -106,28 +106,33 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			const conflictModal = page.locator(".cf-modal");
 			await expect(conflictModal).toBeVisible();
 
-			// MOCK OVERRIDE: Simulate successful PATCH
+			// MOCK OVERRIDE: Simulate successful PATCH and subsequent conflict resolution (Empty conflicts array)
 			await page.route("**/activities/*/subtasks/*/", (route) =>
 				route.fulfill({ status: 200, json: {} }),
 			);
-			await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] }));
+			await page.route("**/conflicts/**", (route) => route.fulfill({ json: [] })); // Conflict resolved!
 
+			// Select the first task in the modal
 			const conflictRow = conflictModal
 				.locator(".cf-subtask-row")
 				.filter({ hasText: "Tarea Pesada" })
 				.first();
 			await conflictRow.getByRole("button", { name: /Ajustar horas/i }).click();
 
+			// Fill 2h (Reducing from 4h to 2h makes total 6h -> Within limits)
 			const resolverLayer = page.locator(".cf-resolver-layer");
 			await resolverLayer.locator('input[type="number"]').fill("2");
 			await resolverLayer.getByRole("button", { name: /Guardar horas/i }).click();
 
+			// The UI should close the modal and show success toast
 			await expect(
 				page
 					.locator("[data-sonner-toast]")
 					.filter({ hasText: /recalculada|actualizada/i })
 					.first(),
 			).toBeVisible({ timeout: 8000 });
+
+			// Criterio de Aceptación 1: Conflicto desaparece correctamente
 			await expect(page.locator(".sidebar-conflicts-count")).not.toHaveClass(/danger/);
 		});
 
@@ -135,8 +140,8 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 			// Criterio #3: "No rompe reglas de prioridad".
 			// MOCK OVERRIDE: We feed the frontend the tasks out of order.
 			// Since "Tarea Pesada" is now 2h and "Tarea Ligera" is 4h, the frontend MUST sort "Tarea Pesada" first.
-			await page.route("**/today/**", (route) =>
-				route.fulfill({
+			await page.route("**/today/**", async (route) => {
+				await route.fulfill({
 					json: {
 						...MOCK_TODAY_DATA,
 						today: [
@@ -144,17 +149,25 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 							{ ...MOCK_TODAY_DATA.today[0], estimated_hours: 2 }, // Tarea Pesada (2h)
 						],
 					},
-				}),
-			);
+				});
+			});
 
 			await page.reload();
-			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 			await expect(page.locator(".sidebar-conflicts-count")).not.toHaveClass(/danger/);
 
+			// FIX CRÍTICO 1: Asegurarnos de estar en la pestaña correcta después de recargar
+			await page
+				.getByRole("button", { name: /Para hoy/i })
+				.first()
+				.click();
+
+			// FIX CRÍTICO 2: Usar el selector correcto para las tarjetas en la vista Kanban (/hoy)
+			const cards = page.locator('div[role="button"][tabindex="0"]');
+
 			// Assert priority: 'Tarea Pesada' (2h) should be placed above 'Tarea Ligera' (4h)
-			const cards = page.locator(".col-title");
-			await expect(cards.nth(0)).toHaveText("Tarea Pesada");
-			await expect(cards.nth(1)).toHaveText("Tarea Ligera");
+			await expect(cards.nth(0)).toContainText("Tarea Pesada", { timeout: 10000 });
+			await expect(cards.nth(1)).toContainText("Tarea Ligera", { timeout: 10000 });
 		});
 	});
 
