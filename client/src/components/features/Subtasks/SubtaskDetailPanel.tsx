@@ -13,11 +13,11 @@ import {
 	ClipboardList,
 	Pencil,
 } from "lucide-react";
-import { type Subtask } from "../api/dashboard";
-import { useTheme } from "../hooks/useTheme";
+import { type Subtask } from "@/api/dashboard";
+import { useTheme } from "@/hooks/useTheme";
 import { toast } from "sonner";
-import "./Dashboard.css";
-import { formatDate, type KanbanGroup } from "./dashboardUtils";
+import "@/pages/Dashboard/Dashboard.css";
+import { formatDate, type KanbanGroup } from "@/pages/Dashboard/utils/dashboardUtils";
 import { EditSubtaskModal, DeleteConfirmModal } from "./SubtaskModals";
 
 export function SubtaskDetailPanel({

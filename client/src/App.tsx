@@ -1,14 +1,14 @@
 import React from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import Landing from "./components/Landing";
-import Dashboard from "./components/Dashboard";
-import client from "./api/client";
-import { isTokenValid, clearAuthStorage, getAccessToken } from "./api/auth";
-import ThemeProvider from "./context/ThemeProvider";
-import { useTheme } from "./hooks/useTheme";
+import Login from "@/pages/Auth/Login/Login";
+import Register from "@/pages/Auth/Register/Register";
+import Landing from "@/pages/Landing/Landing";
+import Dashboard from "@/pages/Dashboard/Dashboard";
+import client from "@/api/client";
+import { isTokenValid, clearAuthStorage, getAccessToken } from "@/api/auth";
+import ThemeProvider from "@/context/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 import "./App.css";
 
 /** Ruta protegida: redirige a /login si el token no es válido o expiró. */
