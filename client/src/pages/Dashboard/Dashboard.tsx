@@ -52,21 +52,21 @@ import {
 } from "@/api/dashboard";
 import { toast } from "sonner";
 import "@/pages/Dashboard/Dashboard.css";
-import CreateActivityModal from "@/components/features/Activities/CreateActivityModal";
+import CreateActivityModal from "@/components/modals/Activities/CreateActivityModal";
 import {
 	checkDailyConflicts,
 	type KanbanGroup,
 	type KanbanState,
 	type NewActivityPayloadFromModal,
 } from "@/pages/Dashboard/utils/dashboardUtils";
-import OrganizationView from "@/pages/Dashboard/views/OrganizationView";
-import TodayKanban from "@/pages/Dashboard/views/TodayView";
+import OrganizationView from "@/components/views/OrganizationView";
+import TodayKanban from "@/components/views/TodayView";
 import ConflictModal, {
 	type ConflictInfo,
 	type ConflictModalItem,
 	type ConflictModalSubtask,
-} from "@/components/features/Activities/ConflictModal";
-import { SubjectFormModal } from "@/components/features/Organizations/OrgModals";
+} from "@/components/modals/Activities/ConflictModal";
+import { SubjectFormModal } from "@/components/modals/Organizations/OrgModals";
 
 /* ============ COMPONENT ============ */
 interface DashboardProps {

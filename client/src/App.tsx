@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
 import Login from "@/pages/Auth/Login/Login";
 import Register from "@/pages/Auth/Register/Register";
@@ -11,34 +11,44 @@ import ThemeProvider from "@/context/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";
 import "./App.css";
 
-/** Ruta protegida: redirige a /login si el token no es válido o expiró. */
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// ─────────────────────────────────────────────
+// Layout: rutas públicas (ya autenticado → /hoy)
+// ─────────────────────────────────────────────
+function AuthLayout() {
 	const token = getAccessToken();
+	if (isTokenValid(token)) return <Navigate to="/hoy" replace />;
+	return <Outlet />;
+}
+
+// ─────────────────────────────────────────────
+// Layout: rutas protegidas (sin sesión → /login)
+// ─────────────────────────────────────────────
+function DashboardLayout() {
+	const navigate = useNavigate();
+	const token = getAccessToken();
+
 	if (!isTokenValid(token)) {
-		// Limpiar almacenamiento antes de redirigir
 		clearAuthStorage();
 		return <Navigate to="/login" replace />;
 	}
-	return <>{children}</>;
+
+	const handleLogout = () => {
+		clearAuthStorage();
+		delete client.defaults.headers.common["Authorization"];
+		toast.success("Sesión cerrada correctamente");
+		navigate("/login");
+	};
+
+	// El Dashboard ya usa useLocation() internamente para saber qué vista mostrar.
+	// Este layout simplemente lo envuelve con la lógica de autenticación.
+	return <Dashboard onLogout={handleLogout} />;
 }
 
-/** Página de registro: redirige a /hoy si ya hay sesión válida. */
-function RegisterPage() {
-	const token = getAccessToken();
-	if (isTokenValid(token)) {
-		return <Navigate to="/hoy" replace />;
-	}
-	// Register component handles navigation internally after success
-	return <Register />;
-}
-
-/** Página de login: redirige a /hoy si ya hay sesión válida. */
+// ─────────────────────────────────────────────
+// Login page (dentro del AuthLayout)
+// ─────────────────────────────────────────────
 function LoginPage() {
 	const navigate = useNavigate();
-	const token = getAccessToken();
-	if (isTokenValid(token)) {
-		return <Navigate to="/hoy" replace />;
-	}
 	const handleLoginSuccess = (accessToken: string) => {
 		client.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 		navigate("/hoy");
@@ -46,18 +56,9 @@ function LoginPage() {
 	return <Login onLoginSuccess={handleLoginSuccess} />;
 }
 
-/** Página del dashboard con manejo de logout. */
-function DashboardPage() {
-	const navigate = useNavigate();
-	const handleLogout = () => {
-		clearAuthStorage();
-		delete client.defaults.headers.common["Authorization"];
-		toast.success("Sesión cerrada correctamente");
-		navigate("/login");
-	};
-	return <Dashboard onLogout={handleLogout} />;
-}
-
+// ─────────────────────────────────────────────
+// App root
+// ─────────────────────────────────────────────
 function App() {
 	return (
 		<ThemeProvider>
@@ -72,38 +73,23 @@ function AppRoutes() {
 		<>
 			<Toaster position="top-right" theme={theme} richColors />
 			<Routes>
-				{/* Landing */}
+				{/* ── Página de inicio ── */}
 				<Route path="/" element={<Landing />} />
 
-				<Route path="/login" element={<LoginPage />} />
-				<Route path="/registro" element={<RegisterPage />} />
+				{/* ── Rutas de autenticación (redirigen si ya hay sesión) ── */}
+				<Route element={<AuthLayout />}>
+					<Route path="/login" element={<LoginPage />} />
+					<Route path="/registro" element={<Register />} />
+				</Route>
 
-				<Route
-					path="/hoy"
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path="/organizacion"
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path="/progreso"
-					element={
-						<ProtectedRoute>
-							<DashboardPage />
-						</ProtectedRoute>
-					}
-				/>
+				{/* ── Rutas protegidas del dashboard ── */}
+				<Route element={<DashboardLayout />}>
+					<Route path="/hoy" element={null} />
+					<Route path="/organizacion" element={null} />
+					<Route path="/progreso" element={null} />
+				</Route>
 
-				{/* Cualquier ruta desconocida va a la landing */}
+				{/* ── Fallback ── */}
 				<Route path="*" element={<Navigate to="/" replace />} />
 			</Routes>
 		</>

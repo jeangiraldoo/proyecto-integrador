@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import client from "@/api/client";
 import { setAuthTokens } from "@/api/auth";
-import "@/pages/Auth/Login/Login.css";
+import "@/pages/Auth/Auth.css";
 import lumaLogoFull from "@/assets/luma.png";
 import heroIllustration from "@/assets/login.png";
 import ThemeToggle from "@/components/ui/ThemeToggle/ThemeToggle";

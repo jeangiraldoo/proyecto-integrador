@@ -31,10 +31,10 @@ import {
 	type KanbanGroup,
 	type KanbanState,
 	EMPTY_KANBAN,
-} from "../utils/dashboardUtils";
-import { type ConflictInfo } from "@/components/features/Activities/ConflictModal";
-import { SubtaskDetailPanel } from "@/components/features/Subtasks/SubtaskDetailPanel";
-import { CreateSubtaskModal } from "@/components/features/Subtasks/SubtaskModals";
+} from "@/pages/Dashboard/utils/dashboardUtils";
+import { type ConflictInfo } from "@/components/modals/Activities/ConflictModal";
+import { SubtaskDetailPanel } from "@/components/shared/SubtaskDetailPanel";
+import { CreateSubtaskModal } from "@/components/modals/Subtasks/SubtaskModals";
 
 /** Sorting rule ("Regla de Oro"):
  *  - Overdue  → chronological, oldest first (target_date ASC)

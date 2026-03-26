@@ -19,8 +19,8 @@ import { updateActivity, fetchSubtasks, type Activity, type Subtask } from "@/ap
 import { toast } from "sonner";
 import "@/pages/Dashboard/Dashboard.css";
 import { formatDate, daysUntil } from "@/pages/Dashboard/utils/dashboardUtils";
-import { EditActivityForm, SubjectFormModal } from "@/components/features/Organizations/OrgModals";
-import SubtaskManagerModal from "@/components/features/Subtasks/SubtaskManagerModal";
+import { EditActivityForm, SubjectFormModal } from "@/components/modals/Organizations/OrgModals";
+import SubtaskManagerModal from "@/components/modals/Subtasks/SubtaskManagerModal";
 import { useTheme } from "@/hooks/useTheme";
 
 interface OrgViewProps {

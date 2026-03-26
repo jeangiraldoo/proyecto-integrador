@@ -18,7 +18,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { toast } from "sonner";
 import "@/pages/Dashboard/Dashboard.css";
 import { formatDate, type KanbanGroup } from "@/pages/Dashboard/utils/dashboardUtils";
-import { EditSubtaskModal, DeleteConfirmModal } from "./SubtaskModals";
+import { EditSubtaskModal, DeleteConfirmModal } from "../modals/Subtasks/SubtaskModals";
 
 export function SubtaskDetailPanel({
 	subtask,
