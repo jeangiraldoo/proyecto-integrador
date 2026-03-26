@@ -124,6 +124,7 @@ export function EditSubtaskModal({
 			{/* Backdrop */}
 			<div
 				onClick={onClose}
+				data-testid="edit-subtask-backdrop"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -136,6 +137,7 @@ export function EditSubtaskModal({
 			/>
 			{/* Dialog */}
 			<div
+				data-testid="edit-subtask-layer"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -147,6 +149,7 @@ export function EditSubtaskModal({
 				}}
 			>
 				<div
+					data-testid="edit-subtask-modal"
 					style={{
 						position: "relative",
 						background: smModalBg,
@@ -204,7 +207,12 @@ export function EditSubtaskModal({
 								</p>
 							</div>
 						</div>
-						<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+						<button
+							onClick={onClose}
+							className="modal-close-x"
+							aria-label="Cerrar"
+							data-testid="edit-subtask-close-btn"
+						>
 							<X size={15} />
 						</button>
 					</div>
@@ -218,6 +226,7 @@ export function EditSubtaskModal({
 								onChange={(e) => setName(e.target.value)}
 								maxLength={200}
 								autoFocus
+								data-testid="edit-subtask-name-input"
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
 									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
@@ -234,6 +243,7 @@ export function EditSubtaskModal({
 									step="0.5"
 									value={initialHours}
 									onChange={(e) => setHours(e.target.value)}
+									data-testid="edit-subtask-hours-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
 										(e.currentTarget.style.borderColor = isDark
@@ -249,6 +259,7 @@ export function EditSubtaskModal({
 									type="date"
 									value={initialDate}
 									onChange={(e) => setDate(e.target.value)}
+									data-testid="edit-subtask-date-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
 										(e.currentTarget.style.borderColor = isDark
@@ -332,7 +343,7 @@ export function EditSubtaskModal({
 						)}
 						<div>
 							<label style={labelStyle}>Estado</label>
-							<StatusPicker value={initialStatus} onChange={setStatus} />
+							<StatusPicker value={initialStatus} onChange={setStatus} qaPrefix="edit-subtask" />
 						</div>
 					</div>
 					{/* Footer */}
@@ -341,6 +352,7 @@ export function EditSubtaskModal({
 							onClick={onSave}
 							disabled={saving}
 							className="modal-btn-primary"
+							data-testid="edit-subtask-save-btn"
 							style={{
 								flex: 1,
 								padding: "10px 14px",
@@ -366,6 +378,7 @@ export function EditSubtaskModal({
 							onClick={onClose}
 							disabled={saving}
 							className="modal-btn-cancel"
+							data-testid="edit-subtask-cancel-btn"
 							style={{
 								padding: "10px 18px",
 								borderRadius: "8px",
@@ -424,6 +437,7 @@ export function DeleteConfirmModal({
 				onClick={() => {
 					if (!deleting) onClose();
 				}}
+				data-testid="delete-subtask-backdrop"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -436,6 +450,7 @@ export function DeleteConfirmModal({
 			/>
 			{/* Dialog */}
 			<div
+				data-testid="delete-subtask-layer"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -447,6 +462,7 @@ export function DeleteConfirmModal({
 				}}
 			>
 				<div
+					data-testid="delete-subtask-modal"
 					style={{
 						position: "relative",
 						background: dcModalBg,
@@ -496,6 +512,7 @@ export function DeleteConfirmModal({
 							onClick={onConfirm}
 							disabled={deleting}
 							className="modal-btn-danger"
+							data-testid="delete-subtask-confirm-btn"
 							style={{
 								flex: 1,
 								padding: "11px 14px",
@@ -520,6 +537,7 @@ export function DeleteConfirmModal({
 							onClick={onClose}
 							disabled={deleting}
 							className="modal-btn-cancel"
+							data-testid="delete-subtask-cancel-btn"
 							style={{
 								flex: 1,
 								padding: "11px 14px",
@@ -546,9 +564,11 @@ export function DeleteConfirmModal({
 export function StatusPicker({
 	value,
 	onChange,
+	qaPrefix = "status-picker",
 }: {
 	value: Subtask["status"];
 	onChange: (v: Subtask["status"]) => void;
+	qaPrefix?: string;
 }) {
 	const { isDark } = useTheme();
 	const opts: { v: Subtask["status"]; label: string; color: string }[] = [
@@ -563,6 +583,7 @@ export function StatusPicker({
 					key={v}
 					type="button"
 					onClick={() => onChange(v)}
+					data-testid={`${qaPrefix}--status-${v}`}
 					style={{
 						flex: 1,
 						padding: "7px 5px",
@@ -700,6 +721,7 @@ export function CreateSubtaskModal({
 		<>
 			<div
 				onClick={onClose}
+				data-testid="create-subtask-backdrop"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -710,6 +732,7 @@ export function CreateSubtaskModal({
 				}}
 			/>
 			<div
+				data-testid="create-subtask-layer"
 				style={{
 					position: "fixed",
 					inset: 0,
@@ -725,6 +748,7 @@ export function CreateSubtaskModal({
 					role="dialog"
 					aria-modal="true"
 					aria-label="Crear tarea"
+					data-testid="create-subtask-modal"
 					style={{
 						pointerEvents: "auto",
 						position: "relative",
@@ -802,7 +826,12 @@ export function CreateSubtaskModal({
 								</p>
 							</div>
 						</div>
-						<button onClick={onClose} className="modal-close-x" aria-label="Cerrar">
+						<button
+							onClick={onClose}
+							className="modal-close-x"
+							aria-label="Cerrar"
+							data-testid="create-subtask-close-btn"
+						>
 							<X size={15} />
 						</button>
 					</div>
@@ -823,6 +852,7 @@ export function CreateSubtaskModal({
 								<button
 									type="button"
 									onClick={() => setActDropOpen(!actDropOpen)}
+									data-testid="create-subtask-activity-btn"
 									style={{
 										...inputStyle,
 										textAlign: "left",
@@ -874,6 +904,7 @@ export function CreateSubtaskModal({
 								</button>
 								{actDropOpen && (
 									<div
+										data-testid="create-subtask-activity-dropdown"
 										style={{
 											position: "absolute",
 											top: "calc(100% + 4px)",
@@ -909,6 +940,7 @@ export function CreateSubtaskModal({
 														setSelectedActivityId(act.id);
 														setActDropOpen(false);
 													}}
+													data-testid={`create-subtask-activity-option-${act.id}`}
 													style={{
 														width: "100%",
 														padding: "9px 12px",
@@ -1078,6 +1110,7 @@ export function CreateSubtaskModal({
 								onChange={(e) => setName(e.target.value)}
 								maxLength={200}
 								autoFocus
+								data-testid="create-subtask-name-input"
 								onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 								onBlur={(e) =>
 									(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
@@ -1099,6 +1132,7 @@ export function CreateSubtaskModal({
 									}
 									value={targetDate}
 									onChange={(e) => setTargetDate(e.target.value)}
+									data-testid="create-subtask-date-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
 										(e.currentTarget.style.borderColor = isDark
@@ -1116,6 +1150,7 @@ export function CreateSubtaskModal({
 									step="0.5"
 									value={hours}
 									onChange={(e) => setHours(e.target.value)}
+									data-testid="create-subtask-hours-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
 										(e.currentTarget.style.borderColor = isDark
@@ -1200,7 +1235,7 @@ export function CreateSubtaskModal({
 						{/* Status */}
 						<div>
 							<label style={labelStyle}>Estado inicial</label>
-							<StatusPicker value={status} onChange={setStatus} />
+							<StatusPicker value={status} onChange={setStatus} qaPrefix="create-subtask" />
 						</div>
 					</div>
 					{/* Footer */}
@@ -1216,6 +1251,7 @@ export function CreateSubtaskModal({
 							onClick={() => void handleSubmit()}
 							disabled={saving}
 							className="modal-btn-primary"
+							data-testid="create-subtask-submit-btn"
 							style={{
 								flex: 1,
 								padding: "10px 16px",
@@ -1241,6 +1277,7 @@ export function CreateSubtaskModal({
 							onClick={onClose}
 							disabled={saving}
 							className="modal-btn-cancel"
+							data-testid="create-subtask-cancel-btn"
 							style={{
 								padding: "10px 18px",
 								borderRadius: "8px",

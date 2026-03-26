@@ -383,16 +383,26 @@ export default function ConflictModal({
 	if (!conflicts.length) return null;
 
 	return createPortal(
-		<div className={`cf-layer ${isClosing ? "is-closing" : ""}`} aria-live="polite">
-			<div className="cf-backdrop" onClick={requestClose} />
+		<div
+			className={`cf-layer ${isClosing ? "is-closing" : ""}`}
+			aria-live="polite"
+			data-testid="conflict-modal-layer"
+		>
+			<div className="cf-backdrop" onClick={requestClose} data-testid="conflict-modal-backdrop" />
 			<section
 				className="cf-modal"
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="cf-modal-title"
+				data-testid="conflict-modal"
 				onClick={(event) => event.stopPropagation()}
 			>
-				<button className="cf-close" onClick={requestClose} aria-label="Cerrar modal de conflictos">
+				<button
+					className="cf-close"
+					onClick={requestClose}
+					aria-label="Cerrar modal de conflictos"
+					data-testid="conflict-modal-close-btn"
+				>
 					<X size={16} />
 				</button>
 
@@ -415,7 +425,11 @@ export default function ConflictModal({
 						const isExpanded = expandedId === conflict.id;
 
 						return (
-							<article key={conflict.id} className={`cf-item ${isExpanded ? "is-expanded" : ""}`}>
+							<article
+								key={conflict.id}
+								className={`cf-item ${isExpanded ? "is-expanded" : ""}`}
+								data-testid={`conflict-item-${conflict.id}`}
+							>
 								<div className="cf-item-summary">
 									<div className="cf-title-wrap">
 										<h3>{conflict.title}</h3>
@@ -438,6 +452,7 @@ export default function ConflictModal({
 										type="button"
 										className="cf-toggle"
 										onClick={() => setExpandedId(isExpanded ? null : conflict.id)}
+										data-testid={`conflict-item-toggle-btn-${conflict.id}`}
 									>
 										{isExpanded ? "Ocultar" : "Resolver"}
 										{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -457,7 +472,11 @@ export default function ConflictModal({
 										{conflict.subtasks.length ? (
 											<div className="cf-subtasks">
 												{conflict.subtasks.map((subtask) => (
-													<div key={subtask.id} className="cf-subtask-row">
+													<div
+														key={subtask.id}
+														className="cf-subtask-row"
+														data-testid={`conflict-subtask-row-${subtask.id}`}
+													>
 														<div className="cf-subtask-main">
 															<div className="cf-subtask-name">{subtask.name}</div>
 															<div className="cf-subtask-meta">
@@ -476,6 +495,7 @@ export default function ConflictModal({
 																onClick={() => {
 																	openResolver("date", conflict, subtask);
 																}}
+																data-testid={`conflict-subtask-change-date-btn-${subtask.id}`}
 															>
 																<span>Cambiar fecha</span>
 																<em>Mover a un dia mas liviano</em>
@@ -486,6 +506,7 @@ export default function ConflictModal({
 																onClick={() => {
 																	openResolver("hours", conflict, subtask);
 																}}
+																data-testid={`conflict-subtask-adjust-hours-btn-${subtask.id}`}
 															>
 																<span>Ajustar horas</span>
 																<em>Reducir carga de esta subtarea</em>
@@ -501,7 +522,12 @@ export default function ConflictModal({
 											</div>
 										)}
 
-										<button type="button" className="cf-link" onClick={() => setExpandedId(null)}>
+										<button
+											type="button"
+											className="cf-link"
+											onClick={() => setExpandedId(null)}
+											data-testid={`conflict-item-close-btn-${conflict.id}`}
+										>
 											Ver despues
 										</button>
 									</div>
@@ -516,8 +542,16 @@ export default function ConflictModal({
 				</footer>
 
 				{resolver && (
-					<div className="cf-resolver-layer" onClick={() => !resolverSaving && setResolver(null)}>
-						<div className="cf-resolver-card" onClick={(event) => event.stopPropagation()}>
+					<div
+						className="cf-resolver-layer"
+						onClick={() => !resolverSaving && setResolver(null)}
+						data-testid="conflict-resolver-layer"
+					>
+						<div
+							className="cf-resolver-card"
+							onClick={(event) => event.stopPropagation()}
+							data-testid="conflict-resolver-card"
+						>
 							<h3>
 								{resolver.mode === "date"
 									? "Cambiar fecha de subtarea"
@@ -526,7 +560,11 @@ export default function ConflictModal({
 							<p>
 								<strong>{resolver.subtask.name}</strong> · {resolver.subtask.activityTitle}
 							</p>
-							<div className="cf-resolver-microcopy" role="note">
+							<div
+								className="cf-resolver-microcopy"
+								role="note"
+								data-testid="conflict-resolver-note"
+							>
 								{resolver.mode === "date"
 									? "Tip: moverla a un dia libre suele resolver mas rapido."
 									: "Tip: bajar horas ayuda sin mover tu calendario."}
@@ -544,6 +582,7 @@ export default function ConflictModal({
 										setResolver((prev) => (prev ? { ...prev, value: event.target.value } : prev))
 									}
 									disabled={resolverSaving}
+									data-testid="conflict-resolver-date-input"
 								/>
 							) : (
 								<input
@@ -556,6 +595,7 @@ export default function ConflictModal({
 										setResolver((prev) => (prev ? { ...prev, value: event.target.value } : prev))
 									}
 									disabled={resolverSaving}
+									data-testid="conflict-resolver-hours-input"
 								/>
 							)}
 
@@ -570,6 +610,7 @@ export default function ConflictModal({
 											)
 										}
 										disabled={resolverSaving}
+										data-testid="conflict-resolver-suggest-date-btn"
 									>
 										Sugerido: {formatConflictDate(suggestedDate)}
 									</button>
@@ -589,6 +630,7 @@ export default function ConflictModal({
 											)
 										}
 										disabled={resolverSaving}
+										data-testid="conflict-resolver-suggest-hours-btn"
 									>
 										Sugerido: {suggestedHoursLabel}h
 									</button>
@@ -603,6 +645,7 @@ export default function ConflictModal({
 									className="cf-resolver-btn"
 									onClick={() => setResolver(null)}
 									disabled={resolverSaving}
+									data-testid="conflict-resolver-cancel-btn"
 								>
 									Cancelar
 								</button>
@@ -611,6 +654,7 @@ export default function ConflictModal({
 									className="cf-resolver-btn is-confirm"
 									onClick={() => void saveResolver()}
 									disabled={resolverSaving}
+									data-testid="conflict-resolver-save-btn"
 								>
 									{resolverSaving ? <Loader2 size={14} className="cf-spin" /> : null}
 									{resolver.mode === "date" ? "Guardar fecha" : "Guardar horas"}

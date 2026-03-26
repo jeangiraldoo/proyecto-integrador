@@ -15,6 +15,7 @@ interface SubtaskManagerModalProps {
 	dateLoadMap?: Record<string, number>;
 	conflictDates?: string[];
 	maxDailyHours?: number;
+	qaPrefix?: string;
 	open: boolean;
 	onClose: () => void;
 	onSubtasksChange?: (subtasks: Subtask[]) => void;
@@ -65,6 +66,7 @@ export default function SubtaskManagerModal({
 	dateLoadMap = {},
 	conflictDates = [],
 	maxDailyHours = 0,
+	qaPrefix = "subtask-manager-modal",
 	open,
 	onClose,
 	onSubtasksChange,
@@ -219,22 +221,31 @@ export default function SubtaskManagerModal({
 
 	// --- Render Modal via Portal ---
 	const modalContent = (
-		<div className="stm-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-			<div className="stm-modal">
+		<div
+			className="stm-backdrop"
+			onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+			data-testid={`${qaPrefix}--backdrop`}
+		>
+			<div className="stm-modal" data-testid={qaPrefix}>
 				{/* Header */}
 				<div className="stm-header">
 					<div className="stm-title-group">
 						<h3 className="stm-title">Plan de Trabajo</h3>
 						<p className="stm-subtitle">Actividad: {activityTitle}</p>
 					</div>
-					<button className="stm-close-btn" onClick={onClose} aria-label="Cerrar">
+					<button
+						className="stm-close-btn"
+						onClick={onClose}
+						aria-label="Cerrar"
+						data-testid={`${qaPrefix}--close-btn`}
+					>
 						<X size={18} />
 					</button>
 				</div>
 
 				<div className="stm-body">
 					{/* Subform (Formulario de Creación) */}
-					<form className="stm-subform" onSubmit={handleCreate}>
+					<form className="stm-subform" onSubmit={handleCreate} data-testid={`${qaPrefix}--form`}>
 						<div className="stm-subform-grid">
 							<div className="stm-field full">
 								<label>¿Qué debes hacer? (Nombre)</label>
@@ -245,6 +256,7 @@ export default function SubtaskManagerModal({
 									onChange={(e) => setName(e.target.value)}
 									className={errors.name ? "input-error" : ""}
 									disabled={isSubmitting}
+									data-testid={`${qaPrefix}--name-input`}
 								/>
 							</div>
 							<div className="stm-field">
@@ -260,6 +272,7 @@ export default function SubtaskManagerModal({
 									}
 									className={errors.targetDate ? "input-error" : ""}
 									disabled={isSubmitting}
+									data-testid={`${qaPrefix}--date-input`}
 								/>
 							</div>
 							<div className="stm-field">
@@ -273,11 +286,15 @@ export default function SubtaskManagerModal({
 									onChange={(e) => setEstimatedHours(e.target.value)}
 									className={errors.hours ? "input-error" : ""}
 									disabled={isSubmitting}
+									data-testid={`${qaPrefix}--hours-input`}
 								/>
 							</div>
 						</div>
 						{targetDate && (
-							<div className={`stm-capacity${hasConflictOnDate ? " is-conflict" : ""}`}>
+							<div
+								className={`stm-capacity${hasConflictOnDate ? " is-conflict" : ""}`}
+								data-testid={`${qaPrefix}--capacity`}
+							>
 								<div className="stm-capacity-top">
 									<span>Capacidad para {formatDateLabel(targetDate)}</span>
 									<strong>
@@ -298,14 +315,19 @@ export default function SubtaskManagerModal({
 								</p>
 							</div>
 						)}
-						<button type="submit" className="stm-btn-add" disabled={isSubmitting}>
+						<button
+							type="submit"
+							className="stm-btn-add"
+							disabled={isSubmitting}
+							data-testid={`${qaPrefix}--add-btn`}
+						>
 							{isSubmitting ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
 							{isSubmitting ? "Guardando..." : "Añadir tarea"}
 						</button>
 					</form>
 
 					{/* Listado de Subtareas (Tabla) */}
-					<div className="stm-table-wrap">
+					<div className="stm-table-wrap" data-testid={`${qaPrefix}--table-wrap`}>
 						{isLoading ? (
 							<div className="stm-empty">
 								<Loader2 size={24} className="spin" />
@@ -348,6 +370,7 @@ export default function SubtaskManagerModal({
 													className="stm-btn-delete"
 													onClick={() => handleDelete(st.id)}
 													title="Eliminar tarea"
+													data-testid={`${qaPrefix}--delete-btn-${st.id}`}
 												>
 													<Trash2 size={16} />
 												</button>

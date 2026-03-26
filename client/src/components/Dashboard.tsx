@@ -779,13 +779,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	}
 
 	return (
-		<div className="dashboard">
+		<div className="dashboard" data-testid="dashboard-container">
 			{/* Confirm delete modal */}
 			{confirmDelete &&
 				createPortal(
 					<>
 						<div
 							onClick={() => setConfirmDelete(null)}
+							data-testid="dashboard-confirm-delete-backdrop"
 							style={{
 								position: "fixed",
 								inset: 0,
@@ -809,6 +810,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						>
 							<div
 								onClick={(e) => e.stopPropagation()}
+								data-testid="dashboard-confirm-delete-modal"
 								style={{
 									position: "relative",
 									background: isDark
@@ -877,6 +879,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 										onClick={() => performDeleteActivity(confirmDelete.id)}
 										disabled={deleting}
 										className="modal-btn-danger"
+										data-testid="dashboard-confirm-delete-accept-btn"
 										style={{
 											flex: 1,
 											padding: "11px 14px",
@@ -901,6 +904,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 										onClick={() => setConfirmDelete(null)}
 										disabled={deleting}
 										className="modal-btn-cancel"
+										data-testid="dashboard-confirm-delete-cancel-btn"
 										style={{
 											flex: 1,
 											padding: "11px 14px",
@@ -923,7 +927,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				)}
 			{capacityEditorOpen &&
 				createPortal(
-					<div className="capacity-popover-layer" role="presentation">
+					<div
+						className="capacity-popover-layer"
+						role="presentation"
+						data-testid="dashboard-capacity-popover-layer"
+					>
 						<div
 							id="capacity-quick-editor"
 							ref={capacityPopoverRef}
@@ -931,6 +939,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 							role="dialog"
 							aria-modal="false"
 							aria-label="Editor rapido de limite diario"
+							data-testid="dashboard-capacity-popover"
 							style={{
 								top: `${capacityPopoverPosition.top}px`,
 								left: `${capacityPopoverPosition.left}px`,
@@ -938,6 +947,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						>
 							<form
 								className="capacity-inline-form"
+								data-testid="dashboard-capacity-form"
 								onSubmit={(event) => {
 									event.preventDefault();
 									void handleCapacityLimitSave();
@@ -958,6 +968,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 										disabled={dailyLimitSaving}
 										ref={dailyLimitInputRef}
 										aria-label="Horas por dia"
+										data-testid="dashboard-capacity-input"
 									/>
 									<span className="capacity-inline-unit">h</span>
 								</div>
@@ -966,6 +977,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									className="capacity-inline-save"
 									disabled={dailyLimitSaving}
 									aria-label="Guardar limite"
+									data-testid="dashboard-capacity-save-btn"
 								>
 									{dailyLimitSaving ? (
 										<Loader2 size={14} className="spinner" />
@@ -979,6 +991,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									onClick={closeCapacityEditor}
 									disabled={dailyLimitSaving}
 									aria-label="Cancelar"
+									data-testid="dashboard-capacity-cancel-btn"
 								>
 									<X size={14} />
 								</button>
@@ -1000,9 +1013,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				/>
 			)}
 			{/* ======= SIDEBAR ======= */}
-			<aside className="sidebar">
+			<aside className="sidebar" data-testid="dashboard-sidebar">
 				{/* User profile */}
-				<div className="sidebar-profile">
+				<div className="sidebar-profile" data-testid="dashboard-user-profile">
 					{loading ? (
 						<div className="sidebar-profile-skeleton">
 							<div className="skeleton-avatar" />
@@ -1034,7 +1047,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								<span className="profile-name">{user?.name || user?.username}</span>
 								<span className="profile-role">{user?.email}</span>
 							</div>
-							<button className="profile-menu-btn" aria-label="Menu">
+							<button
+								className="profile-menu-btn"
+								aria-label="Menu"
+								data-testid="dashboard-profile-menu-btn"
+							>
 								<MoreVertical size={18} />
 							</button>
 						</>
@@ -1057,10 +1074,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				)}
 
 				{/* Navigation */}
-				<nav className="sidebar-nav">
+				<nav className="sidebar-nav" data-testid="dashboard-nav">
 					<button
 						className={`nav-item ${activeNav === "today" ? "active" : ""}`}
 						onClick={() => navigate("/hoy")}
+						data-testid="dashboard-nav-today"
 					>
 						<CalendarCheck size={18} />
 						<span>Hoy</span>
@@ -1068,6 +1086,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					<button
 						className={`nav-item ${activeNav === "progress" ? "active" : ""}`}
 						onClick={() => navigate("/progreso")}
+						data-testid="dashboard-nav-progress"
 					>
 						<BarChart3 size={18} />
 						<span>Mi progreso</span>
@@ -1075,6 +1094,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					<button
 						className={`nav-item ${activeNav === "org" ? "active" : ""}`}
 						onClick={() => navigate("/organizacion")}
+						data-testid="dashboard-nav-org"
 					>
 						<Users size={18} />
 						<span>Organización</span>
@@ -1115,6 +1135,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						disabled={!user || sidebarCapacityLoading}
 						aria-expanded={capacityEditorOpen}
 						aria-controls="capacity-quick-editor"
+						data-testid="dashboard-capacity-edit-btn"
 					>
 						{sidebarCapacityLoading ? "Cargando capacidad..." : "Editar limite diario"}
 					</button>
@@ -1123,6 +1144,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				<button
 					className="sidebar-conflicts-btn"
 					disabled={sidebarConflictsLoading}
+					data-testid="dashboard-conflicts-btn"
 					onClick={async () => {
 						if (sidebarConflictsLoading) return;
 						const conflicts = await refreshConflicts();
@@ -1140,13 +1162,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					</span>
 					<span
 						className={`sidebar-conflicts-count ${sidebarConflictsLoading ? "ok is-loading" : conflictCount > 0 ? "danger" : "ok"}`}
+						data-testid="dashboard-conflicts-count"
 					>
 						{sidebarConflictsLoading ? <Loader2 size={12} className="spinner" /> : conflictCount}
 					</span>
 				</button>
 
 				{/* Logout */}
-				<button className="logout-btn" onClick={onLogout}>
+				<button className="logout-btn" onClick={onLogout} data-testid="dashboard-logout-btn">
 					<LogOut size={16} />
 					<span>Cerrar sesión</span>
 				</button>
@@ -1154,29 +1177,37 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				{/* Branding */}
 				<div className="sidebar-brand">
 					<img src={lumaLogo} alt="Luma" className="sidebar-logo" />
-					<ThemeToggle className="sidebar-brand-toggle" />
+					<ThemeToggle className="sidebar-brand-toggle" qaId="dashboard-theme-toggle-btn" />
 				</div>
 			</aside>
 
 			{/* ======= MAIN CONTENT ======= */}
-			<main className="main-content">
+			<main className="main-content" data-testid="dashboard-main-content">
 				{loading ? (
-					<div className="loading-state">
+					<div className="loading-state" data-testid="dashboard-loading-state">
 						<Loader2 size={32} className="spinner" />
 						<p>Cargando actividades...</p>
 					</div>
 				) : (
 					<>
 						{/* Tip banner */}
-						<div className="tip-banner fade-in" style={{ animationDelay: "0.05s" }}>
+						<div
+							className="tip-banner fade-in"
+							style={{ animationDelay: "0.05s" }}
+							data-testid="dashboard-tip-banner"
+						>
 							<Sparkles size={18} className="tip-icon" />
 							<p>{headerInfo.tipText}</p>
 						</div>
 
 						{/* Header toolbar */}
-						<div className="content-header fade-in" style={{ animationDelay: "0.12s" }}>
+						<div
+							className="content-header fade-in"
+							style={{ animationDelay: "0.12s" }}
+							data-testid="dashboard-toolbar"
+						>
 							<div className="header-left">
-								<h1 className="page-title">
+								<h1 className="page-title" data-testid="dashboard-page-title">
 									<headerInfo.TitleIcon size={22} className="title-icon" />
 									{headerInfo.title}
 								</h1>
@@ -1186,6 +1217,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											className="btn-add"
 											style={{ background: "#334155", border: "1px solid #475569" }}
 											onClick={() => setSubjectModal({ mode: "add" })}
+											data-testid="dashboard-add-subject-btn"
 										>
 											<BookOpen size={16} />
 											<span>Agregar materia</span>
@@ -1196,6 +1228,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												setPrefilledSubject("");
 												setCreateOpen(true);
 											}}
+											data-testid="dashboard-create-activity-btn"
 										>
 											<Plus size={16} />
 											<span>Nueva actividad</span>
@@ -1312,10 +1345,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									className="filter-wrapper"
 									ref={filterRef}
 									style={{ display: activeNav === "today" ? "none" : undefined }}
+									data-testid="dashboard-filter-wrapper"
 								>
 									<button
 										className={`btn-filter ${filtersOpen ? "active" : ""}`}
 										onClick={() => setFiltersOpen(!filtersOpen)}
+										data-testid="dashboard-filters-btn"
 									>
 										<SlidersHorizontal size={15} />
 										<span>Filtros</span>
@@ -1325,10 +1360,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 									</button>
 
 									{/* Filter panel */}
-									<div className={`filter-panel ${filtersOpen ? "open" : ""}`}>
+									<div
+										className={`filter-panel ${filtersOpen ? "open" : ""}`}
+										data-testid="dashboard-filters-panel"
+									>
 										<div className="filter-panel-header">
 											<span>{activeNav === "org" ? "Ordenar materias" : "Filtrar por"}</span>
-											<button className="filter-close" onClick={() => setFiltersOpen(false)}>
+											<button
+												className="filter-close"
+												onClick={() => setFiltersOpen(false)}
+												data-testid="dashboard-filters-close-btn"
+											>
 												<X size={14} />
 											</button>
 										</div>
@@ -1339,18 +1381,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("org-az") ? "on" : ""}`}
 														onClick={() => toggleFilter("org-az")}
+														data-testid="dashboard-filter-chip-org-az"
 													>
 														<ArrowUpDown size={13} />A → Z
 													</button>
 													<button
 														className={`filter-chip ${activeFilters.includes("org-za") ? "on" : ""}`}
 														onClick={() => toggleFilter("org-za")}
+														data-testid="dashboard-filter-chip-org-za"
 													>
 														<ArrowUpDown size={13} />Z → A
 													</button>
 													<button
 														className={`filter-chip ${activeFilters.includes("org-count") ? "on" : ""}`}
 														onClick={() => toggleFilter("org-count")}
+														data-testid="dashboard-filter-chip-org-count"
 													>
 														<Tag size={13} />
 														Más actividades
@@ -1358,6 +1403,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("org-hours") ? "on" : ""}`}
 														onClick={() => toggleFilter("org-hours")}
+														data-testid="dashboard-filter-chip-org-hours"
 													>
 														<Clock size={13} />
 														Más horas
@@ -1368,6 +1414,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("urgency") ? "on" : ""}`}
 														onClick={() => toggleFilter("urgency")}
+														data-testid="dashboard-filter-chip-urgency"
 													>
 														<AlertTriangle size={13} />
 														Urgencia
@@ -1375,6 +1422,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("duration") ? "on" : ""}`}
 														onClick={() => toggleFilter("duration")}
+														data-testid="dashboard-filter-chip-duration"
 													>
 														<Clock size={13} />
 														Duración
@@ -1382,6 +1430,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("date") ? "on" : ""}`}
 														onClick={() => toggleFilter("date")}
+														data-testid="dashboard-filter-chip-date"
 													>
 														<CalendarCheck size={13} />
 														Fecha límite
@@ -1389,6 +1438,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("category") ? "on" : ""}`}
 														onClick={() => toggleFilter("category")}
+														data-testid="dashboard-filter-chip-category"
 													>
 														<Tag size={13} />
 														Categoría
@@ -1396,6 +1446,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 													<button
 														className={`filter-chip ${activeFilters.includes("alphabetical") ? "on" : ""}`}
 														onClick={() => toggleFilter("alphabetical")}
+														data-testid="dashboard-filter-chip-alphabetical"
 													>
 														<ArrowUpDown size={13} />
 														Alfabético
@@ -1404,7 +1455,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											)}
 										</div>
 										{activeFilters.length > 0 && (
-											<button className="filter-clear" onClick={() => setActiveFilters([])}>
+											<button
+												className="filter-clear"
+												onClick={() => setActiveFilters([])}
+												data-testid="dashboard-filters-clear-btn"
+											>
 												Limpiar filtros
 											</button>
 										)}
@@ -1412,7 +1467,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								</div>
 
 								<div className={`search-wrapper ${searchOpen ? "open" : ""}`}>
-									<button className="btn-search" onClick={() => setSearchOpen(!searchOpen)}>
+									<button
+										className="btn-search"
+										onClick={() => setSearchOpen(!searchOpen)}
+										data-testid="dashboard-search-btn"
+									>
 										<Search size={15} />
 										<span>Buscar</span>
 									</button>
@@ -1424,6 +1483,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 											className="search-input"
 											value={searchQuery}
 											onChange={(e) => setSearchQuery(e.target.value)}
+											data-testid="dashboard-search-input"
 										/>
 									</div>
 								</div>
@@ -1494,6 +1554,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						{activeNav === "progress" && (
 							<div
 								className="fade-in"
+								data-testid="dashboard-progress-view"
 								style={{
 									animationDelay: "0.2s",
 									padding: "4rem 2rem",
@@ -1514,6 +1575,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				{subjectModal &&
 					createPortal(
 						<div
+							data-testid="dashboard-subject-form-layer"
 							style={{
 								position: "fixed",
 								inset: 0,

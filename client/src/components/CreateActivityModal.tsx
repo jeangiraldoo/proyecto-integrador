@@ -79,12 +79,14 @@ function DateInput({
 	onChange,
 	variant = "purple",
 	hasError = false,
+	testId,
 }: {
 	id?: string;
 	value: string;
 	onChange: (v: string) => void;
 	variant?: "purple" | "green";
 	hasError?: boolean;
+	testId?: string;
 }) {
 	const wrapClass = [
 		variant === "green" ? "ca-subform-date-wrapper" : "ca-date-wrapper",
@@ -98,7 +100,13 @@ function DateInput({
 			<span className="ca-date-icon">
 				<CalendarDays size={15} />
 			</span>
-			<input id={id} type="date" value={value} onChange={(e) => onChange(e.target.value)} />
+			<input
+				id={id}
+				type="date"
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				data-testid={testId}
+			/>
 		</div>
 	);
 }
@@ -192,7 +200,11 @@ function SubjectCombobox({
 	const dropdownVisible = open && (filtered.length > 0 || showAdd);
 
 	return (
-		<div className="ca-combobox-wrapper" ref={wrapperRef}>
+		<div
+			className="ca-combobox-wrapper"
+			ref={wrapperRef}
+			data-testid="create-activity-subject-combobox"
+		>
 			<div className={`ca-combobox-input-row ${hasError ? "input-error" : ""}`}>
 				<input
 					ref={inputRef}
@@ -210,11 +222,13 @@ function SubjectCombobox({
 					placeholder="Ej. Cálculo III, Redes, Bases de Datos..."
 					autoComplete="off"
 					className="ca-combobox-input"
+					data-testid="create-activity-subject-input"
 				/>
 				<button
 					type="button"
 					className={`ca-combobox-chevron ${open ? "open" : ""}`}
 					tabIndex={-1}
+					data-testid="create-activity-subject-toggle-btn"
 					onMouseDown={(e) => {
 						e.preventDefault();
 						if (open) {
@@ -230,13 +244,18 @@ function SubjectCombobox({
 			</div>
 
 			{dropdownVisible && (
-				<ul className="ca-combobox-dropdown" role="listbox">
+				<ul
+					className="ca-combobox-dropdown"
+					role="listbox"
+					data-testid="create-activity-subject-dropdown"
+				>
 					{filtered.map((s, idx) => (
 						<li
 							key={s}
 							role="option"
 							aria-selected={idx === activeIdx}
 							className={`ca-combobox-option ${idx === activeIdx ? "highlighted" : ""}`}
+							data-testid={`create-activity-subject-option-${idx}`}
 							onMouseDown={(e) => {
 								e.preventDefault();
 								select(s);
@@ -252,6 +271,7 @@ function SubjectCombobox({
 							className={`ca-combobox-option ca-combobox-add ${
 								activeIdx === filtered.length ? "highlighted" : ""
 							}`}
+							data-testid="create-activity-subject-add-option"
 							onMouseDown={(e) => {
 								e.preventDefault();
 								select(value.trim());
@@ -494,11 +514,12 @@ export default function CreateActivityModal({
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="ca-modal-title"
+			data-testid="create-activity-modal"
 			onMouseDown={(e) => {
 				if (e.target === e.currentTarget) onClose();
 			}}
 		>
-			<div className="ca-modal">
+			<div className="ca-modal" data-testid="create-activity-modal-card">
 				{/* ====== HEADER ====== */}
 				<div className="ca-header">
 					<div className="ca-header-left">
@@ -510,7 +531,12 @@ export default function CreateActivityModal({
 							<p className="ca-subtitle">Rellena los datos para planificar tu día</p>
 						</div>
 					</div>
-					<button className="ca-close" onClick={onClose} aria-label="Cerrar">
+					<button
+						className="ca-close"
+						onClick={onClose}
+						aria-label="Cerrar"
+						data-testid="create-activity-close-btn"
+					>
 						<X size={15} />
 					</button>
 				</div>
@@ -551,6 +577,7 @@ export default function CreateActivityModal({
 											onChange={(e) => setTitle(e.target.value)}
 											placeholder="¿Qué vas a hacer?"
 											className={step1Submitted && titleError ? "input-error" : ""}
+											data-testid="create-activity-title-input"
 										/>
 										{step1Submitted && titleError && <FieldError msg={titleError} />}
 									</div>
@@ -567,6 +594,7 @@ export default function CreateActivityModal({
 											onChange={setDueDate}
 											variant="purple"
 											hasError={step1Submitted && !!dueDateError}
+											testId="create-activity-due-date-input"
 										/>
 										{step1Submitted && dueDateError && <FieldError msg={dueDateError} />}
 										{dueDate && (
@@ -652,6 +680,7 @@ export default function CreateActivityModal({
 										onChange={(e) => setDescription(e.target.value)}
 										placeholder="Añade contexto o notas relevantes..."
 										rows={4}
+										data-testid="create-activity-description-input"
 									/>
 								</div>
 							</div>
@@ -688,6 +717,7 @@ export default function CreateActivityModal({
 												placeholder="Nombre de la subtarea"
 												disabled={atMax}
 												autoFocus
+												data-testid="create-activity-subtask-title-input"
 												onKeyDown={(e) => {
 													if (e.key === "Enter") {
 														e.preventDefault();
@@ -700,7 +730,12 @@ export default function CreateActivityModal({
 
 										<div className="ca-subform-field">
 											<label>Fecha objetivo</label>
-											<DateInput value={stDate} onChange={setStDate} variant="green" />
+											<DateInput
+												value={stDate}
+												onChange={setStDate}
+												variant="green"
+												testId="create-activity-subtask-date-input"
+											/>
 										</div>
 
 										<div className="ca-subform-field">
@@ -716,6 +751,7 @@ export default function CreateActivityModal({
 												}
 												placeholder="0"
 												disabled={atMax}
+												data-testid="create-activity-subtask-hours-input"
 											/>
 										</div>
 									</div>
@@ -731,6 +767,7 @@ export default function CreateActivityModal({
 											className="ca-subform-add-btn"
 											onClick={handleAddSubtask}
 											disabled={atMax}
+											data-testid="create-activity-add-subtask-btn"
 										>
 											<Plus size={14} />
 											Añadir subtarea
@@ -751,7 +788,10 @@ export default function CreateActivityModal({
 											</p>
 										</div>
 									) : (
-										<table className="ca-subtask-table">
+										<table
+											className="ca-subtask-table"
+											data-testid="create-activity-subtasks-table"
+										>
 											<thead>
 												<tr>
 													<th style={{ width: 24 }} />
@@ -768,6 +808,7 @@ export default function CreateActivityModal({
 												{subtasks.map((st, idx) => (
 													<tr
 														key={st.id}
+														data-testid={`create-activity-subtask-row-${st.id}`}
 														draggable
 														onDragStart={(e) => handleDragStart(e, idx)}
 														onDragEnter={() => handleDragEnter(idx)}
@@ -803,6 +844,7 @@ export default function CreateActivityModal({
 																type="button"
 																onClick={() => handleDeleteSubtask(st.id)}
 																aria-label="Eliminar subtarea"
+																data-testid={`create-activity-subtask-delete-btn-${st.id}`}
 															>
 																<Trash2 size={12} />
 															</button>
@@ -839,10 +881,16 @@ export default function CreateActivityModal({
 									className="btn btn-ghost"
 									onClick={onClose}
 									disabled={submitting}
+									data-testid="create-activity-cancel-btn-step-1"
 								>
 									Cancelar
 								</button>
-								<button type="button" className="btn btn-primary" onClick={goNext}>
+								<button
+									type="button"
+									className="btn btn-primary"
+									onClick={goNext}
+									data-testid="create-activity-next-btn"
+								>
 									Siguiente →
 								</button>
 							</>
@@ -853,6 +901,7 @@ export default function CreateActivityModal({
 									className="btn btn-ghost btn-back"
 									onClick={goBack}
 									disabled={submitting}
+									data-testid="create-activity-back-btn"
 								>
 									← Volver
 								</button>
@@ -862,6 +911,7 @@ export default function CreateActivityModal({
 										className="btn btn-ghost"
 										onClick={onClose}
 										disabled={submitting}
+										data-testid="create-activity-cancel-btn-step-2"
 									>
 										Cancelar
 									</button>
@@ -870,6 +920,7 @@ export default function CreateActivityModal({
 										className="btn btn-primary"
 										onClick={handleSubmit}
 										disabled={submitting}
+										data-testid="create-activity-submit-btn"
 									>
 										{submitting ? (
 											<>
