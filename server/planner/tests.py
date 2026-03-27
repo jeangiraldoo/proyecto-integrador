@@ -153,3 +153,5 @@ class ActivityProgressCountTests(APITestCase):
 		# total grows by 1, completed stays at 2
 		self.assertEqual(res.data["total_subtasks_count"], 4)
 		self.assertEqual(res.data["completed_subtasks_count"], 2)
+
+

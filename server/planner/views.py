@@ -767,6 +767,10 @@ class SubtaskViewSet(viewsets.ModelViewSet):
 			raw_note = raw_note[0] if raw_note else ""
 		note: str = (raw_note or "").strip()
 
+		# Auto-reset postponed subtasks to pending when rescheduled.
+		if subtask.status == "postponed" and "target_date" in data:
+			data["status"] = "pending"
+
 		old_date = subtask.target_date
 		serializer = self.get_serializer(subtask, data=data, partial=True)
 		try:
