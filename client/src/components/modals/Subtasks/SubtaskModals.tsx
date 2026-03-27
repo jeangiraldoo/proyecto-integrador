@@ -30,6 +30,7 @@ interface EditSubtaskModalProps {
 	initialHours: string;
 	initialDate: string;
 	initialStatus: Subtask["status"];
+	initialPostponementNote?: string;
 	dateLoadMap?: Record<string, number>;
 	conflictDates?: string[];
 	maxDailyHours?: number;
@@ -37,6 +38,7 @@ interface EditSubtaskModalProps {
 	setHours: (v: string) => void;
 	setDate: (v: string) => void;
 	setStatus: (v: Subtask["status"]) => void;
+	setPostponementNote?: (v: string) => void;
 	saving: boolean;
 	onSave: () => void;
 	onClose: () => void;
@@ -47,6 +49,7 @@ export function EditSubtaskModal({
 	initialHours,
 	initialDate,
 	initialStatus,
+	initialPostponementNote = "",
 	dateLoadMap = {},
 	conflictDates = [],
 	maxDailyHours = 0,
@@ -54,6 +57,7 @@ export function EditSubtaskModal({
 	setHours,
 	setDate,
 	setStatus,
+	setPostponementNote,
 	saving,
 	onSave,
 	onClose,
@@ -345,6 +349,30 @@ export function EditSubtaskModal({
 							<label style={labelStyle}>Estado</label>
 							<StatusPicker value={initialStatus} onChange={setStatus} qaPrefix="edit-subtask" />
 						</div>
+						{initialStatus === "postponed" && (
+							<div>
+								<label style={labelStyle}>Nota opcional posposición</label>
+								<textarea
+									style={{
+										...inputStyle,
+										minHeight: "70px",
+										resize: "vertical",
+										fontFamily: "inherit",
+									}}
+									value={initialPostponementNote}
+									onChange={(e) => setPostponementNote?.(e.target.value)}
+									placeholder="Razón por la que se pospone..."
+									maxLength={500}
+									data-testid="edit-subtask-postponement-note"
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
+									}
+								/>
+							</div>
+						)}
 					</div>
 					{/* Footer */}
 					<div style={{ display: "flex", gap: "8px", padding: "14px 20px 18px" }}>
@@ -575,9 +603,10 @@ export function StatusPicker({
 		{ v: "pending", label: "Pendiente", color: "#fbbf24" },
 		{ v: "in_progress", label: "En progreso", color: "#60a5fa" },
 		{ v: "completed", label: "Completada", color: "#34d399" },
+		{ v: "postponed", label: "Posponer", color: "#fb923c" },
 	];
 	return (
-		<div style={{ display: "flex", gap: "5px" }}>
+		<div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
 			{opts.map(({ v, label, color }) => (
 				<button
 					key={v}
@@ -596,6 +625,7 @@ export function StatusPicker({
 						cursor: "pointer",
 						transition: "all 0.14s",
 						lineHeight: 1,
+						minWidth: "70px",
 					}}
 				>
 					{label}
@@ -672,6 +702,7 @@ export function CreateSubtaskModal({
 				overdue: todayView.overdue,
 				today: todayView.today,
 				upcoming: todayView.upcoming,
+				postponed: todayView.postponed ?? [],
 			};
 			onCreated(k);
 			toast.success("Tarea creada");

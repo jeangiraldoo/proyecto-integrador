@@ -187,7 +187,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
-				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+				setTodayData({
+					overdue: today.overdue,
+					today: today.today,
+					upcoming: today.upcoming,
+					postponed: today.postponed ?? [],
+				});
 			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
@@ -218,7 +223,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
-				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+				setTodayData({
+					overdue: today.overdue,
+					today: today.today,
+					upcoming: today.upcoming,
+					postponed: today.postponed ?? [],
+				});
 			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
@@ -349,7 +359,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const refreshPlannerAfterConflictUpdate = useCallback(async () => {
 		const [acts, today] = await Promise.all([fetchActivities(), fetchTodayView()]);
 		setActivities(Array.isArray(acts) ? acts : []);
-		setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+		setTodayData({
+			overdue: today.overdue,
+			today: today.today,
+			upcoming: today.upcoming,
+			postponed: today.postponed ?? [],
+		});
 	}, []);
 
 	const refreshTodayFromOrganizationMutation = useCallback(async () => {
@@ -359,6 +374,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				overdue: todayView.overdue,
 				today: todayView.today,
 				upcoming: todayView.upcoming,
+				postponed: todayView.postponed ?? [],
 			});
 		} catch (err) {
 			console.warn("No se pudo refrescar la vista de hoy tras mutar subtareas:", err);
@@ -436,6 +452,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					overdue: prev.overdue.filter((subtask) => subtask.id !== subtaskId),
 					today: prev.today.filter((subtask) => subtask.id !== subtaskId),
 					upcoming: prev.upcoming.filter((subtask) => subtask.id !== subtaskId),
+					postponed: prev.postponed.filter((subtask) => subtask.id !== subtaskId),
 				};
 
 				nextState[targetGroup] = [...nextState[targetGroup], nextSubtask];
@@ -527,6 +544,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						overdue: todayView.overdue,
 						today: todayView.today,
 						upcoming: todayView.upcoming,
+						postponed: todayView.postponed ?? [],
 					});
 					setApiSubjects(Array.isArray(subs) ? subs : []);
 					void refreshConflicts();

@@ -14,6 +14,7 @@ import {
 	ArrowUp,
 	Zap,
 	ArrowRight,
+	PauseCircle,
 } from "lucide-react";
 import {
 	fetchTodayView,
@@ -43,7 +44,13 @@ import { CreateSubtaskModal } from "@/components/modals/Subtasks/SubtaskModals";
  */
 function sortSubtasks(group: KanbanGroup, items: Subtask[]): Subtask[] {
 	const copy = [...items];
-	if (group === "overdue" || group === "upcoming") {
+	if (group === "postponed") {
+		copy.sort((a, b) => {
+			const da = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+			const db = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+			return da - db; // ascendente por fecha de actualización (posposición)
+		});
+	} else if (group === "overdue" || group === "upcoming") {
 		copy.sort((a, b) => {
 			const da = a.target_date ? new Date(a.target_date).getTime() : Infinity;
 			const db = b.target_date ? new Date(b.target_date).getTime() : Infinity;
@@ -81,6 +88,7 @@ function upsertSubtaskAcrossKanban(
 		overdue: state.overdue.filter((item) => item.id !== subtaskId),
 		today: state.today.filter((item) => item.id !== subtaskId),
 		upcoming: state.upcoming.filter((item) => item.id !== subtaskId),
+		postponed: state.postponed.filter((item) => item.id !== subtaskId),
 	};
 
 	nextState[targetGroup] = [...nextState[targetGroup], nextSubtask];
@@ -164,9 +172,9 @@ export default function TodayKanban({
 	} | null>(null);
 	const [togglingId, setTogglingId] = useState<number | null>(null);
 	const [createModalOpen, setCreateModalOpen] = useState(false);
-	const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in_progress" | "completed">(
-		"all",
-	);
+	const [statusFilter, setStatusFilter] = useState<
+		"all" | "pending" | "in_progress" | "completed" | "postponed"
+	>("all");
 	const [courseFilter, setCourseFilter] = useState<string>("all");
 	const [toolbarSelect, setToolbarSelect] = useState<{
 		type: "status" | "course";
@@ -174,9 +182,13 @@ export default function TodayKanban({
 		left: number;
 		width: number;
 	} | null>(null);
-	const [openSelect, setOpenSelect] = useState<{ id: number; top: number; left: number } | null>(
-		null,
-	);
+	const [openSelect, setOpenSelect] = useState<{
+		id: number;
+		top: number;
+		left: number;
+		postponeMode?: boolean;
+	} | null>(null);
+	const [postponementNote, setPostponementNote] = useState("");
 	const [activeTab, setActiveTab] = useState<KanbanGroup>(() => {
 		const d = initialData ?? EMPTY_KANBAN;
 		if (d.overdue.length > 0) return "overdue";
@@ -204,6 +216,7 @@ export default function TodayKanban({
 						overdue: data.overdue,
 						today: data.today,
 						upcoming: data.upcoming,
+						postponed: data.postponed ?? [],
 					};
 					setKanban(k);
 					onDataRefresh(k);
@@ -229,7 +242,7 @@ export default function TodayKanban({
 		let liveSubtask = kanban[group].find((item) => item.id === subtask.id);
 
 		if (!liveSubtask) {
-			for (const candidate of ["overdue", "today", "upcoming"] as const) {
+			for (const candidate of ["overdue", "today", "upcoming", "postponed"] as const) {
 				const match = kanban[candidate].find((item) => item.id === subtask.id);
 				if (match) {
 					liveGroup = candidate;
@@ -259,6 +272,7 @@ export default function TodayKanban({
 		subtask: Subtask,
 		group: KanbanGroup,
 		targetStatus?: Subtask["status"],
+		postponementNoteDraft?: string,
 	) {
 		const activityId = resolveActivityId(subtask);
 		if (!activityId) {
@@ -270,10 +284,14 @@ export default function TodayKanban({
 			in_progress: "En progreso",
 			completed: "Completada",
 			pending: "Pendiente",
+			postponed: "Pospuesta",
 		};
 		setTogglingId(subtask.id);
 		try {
-			await updateSubtask(activityId, subtask.id, { status: nextStatus });
+			await updateSubtask(activityId, subtask.id, {
+				status: nextStatus,
+				postponement_note: postponementNoteDraft,
+			});
 			setKanban((prev) => {
 				const nextKanban = {
 					...prev,
@@ -336,7 +354,12 @@ export default function TodayKanban({
 			(fields.estimated_hours !== undefined || fields.target_date !== undefined)
 		) {
 			const conflict = checkDailyConflicts(
-				[...conflictSource.overdue, ...conflictSource.today, ...conflictSource.upcoming],
+				[
+					...conflictSource.overdue,
+					...conflictSource.today,
+					...conflictSource.upcoming,
+					...conflictSource.postponed,
+				],
 				maxDailyHours,
 			);
 			if (conflict) {
@@ -374,8 +397,8 @@ export default function TodayKanban({
 	}
 
 	const allItems = useMemo(
-		() => [...kanban.overdue, ...kanban.today, ...kanban.upcoming],
-		[kanban.overdue, kanban.today, kanban.upcoming],
+		() => [...kanban.overdue, ...kanban.today, ...kanban.upcoming, ...kanban.postponed],
+		[kanban.overdue, kanban.today, kanban.upcoming, kanban.postponed],
 	);
 	const availableCourseNames = useMemo(() => {
 		const names = new Set<string>();
@@ -424,11 +447,15 @@ export default function TodayKanban({
 
 	const pendingCount = allItems.filter((s) => s.status !== "completed").length;
 	const hasOverdueOpen = kanban.overdue.some((s) => s.status !== "completed");
-	const statusFilterLabel: Record<"all" | "pending" | "in_progress" | "completed", string> = {
+	const statusFilterLabel: Record<
+		"all" | "pending" | "in_progress" | "completed" | "postponed",
+		string
+	> = {
 		all: "Todos",
 		pending: "Pendiente",
 		in_progress: "En progreso",
 		completed: "Completada",
+		postponed: "Pospuesta",
 	};
 
 	const columns: {
@@ -462,6 +489,14 @@ export default function TodayKanban({
 			accent: "#60a5fa",
 			icon: <CalendarClock size={13} />,
 			sortHint: { icon: <ArrowRight size={12} />, text: "más cercanas primero" },
+		},
+		{
+			group: "postponed" as KanbanGroup,
+			label: "Pospuestas",
+			items: sortSubtasks("postponed", kanban.postponed),
+			accent: "#fb923c",
+			icon: <PauseCircle size={13} />,
+			sortHint: { icon: <ArrowUp size={12} />, text: "más recientes primero" },
 		},
 	];
 
@@ -761,7 +796,7 @@ export default function TodayKanban({
 				data-testid="today-tabs"
 				style={{
 					display: "grid",
-					gridTemplateColumns: "1fr 1fr 1fr",
+					gridTemplateColumns: "repeat(4, 1fr)",
 					gap: "7px",
 					marginBottom: "14px",
 					animationDelay: "0.18s",
@@ -1165,60 +1200,132 @@ export default function TodayKanban({
 																		}}
 																		onClick={(e) => e.stopPropagation()}
 																	>
-																		{(
-																			[
-																				["pending", "Pendiente", "#64748b"],
-																				["in_progress", "En progreso", "#60a5fa"],
-																				["completed", "Completada", "#34d399"],
-																			] as const
-																		).map(([val, label, color]) => (
-																			<button
-																				key={val}
-																				onClick={() => {
-																					setOpenSelect(null);
-																					void handleToggle(subtask, group, val);
-																				}}
-																				data-testid={`today-subtask-status-option-${subtask.id}-${val}`}
-																				style={{
-																					display: "flex",
-																					alignItems: "center",
-																					gap: "8px",
-																					width: "100%",
-																					padding: "8px 12px",
-																					background:
-																						subtask.status === val ? `${color}20` : "transparent",
-																					border: "none",
-																					color: subtask.status === val ? color : tv.dropTxt,
-																					fontSize: "12px",
-																					fontWeight: subtask.status === val ? 600 : 400,
-																					cursor: "pointer",
-																					fontFamily: "inherit",
-																					textAlign: "left",
-																				}}
-																				onMouseEnter={(e) => {
-																					e.currentTarget.style.background = `${color}20`;
-																					e.currentTarget.style.color = color;
-																				}}
-																				onMouseLeave={(e) => {
-																					e.currentTarget.style.background =
-																						subtask.status === val ? `${color}20` : "transparent";
-																					e.currentTarget.style.color =
-																						subtask.status === val ? color : tv.dropTxt;
-																				}}
-																			>
-																				<span
+																		{!openSelect!.postponeMode ? (
+																			(
+																				[
+																					["pending", "Pendiente", "#64748b"],
+																					["in_progress", "En progreso", "#60a5fa"],
+																					["completed", "Completada", "#34d399"],
+																					["postponed", "Posponer", "#fb923c"],
+																				] as const
+																			).map(([val, label, color]) => (
+																				<button
+																					key={val}
+																					onClick={() => {
+																						if (val === "postponed") {
+																							setOpenSelect((prev) => ({
+																								...prev!,
+																								postponeMode: true,
+																							}));
+																							setPostponementNote(subtask.postponement_note || "");
+																						} else {
+																							setOpenSelect(null);
+																							void handleToggle(subtask, group, val as any);
+																						}
+																					}}
+																					data-testid={`today-subtask-status-option-${subtask.id}-${val}`}
 																					style={{
-																						width: 7,
-																						height: 7,
-																						borderRadius: "50%",
-																						background: color,
-																						flexShrink: 0,
-																						display: "inline-block",
+																						display: "flex",
+																						alignItems: "center",
+																						gap: "8px",
+																						width: "100%",
+																						padding: "8px 12px",
+																						background:
+																							subtask.status === val ? `${color}20` : "transparent",
+																						border: "none",
+																						color: subtask.status === val ? color : tv.dropTxt,
+																						fontSize: "12px",
+																						fontWeight: subtask.status === val ? 600 : 400,
+																						cursor: "pointer",
+																						fontFamily: "inherit",
+																						textAlign: "left",
+																					}}
+																					onMouseEnter={(e) => {
+																						e.currentTarget.style.background = `${color}20`;
+																						e.currentTarget.style.color = color;
+																					}}
+																					onMouseLeave={(e) => {
+																						e.currentTarget.style.background =
+																							subtask.status === val ? `${color}20` : "transparent";
+																						e.currentTarget.style.color =
+																							subtask.status === val ? color : tv.dropTxt;
+																					}}
+																				>
+																					<span
+																						style={{
+																							width: 7,
+																							height: 7,
+																							borderRadius: "50%",
+																							background: color,
+																							flexShrink: 0,
+																							display: "inline-block",
+																						}}
+																					/>
+																					{label}
+																				</button>
+																			))
+																		) : (
+																			<div
+																				style={{
+																					padding: "12px",
+																					width: "200px",
+																					display: "flex",
+																					flexDirection: "column",
+																					gap: "8px",
+																				}}
+																				onClick={(e) => e.stopPropagation()}
+																			>
+																				<label
+																					style={{
+																						fontSize: "11px",
+																						fontWeight: 600,
+																						color: tv.dropTxt,
+																					}}
+																				>
+																					Razón (opcional)
+																				</label>
+																				<textarea
+																					autoFocus
+																					value={postponementNote}
+																					onChange={(e) => setPostponementNote(e.target.value)}
+																					placeholder="Ej: Falta de material..."
+																					style={{
+																						background: isDark ? "#0f172a" : "#fff",
+																						border: `1px solid ${tv.dropBdr}`,
+																						borderRadius: "6px",
+																						padding: "8px",
+																						fontSize: "12px",
+																						color: tv.dropTxt,
+																						resize: "vertical",
+																						minHeight: "60px",
+																						fontFamily: "inherit",
 																					}}
 																				/>
-																				{label}
-																			</button>
-																		))}
+																				<button
+																					onClick={() => {
+																						setOpenSelect(null);
+																						void handleToggle(
+																							subtask,
+																							group,
+																							"postponed",
+																							postponementNote,
+																						);
+																					}}
+																					style={{
+																						background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
+																						color: "#fff",
+																						border: "none",
+																						borderRadius: "6px",
+																						padding: "6px 0",
+																						fontSize: "12px",
+																						fontWeight: 600,
+																						cursor: "pointer",
+																					}}
+																				>
+																					Guardar
+																				</button>
+																			</div>
+																		)}
 																	</div>
 																</>,
 																document.body,
