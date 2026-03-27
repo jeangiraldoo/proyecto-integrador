@@ -4,8 +4,8 @@ import { X, Plus, Trash2, Layers, Loader2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
-import { fetchSubtasks, createSubtask, deleteSubtask } from "../api/dashboard";
-import type { Subtask } from "../api/dashboard";
+import { fetchSubtasks, createSubtask, deleteSubtask } from "@/api/dashboard";
+import type { Subtask } from "@/api/dashboard";
 import "./SubtaskManagerModal.css";
 
 interface SubtaskManagerModalProps {

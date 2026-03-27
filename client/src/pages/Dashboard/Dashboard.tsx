@@ -27,10 +27,10 @@ import {
 	Folder,
 	BookOpen,
 } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
-import { useTheme } from "../hooks/useTheme";
-import { getAccessToken } from "../api/auth";
-import lumaLogo from "../assets/luma.png";
+import ThemeToggle from "@/components/ui/ThemeToggle/ThemeToggle";
+import { useTheme } from "@/hooks/useTheme";
+import { getAccessToken } from "@/api/auth";
+import lumaLogo from "@/assets/luma.png";
 import {
 	fetchMe,
 	updateMe,
@@ -49,24 +49,24 @@ import {
 	type Conflict,
 	type Subtask,
 	type Subject,
-} from "../api/dashboard";
+} from "@/api/dashboard";
 import { toast } from "sonner";
-import "./Dashboard.css";
-import CreateActivityModal from "./CreateActivityModal";
+import "@/pages/Dashboard/Dashboard.css";
+import CreateActivityModal from "@/components/modals/Activities/CreateActivityModal";
 import {
 	checkDailyConflicts,
 	type KanbanGroup,
 	type KanbanState,
 	type NewActivityPayloadFromModal,
-} from "./dashboardUtils";
-import OrganizationView from "./OrganizationView";
-import TodayKanban from "./TodayView";
+} from "@/pages/Dashboard/utils/dashboardUtils";
+import OrganizationView from "@/components/views/OrganizationView";
+import TodayKanban from "@/components/views/TodayView";
 import ConflictModal, {
 	type ConflictInfo,
 	type ConflictModalItem,
 	type ConflictModalSubtask,
-} from "./ConflictModal";
-import { SubjectFormModal } from "./OrganizationView";
+} from "@/components/modals/Activities/ConflictModal";
+import { SubjectFormModal } from "@/components/modals/Organizations/OrgModals";
 
 /* ============ COMPONENT ============ */
 interface DashboardProps {
