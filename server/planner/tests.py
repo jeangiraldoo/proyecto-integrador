@@ -1,12 +1,31 @@
+from typing import Any, cast
+
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.response import Response
+from rest_framework.test import APIClient, APITestCase
 
 from .models import Activity, Progress, Subject, Subtask, User
 
 
 def _make_user(username="testuser", email="test@example.com", password="testpass123"):
 	return User.objects.create_user(username=username, email=email, password=password)
+
+
+def _api_client(test_case: APITestCase) -> APIClient:
+	return cast(APIClient, test_case.client)
+
+
+def _drf_response(value: object) -> Response:
+	return cast(Response, value)
+
+
+def _response_data(response: Response) -> Any:
+	return cast(Any, response.data)
+
+
+def _model_id(instance: object) -> int:
+	return cast(int, cast(Any, instance).id)
 
 
 def _make_activity(user, title="Test Activity"):
@@ -22,14 +41,20 @@ def _make_activity(user, title="Test Activity"):
 	)
 
 
-def _make_subtask(activity, name="Task", target_date="2099-06-01", status="pending", hours=2):
+def _make_subtask(
+	activity,
+	name="Task",
+	target_date="2099-06-01",
+	subtask_status="pending",
+	hours=2,
+):
 	count = Subtask.objects.filter(activity_id=activity).count()
 	return Subtask.objects.create(
 		activity_id=activity,
 		name=name,
 		estimated_hours=hours,
 		target_date=target_date,
-		status=status,
+		status=subtask_status,
 		ordering=count + 1,
 	)
 
@@ -42,22 +67,24 @@ def _make_subtask(activity, name="Task", target_date="2099-06-01", status="pendi
 class SubtaskStatusValidationTests(APITestCase):
 	def setUp(self):
 		self.user = _make_user()
-		self.client.force_authenticate(user=self.user)
+		_api_client(self).force_authenticate(user=self.user)
 		self.activity = _make_activity(self.user)
 		self.subtask = _make_subtask(self.activity)
 		self.url = reverse(
 			"activity-subtask-detail",
-			kwargs={"activity_id": self.activity.id, "subtask_id": self.subtask.id},
+			kwargs={"activity_id": _model_id(self.activity), "subtask_id": _model_id(self.subtask)},
 		)
 
 	def test_valid_statuses_accepted(self):
 		for s in ("pending", "in_progress", "completed", "postponed"):
 			with self.subTest(status=s):
-				res = self.client.patch(self.url, {"status": s}, format="json")
-				self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+				res = _drf_response(_api_client(self).patch(self.url, {"status": s}, format="json"))
+				self.assertEqual(res.status_code, status.HTTP_200_OK, _response_data(res))
 
 	def test_invalid_status_returns_422(self):
-		res = self.client.patch(self.url, {"status": "unknown_status"}, format="json")
+		res = _drf_response(
+			_api_client(self).patch(self.url, {"status": "unknown_status"}, format="json")
+		)
 		self.assertEqual(res.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
@@ -69,22 +96,26 @@ class SubtaskStatusValidationTests(APITestCase):
 class SubtaskPartialUpdateProgressTests(APITestCase):
 	def setUp(self):
 		self.user = _make_user()
-		self.client.force_authenticate(user=self.user)
+		_api_client(self).force_authenticate(user=self.user)
 		self.activity = _make_activity(self.user)
 		self.subtask = _make_subtask(self.activity)
 		self.url = reverse(
 			"activity-subtask-detail",
-			kwargs={"activity_id": self.activity.id, "subtask_id": self.subtask.id},
+			kwargs={"activity_id": _model_id(self.activity), "subtask_id": _model_id(self.subtask)},
 		)
 
 	def test_patch_creates_progress_record(self):
-		res = self.client.patch(self.url, {"status": "in_progress"}, format="json")
+		res = _drf_response(
+			_api_client(self).patch(self.url, {"status": "in_progress"}, format="json")
+		)
 		self.assertEqual(res.status_code, status.HTTP_200_OK)
 		self.assertEqual(Progress.objects.filter(subtask=self.subtask).count(), 1)
 
 	def test_patch_with_note_persists_note(self):
-		res = self.client.patch(
-			self.url, {"status": "postponed", "note": "Esperando al profesor"}, format="json"
+		res = _drf_response(
+			_api_client(self).patch(
+				self.url, {"status": "postponed", "note": "Esperando al profesor"}, format="json"
+			)
 		)
 		self.assertEqual(res.status_code, status.HTTP_200_OK)
 		entry = Progress.objects.get(subtask=self.subtask)
@@ -92,15 +123,17 @@ class SubtaskPartialUpdateProgressTests(APITestCase):
 		self.assertEqual(entry.status, "postponed")
 
 	def test_patch_without_note_creates_empty_note(self):
-		res = self.client.patch(self.url, {"status": "completed"}, format="json")
+		res = _drf_response(
+			_api_client(self).patch(self.url, {"status": "completed"}, format="json")
+		)
 		self.assertEqual(res.status_code, status.HTTP_200_OK)
 		entry = Progress.objects.get(subtask=self.subtask)
 		self.assertEqual(entry.note, "")
 
 	def test_note_persists_after_subsequent_status_change(self):
 		"""Progress history is immutable — old notes survive future updates."""
-		self.client.patch(self.url, {"status": "postponed", "note": "blocked"}, format="json")
-		self.client.patch(self.url, {"status": "completed"}, format="json")
+		_api_client(self).patch(self.url, {"status": "postponed", "note": "blocked"}, format="json")
+		_api_client(self).patch(self.url, {"status": "completed"}, format="json")
 		entries = Progress.objects.filter(subtask=self.subtask).order_by("recorded_at")
 		self.assertEqual(entries.count(), 2)
 		self.assertEqual(entries[0].note, "blocked")
@@ -108,7 +141,7 @@ class SubtaskPartialUpdateProgressTests(APITestCase):
 		self.assertEqual(entries[1].status, "completed")
 
 	def test_patch_subtask_status_updated(self):
-		self.client.patch(self.url, {"status": "postponed"}, format="json")
+		_api_client(self).patch(self.url, {"status": "postponed"}, format="json")
 		self.subtask.refresh_from_db()
 		self.assertEqual(self.subtask.status, "postponed")
 
@@ -121,37 +154,47 @@ class SubtaskPartialUpdateProgressTests(APITestCase):
 class ActivityProgressCountTests(APITestCase):
 	def setUp(self):
 		self.user = _make_user()
-		self.client.force_authenticate(user=self.user)
+		_api_client(self).force_authenticate(user=self.user)
 		self.activity = _make_activity(self.user)
-		_make_subtask(self.activity, name="T1", status="completed")
-		_make_subtask(self.activity, name="T2", status="completed")
-		_make_subtask(self.activity, name="T3", status="pending")
+		_make_subtask(self.activity, name="T1", subtask_status="completed")
+		_make_subtask(self.activity, name="T2", subtask_status="completed")
+		_make_subtask(self.activity, name="T3", subtask_status="pending")
 
 	def _assert_counts(self, data):
 		self.assertEqual(data["total_subtasks_count"], 3)
 		self.assertEqual(data["completed_subtasks_count"], 2)
 
 	def test_list_returns_progress_counts(self):
-		res = self.client.get(reverse("activity-list"))
+		res = _drf_response(_api_client(self).get(reverse("activity-list")))
 		self.assertEqual(res.status_code, status.HTTP_200_OK)
-		self._assert_counts(res.data[0])
+		self._assert_counts(_response_data(res)[0])
 
 	def test_retrieve_returns_progress_counts(self):
-		res = self.client.get(reverse("activity-detail", kwargs={"pk": self.activity.id}))
+		res = _drf_response(
+			_api_client(self).get(
+				reverse("activity-detail", kwargs={"pk": _model_id(self.activity)})
+			)
+		)
 		self.assertEqual(res.status_code, status.HTTP_200_OK)
-		self._assert_counts(res.data)
+		self._assert_counts(_response_data(res))
 
 	def test_no_subtasks_returns_zero_counts(self):
 		activity2 = _make_activity(self.user, title="Empty")
-		res = self.client.get(reverse("activity-detail", kwargs={"pk": activity2.id}))
-		self.assertEqual(res.data["total_subtasks_count"], 0)
-		self.assertEqual(res.data["completed_subtasks_count"], 0)
+		res = _drf_response(
+			_api_client(self).get(reverse("activity-detail", kwargs={"pk": _model_id(activity2)}))
+		)
+		data = _response_data(res)
+		self.assertEqual(data["total_subtasks_count"], 0)
+		self.assertEqual(data["completed_subtasks_count"], 0)
 
 	def test_postponed_not_counted_as_completed(self):
-		_make_subtask(self.activity, name="T4", status="postponed")
-		res = self.client.get(reverse("activity-detail", kwargs={"pk": self.activity.id}))
+		_make_subtask(self.activity, name="T4", subtask_status="postponed")
+		res = _drf_response(
+			_api_client(self).get(
+				reverse("activity-detail", kwargs={"pk": _model_id(self.activity)})
+			)
+		)
 		# total grows by 1, completed stays at 2
-		self.assertEqual(res.data["total_subtasks_count"], 4)
-		self.assertEqual(res.data["completed_subtasks_count"], 2)
-
-
+		data = _response_data(res)
+		self.assertEqual(data["total_subtasks_count"], 4)
+		self.assertEqual(data["completed_subtasks_count"], 2)

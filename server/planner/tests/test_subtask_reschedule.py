@@ -6,15 +6,15 @@ whose current status is "postponed", the backend silently resets the status
 to "pending" and records that transition in the Progress history.
 """
 
+from typing import Any, cast
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
 
 from planner.models import Activity, Progress, Subject, Subtask
 
-# ──────────────────────────────────────────────
-#  Helpers
-# ──────────────────────────────────────────────
+# Helpers
 
 
 def _make_activity(user):
@@ -49,9 +49,11 @@ def _subtask_url(activity_id, subtask_id):
 	)
 
 
-# ──────────────────────────────────────────────
-#  Tests
-# ──────────────────────────────────────────────
+def _model_id(instance: object) -> int:
+	return cast(int, cast(Any, instance).id)
+
+
+# Tests
 
 
 @pytest.mark.django_db
@@ -59,7 +61,7 @@ class TestPostponedSubtaskReschedule:
 	def test_rescheduling_postponed_resets_status_to_pending(self, auth_client, user):
 		activity = _make_activity(user)
 		subtask = _make_subtask(activity, subtask_status="postponed")
-		url = _subtask_url(activity.id, subtask.id)
+		url = _subtask_url(_model_id(activity), _model_id(subtask))
 
 		res = auth_client.patch(url, {"target_date": "2099-07-01"}, format="json")
 
@@ -71,7 +73,7 @@ class TestPostponedSubtaskReschedule:
 	def test_rescheduling_postponed_records_progress_as_pending(self, auth_client, user):
 		activity = _make_activity(user)
 		subtask = _make_subtask(activity, subtask_status="postponed")
-		url = _subtask_url(activity.id, subtask.id)
+		url = _subtask_url(_model_id(activity), _model_id(subtask))
 
 		auth_client.patch(url, {"target_date": "2099-07-01"}, format="json")
 
@@ -82,7 +84,7 @@ class TestPostponedSubtaskReschedule:
 		"""Only postponed subtasks are auto-reset; other statuses are preserved."""
 		activity = _make_activity(user)
 		subtask = _make_subtask(activity, subtask_status="in_progress")
-		url = _subtask_url(activity.id, subtask.id)
+		url = _subtask_url(_model_id(activity), _model_id(subtask))
 
 		res = auth_client.patch(url, {"target_date": "2099-07-01"}, format="json")
 
@@ -93,7 +95,7 @@ class TestPostponedSubtaskReschedule:
 		"""Updating fields other than target_date on a postponed subtask leaves it postponed."""
 		activity = _make_activity(user)
 		subtask = _make_subtask(activity, subtask_status="postponed")
-		url = _subtask_url(activity.id, subtask.id)
+		url = _subtask_url(_model_id(activity), _model_id(subtask))
 
 		res = auth_client.patch(url, {"estimated_hours": 3}, format="json")
 
