@@ -41,7 +41,9 @@ export function SubtaskDetailPanel({
 	onToggle: () => void;
 	toggling: boolean;
 	onEdit: (
-		fields: Partial<Pick<Subtask, "name" | "estimated_hours" | "target_date" | "status">>,
+		fields: Partial<
+			Pick<Subtask, "name" | "estimated_hours" | "target_date" | "status" | "postponement_note">
+		>,
 	) => Promise<void>;
 	onDelete: () => Promise<void>;
 }) {
@@ -68,12 +70,14 @@ export function SubtaskDetailPanel({
 		overdue: { accent: "#f87171", bgAccent: "rgba(248,113,113,0.1)", label: "Vencida" },
 		today: { accent: "#c084fc", bgAccent: "rgba(192,132,252,0.1)", label: "Para hoy" },
 		upcoming: { accent: "#60a5fa", bgAccent: "rgba(96,165,250,0.1)", label: "Próxima" },
+		postponed: { accent: "#fb923c", bgAccent: "rgba(251,146,60,0.1)", label: "Pospuesta" },
 	};
 	const { accent, bgAccent, label } = groupMeta[group];
 	const statusConfig: Record<string, { label: string; color: string }> = {
 		pending: { label: "Pendiente", color: "#fbbf24" },
 		in_progress: { label: "En progreso", color: "#60a5fa" },
 		completed: { label: "Completada", color: "#34d399" },
+		postponed: { label: "Pospuesta", color: "#fb923c" },
 	};
 	const statusInfo = statusConfig[subtask.status] ?? { label: subtask.status, color: "#64748b" };
 
@@ -83,6 +87,7 @@ export function SubtaskDetailPanel({
 	const [editHours, setEditHours] = useState(String(subtask.estimated_hours));
 	const [editDate, setEditDate] = useState(subtask.target_date);
 	const [editStatus, setEditStatus] = useState<Subtask["status"]>(subtask.status);
+	const [editPostponementNote, setEditPostponementNote] = useState(subtask.postponement_note ?? "");
 	const [editSaving, setEditSaving] = useState(false);
 
 	// ---- Delete confirm state ----
@@ -97,6 +102,7 @@ export function SubtaskDetailPanel({
 		setEditHours(String(subtask.estimated_hours));
 		setEditDate(subtask.target_date);
 		setEditStatus(subtask.status);
+		setEditPostponementNote(subtask.postponement_note ?? "");
 	}, [subtask.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// ESC closes the panel only when no sub-modal is open (they handle ESC themselves)
@@ -127,6 +133,7 @@ export function SubtaskDetailPanel({
 				estimated_hours: hours,
 				target_date: editDate,
 				status: editStatus,
+				postponement_note: editPostponementNote,
 			});
 			setEditMode(false);
 		} catch {
@@ -438,6 +445,42 @@ export function SubtaskDetailPanel({
 								</p>
 							</div>
 						</div>
+
+						{/* Rendering postponement_note conceptually under state */}
+						{subtask.status === "postponed" && subtask.postponement_note && (
+							<div
+								style={{ display: "flex", gap: "12px", alignItems: "flex-start", marginTop: "4px" }}
+							>
+								<span
+									style={{ color: "transparent", display: "flex", flexShrink: 0, width: "15px" }} // spacer aligned with icon
+								/>
+								<div>
+									<p
+										style={{
+											fontSize: "10px",
+											color: sdp.metaLabel,
+											margin: "0 0 2px 0",
+											textTransform: "uppercase",
+											letterSpacing: "0.05em",
+											fontWeight: 600,
+										}}
+									>
+										Nota opcional de posposición
+									</p>
+									<p
+										style={{
+											fontSize: "13px",
+											color: sdp.metaValue,
+											margin: 0,
+											fontWeight: 500,
+											whiteSpace: "pre-wrap",
+										}}
+									>
+										{subtask.postponement_note}
+									</p>
+								</div>
+							</div>
+						)}
 						{subtask.ordering > 0 && (
 							<div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
 								<span
@@ -566,6 +609,7 @@ export function SubtaskDetailPanel({
 					initialHours={editHours}
 					initialDate={editDate}
 					initialStatus={editStatus}
+					initialPostponementNote={editPostponementNote}
 					dateLoadMap={dateLoadMap}
 					conflictDates={conflictDates}
 					maxDailyHours={maxDailyHours}
@@ -573,6 +617,7 @@ export function SubtaskDetailPanel({
 					setHours={setEditHours}
 					setDate={setEditDate}
 					setStatus={setEditStatus}
+					setPostponementNote={setEditPostponementNote}
 					saving={editSaving}
 					onSave={() => void saveEdit()}
 					onClose={() => setEditMode(false)}

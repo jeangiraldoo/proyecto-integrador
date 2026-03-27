@@ -29,21 +29,23 @@ export interface Subtask {
 	name: string;
 	estimated_hours: number;
 	target_date: string;
-	status: "pending" | "completed" | "in_progress";
+	status: "pending" | "completed" | "in_progress" | "postponed";
 	ordering: number;
 	created_at: string;
 	updated_at: string;
+	postponement_note?: string;
 	// Populated by TodayView endpoint (TodaySubtaskSerializer)
 	activity?: { id: number; title: string };
 	course_name?: string;
 }
 
-export type TodayStatusFilter = "vencidas" | "hoy" | "proximas";
+export type TodayStatusFilter = "vencidas" | "hoy" | "proximas" | "pospuestas";
 
 export interface TodayViewResponse {
 	overdue: Subtask[];
 	today: Subtask[];
 	upcoming: Subtask[];
+	postponed?: Subtask[];
 	meta: {
 		n_days: number;
 		filters: {
@@ -146,7 +148,10 @@ export async function updateSubtask(
 	activityId: number,
 	subtaskId: number,
 	payload: Partial<
-		Pick<Subtask, "name" | "estimated_hours" | "target_date" | "status" | "ordering">
+		Pick<
+			Subtask,
+			"name" | "estimated_hours" | "target_date" | "status" | "ordering" | "postponement_note"
+		>
 	>,
 ): Promise<Subtask> {
 	const { data } = await client.patch<Subtask>(

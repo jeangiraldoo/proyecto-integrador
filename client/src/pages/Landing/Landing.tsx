@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, TrendingUp } from "lucide-react";
-import "@/pages/Auth/Login/Login.css";
+import "@/pages/Auth/Auth.css";
 import "@/pages/Landing/Landing.css";
 import lumaLogoFull from "@/assets/luma.png";
 import heroIllustration from "@/assets/login.png";

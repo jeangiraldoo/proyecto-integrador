@@ -1,4 +1,3 @@
-import React from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { toast, Toaster } from "sonner";
 import Login from "@/pages/Auth/Login/Login";
