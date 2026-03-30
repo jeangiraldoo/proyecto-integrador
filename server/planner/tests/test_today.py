@@ -15,11 +15,12 @@ from datetime import timedelta
 import pytest
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework import status
 
 from planner.models import Activity, Subtask
 
-
 TODAY_URL = reverse("today")
+DEFAULT_N_DAYS = 7
 
 
 # ──────────────────────────────────────────────
@@ -66,7 +67,7 @@ class TestTodayAuthentication:
 
 	def test_returns_401_for_unauthenticated_request(self, unauth_client):
 		response = unauth_client.get(TODAY_URL)
-		assert response.status_code == 401
+		assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ──────────────────────────────────────────────
@@ -91,11 +92,9 @@ class TestTodayDataIsolation:
 
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		all_names = [
-			s["name"]
-			for group in ("overdue", "today", "upcoming")
-			for s in response.data[group]
+			s["name"] for group in ("overdue", "today", "upcoming") for s in response.data[group]
 		]
 		assert "Mine" in all_names
 		assert "Not mine" not in all_names
@@ -116,7 +115,7 @@ class TestTodayGrouping:
 
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		overdue_names = [s["name"] for s in response.data["overdue"]]
 		assert "Late" in overdue_names
 		assert all(s["name"] != "Late" for s in response.data["today"])
@@ -128,7 +127,7 @@ class TestTodayGrouping:
 
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		today_names = [s["name"] for s in response.data["today"]]
 		assert "Now" in today_names
 		assert all(s["name"] != "Now" for s in response.data["overdue"])
@@ -140,7 +139,7 @@ class TestTodayGrouping:
 
 		response = auth_client.get(TODAY_URL)  # default n_days=7
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		upcoming_names = [s["name"] for s in response.data["upcoming"]]
 		assert "Soon" in upcoming_names
 
@@ -150,11 +149,9 @@ class TestTodayGrouping:
 
 		response = auth_client.get(TODAY_URL)  # default n_days=7
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		all_names = [
-			s["name"]
-			for group in ("overdue", "today", "upcoming")
-			for s in response.data[group]
+			s["name"] for group in ("overdue", "today", "upcoming") for s in response.data[group]
 		]
 		assert "Far away" not in all_names
 
@@ -169,7 +166,7 @@ class TestTodayGrouping:
 
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		assert len(response.data["overdue"]) >= 1
 		assert len(response.data["today"]) >= 1
 		assert len(response.data["upcoming"]) >= 1
@@ -252,19 +249,17 @@ class TestTodayEmptyResponse:
 	def test_returns_empty_lists_for_user_with_no_data(self, auth_client):
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		assert response.data["overdue"] == []
 		assert response.data["today"] == []
 		assert response.data["upcoming"] == []
 
-	def test_returns_empty_lists_for_user_with_activities_but_no_subtasks(
-		self, auth_client, user
-	):
+	def test_returns_empty_lists_for_user_with_activities_but_no_subtasks(self, auth_client, user):
 		_create_activity(user)
 
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		assert response.data["overdue"] == []
 		assert response.data["today"] == []
 		assert response.data["upcoming"] == []
@@ -285,7 +280,7 @@ class TestTodayNDays:
 
 		response = auth_client.get(TODAY_URL, {"n_days": 3})
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		upcoming_names = [s["name"] for s in response.data["upcoming"]]
 		assert "3-day" in upcoming_names
 
@@ -295,7 +290,7 @@ class TestTodayNDays:
 
 		response = auth_client.get(TODAY_URL, {"n_days": 2})
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		upcoming_names = [s["name"] for s in response.data["upcoming"]]
 		assert "4-day" not in upcoming_names
 
@@ -305,23 +300,23 @@ class TestTodayNDays:
 
 		response = auth_client.get(TODAY_URL, {"n_days": 0})
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		assert response.data["upcoming"] == []
 		assert response.data["meta"]["n_days"] == 0
 
-	def test_negative_n_days_returns_422(self, auth_client):
+	def test_negative_n_days_returns_400(self, auth_client):
 		response = auth_client.get(TODAY_URL, {"n_days": -1})
-		assert response.status_code == 422
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-	def test_non_integer_n_days_returns_422(self, auth_client):
+	def test_non_integer_n_days_returns_400(self, auth_client):
 		response = auth_client.get(TODAY_URL, {"n_days": "abc"})
-		assert response.status_code == 422
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 	def test_default_n_days_is_7(self, auth_client):
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
-		assert response.data["meta"]["n_days"] == 7
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data["meta"]["n_days"] == DEFAULT_N_DAYS
 
 
 # ──────────────────────────────────────────────
@@ -336,7 +331,7 @@ class TestTodayResponseStructure:
 	def test_response_contains_required_keys(self, auth_client):
 		response = auth_client.get(TODAY_URL)
 
-		assert response.status_code == 200
+		assert response.status_code == status.HTTP_200_OK
 		assert "overdue" in response.data
 		assert "today" in response.data
 		assert "upcoming" in response.data
@@ -350,5 +345,14 @@ class TestTodayResponseStructure:
 		response = auth_client.get(TODAY_URL)
 		subtask = response.data["today"][0]
 
-		expected_fields = {"id", "name", "estimated_hours", "target_date", "status", "ordering", "created_at", "updated_at"}
+		expected_fields = {
+			"id",
+			"name",
+			"estimated_hours",
+			"target_date",
+			"status",
+			"ordering",
+			"created_at",
+			"updated_at",
+		}
 		assert expected_fields.issubset(set(subtask.keys()))

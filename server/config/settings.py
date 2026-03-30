@@ -3,6 +3,7 @@ Django settings for config project.
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -62,9 +63,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+RUNNING_TESTS = os.environ.get("DJANGO_USE_SQLITE_FOR_TESTS") == "True" or "test" in sys.argv
 DATABASE_URL = os.environ.get("SUPABASE_DATABASE_URL")
 
-if DATABASE_URL:
+if RUNNING_TESTS:
+	# Never point Django's test runner at the configured Postgres instance.
+	# Tests always run against a local SQLite database.
+	DATABASES = {
+		"default": {
+			"ENGINE": "django.db.backends.sqlite3",
+			"NAME": BASE_DIR / "test_db.sqlite3",
+		}
+	}
+elif DATABASE_URL:
 	DATABASES = {"default": dj_database_url.parse(DATABASE_URL)}
 else:
 	# Fallback to SQLite for local development without Supabase
