@@ -74,6 +74,9 @@ export default function OrganizationView({
 	const { isDark } = useTheme();
 	const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
 
+	const [orgPage, setOrgPage] = useState(1);
+	const ORG_LIMIT = 10;
+
 	useEffect(() => {
 		if (expandSubject?.subject) {
 			setExpandedSubject(expandSubject.subject);
@@ -261,6 +264,12 @@ export default function OrganizationView({
 		return a.localeCompare(b);
 	});
 
+	const paginatedSubjectKeys = useMemo(() => {
+		return allSubjectKeys.slice(0, orgPage * ORG_LIMIT);
+	}, [allSubjectKeys, orgPage]);
+
+	const hasMoreSubjects = paginatedSubjectKeys.length < allSubjectKeys.length;
+
 	if (allSubjectKeys.length === 0) {
 		return (
 			<div
@@ -307,7 +316,7 @@ export default function OrganizationView({
 					gap: "1rem",
 				}}
 			>
-				{allSubjectKeys.map((subject) => {
+				{paginatedSubjectKeys.map((subject) => {
 					const acts = grouped[subject] ?? [];
 					const isOpen = expandedSubject === subject;
 					const subjectToken = toTestIdToken(subject);
@@ -501,10 +510,10 @@ export default function OrganizationView({
 												const isActOpen = expandedActivity === act.id;
 												const stState = subtaskStateByActivity[act.id];
 												const subtasks = stState?.items ?? [];
-												const completedSubs = subtasks.filter(
+												const completedSubs = act.completed_subtasks_count ?? subtasks.filter(
 													(s) => s.status === "completed",
 												).length;
-												const totalSubs = subtasks.length || act.subtask_count || 0;
+												const totalSubs = act.total_subtasks_count ?? act.subtask_count ?? subtasks.length ?? 0;
 
 												const isActOverdue =
 													act.status !== "completed" && daysUntil(act.due_date) < 0;
@@ -1069,6 +1078,32 @@ export default function OrganizationView({
 						</div>
 					);
 				})}
+				{hasMoreSubjects && (
+					<button
+						onClick={() => setOrgPage((prev) => prev + 1)}
+						style={{
+							marginTop: "8px",
+							padding: "10px",
+							width: "100%",
+							background: ov.subBg,
+							border: `1px solid ${ov.subBdr}`,
+							borderRadius: "12px",
+							color: ov.iconClr,
+							fontSize: "13px",
+							fontWeight: 600,
+							cursor: "pointer",
+							transition: "all 0.15s",
+						}}
+						onMouseOver={(e) => {
+							e.currentTarget.style.background = isDark ? "#132040" : "rgba(124,92,255,0.08)";
+						}}
+						onMouseOut={(e) => {
+							e.currentTarget.style.background = ov.subBg;
+						}}
+					>
+						Cargar Más Materias
+					</button>
+				)}
 			</div>
 
 			{/* Subtask manager modal */}

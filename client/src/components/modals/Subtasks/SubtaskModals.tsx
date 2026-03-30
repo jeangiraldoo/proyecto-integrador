@@ -349,26 +349,23 @@ export function EditSubtaskModal({
 							<label style={labelStyle}>Estado</label>
 							<StatusPicker value={initialStatus} onChange={setStatus} qaPrefix="edit-subtask" />
 						</div>
-						{initialStatus === "postponed" && (
+						{initialStatus === "postponed" && setPostponementNote && (
 							<div>
-								<label style={labelStyle}>Nota opcional posposición</label>
+								<label style={labelStyle}>Motivo de la posposición (opcional)</label>
 								<textarea
 									style={{
 										...inputStyle,
-										minHeight: "70px",
 										resize: "vertical",
+										minHeight: "60px",
 										fontFamily: "inherit",
 									}}
+									placeholder="ej. Esperando respuesta del profesor..."
 									value={initialPostponementNote}
-									onChange={(e) => setPostponementNote?.(e.target.value)}
-									placeholder="Razón por la que se pospone..."
-									maxLength={500}
-									data-testid="edit-subtask-postponement-note"
+									onChange={(e) => setPostponementNote(e.target.value)}
+									data-testid="edit-subtask-postponement-note-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark
-											? "#334155"
-											: "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -653,9 +650,10 @@ export function CreateSubtaskModal({
 }) {
 	const [selectedActivityId, setSelectedActivityId] = useState<number | "">("");
 	const [name, setName] = useState("");
+	const [hours, setHours] = useState("");
 	const [targetDate, setTargetDate] = useState("");
-	const [hours, setHours] = useState("1");
 	const [status, setStatus] = useState<Subtask["status"]>("pending");
+	const [postponementNote, setPostponementNote] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [actDropOpen, setActDropOpen] = useState(false);
 	const { isDark } = useTheme();
@@ -690,14 +688,17 @@ export function CreateSubtaskModal({
 		}
 		setSaving(true);
 		try {
-			await createSubtask(selectedActivityId as number, {
+			const payload = {
 				name: name.trim(),
-				estimated_hours: h,
+				estimated_hours: parseFloat(hours),
 				target_date: targetDate,
 				status,
 				ordering: 1,
-			});
-			const todayView = await fetchTodayView();
+				...(status === "postponed" ? { postponement_note: postponementNote.trim() } : {}),
+			};
+			await createSubtask(selectedActivityId as number, payload);
+			const rawToday = await fetchTodayView();
+			const todayView = 'results' in rawToday ? rawToday.results : rawToday;
 			const k: KanbanState = {
 				overdue: todayView.overdue,
 				today: todayView.today,
@@ -1268,6 +1269,27 @@ export function CreateSubtaskModal({
 							<label style={labelStyle}>Estado inicial</label>
 							<StatusPicker value={status} onChange={setStatus} qaPrefix="create-subtask" />
 						</div>
+						{status === "postponed" && (
+							<div>
+								<label style={labelStyle}>Motivo de la posposición (opcional)</label>
+								<textarea
+									style={{
+										...inputStyle,
+										resize: "vertical",
+										minHeight: "60px",
+										fontFamily: "inherit",
+									}}
+									placeholder="ej. Falta de tiempo..."
+									value={postponementNote}
+									onChange={(e) => setPostponementNote(e.target.value)}
+									data-testid="create-subtask-postponement-note-input"
+									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
+									onBlur={(e) =>
+										(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+									}
+								/>
+							</div>
+						)}
 					</div>
 					{/* Footer */}
 					<div

@@ -38,7 +38,7 @@ export function SubtaskDetailPanel({
 	conflictDates?: string[];
 	maxDailyHours?: number;
 	onClose: () => void;
-	onToggle: () => void;
+	onToggle: (targetStatus?: Subtask["status"], note?: string) => void;
 	toggling: boolean;
 	onEdit: (
 		fields: Partial<
@@ -94,6 +94,10 @@ export function SubtaskDetailPanel({
 	const [deleteStep, setDeleteStep] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 
+	// ---- Postpone state ----
+	const [showPostponeInput, setShowPostponeInput] = useState(false);
+	const [postponeNote, setPostponeNote] = useState("");
+
 	// Reset local edit fields whenever we open a different subtask
 	useEffect(() => {
 		setEditMode(false);
@@ -103,6 +107,8 @@ export function SubtaskDetailPanel({
 		setEditDate(subtask.target_date);
 		setEditStatus(subtask.status);
 		setEditPostponementNote(subtask.postponement_note ?? "");
+		setShowPostponeInput(false);
+		setPostponeNote("");
 	}, [subtask.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// ESC closes the panel only when no sub-modal is open (they handle ESC themselves)
@@ -561,43 +567,135 @@ export function SubtaskDetailPanel({
 
 				{/* ---- Footer CTA ---- */}
 				<div style={{ padding: "14px 18px", borderTop: `1px solid ${sdp.divider}` }}>
-					<button
-						onClick={onToggle}
-						disabled={toggling}
-						data-testid="subtask-detail-toggle-status-btn"
-						style={{
-							width: "100%",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: "8px",
-							padding: "11px 16px",
-							borderRadius: "8px",
-							border: "none",
-							cursor: toggling ? "wait" : "pointer",
-							fontSize: "13px",
-							fontWeight: 700,
-							background: isCompleted ? sdp.ctaBg : "linear-gradient(135deg,#7c3aed,#6d28d9)",
-							color: isCompleted ? sdp.ctaClr : "#fff",
-							transition: "opacity 0.15s",
-							boxShadow: isCompleted ? "none" : "0 4px 14px rgba(124,58,237,0.35)",
-						}}
-						onMouseOver={(e) => {
-							if (!toggling) e.currentTarget.style.opacity = "0.85";
-						}}
-						onMouseOut={(e) => {
-							e.currentTarget.style.opacity = "1";
-						}}
-					>
-						{toggling ? (
-							<Loader2 size={15} className="spinner" />
-						) : isCompleted ? (
-							<Circle size={15} />
-						) : (
-							<CheckCircle2 size={15} />
-						)}
-						{isCompleted ? "Marcar como pendiente" : "Marcar como completada"}
-					</button>
+					{showPostponeInput ? (
+						<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+							<textarea
+								value={postponeNote}
+								onChange={(e) => setPostponeNote(e.target.value)}
+								placeholder="Motivo de la posposición (opcional)..."
+								className="input-textarea"
+								autoFocus
+								style={{
+									width: "100%",
+									padding: "10px",
+									borderRadius: "8px",
+									border: `1px solid ${sdp.divider}`,
+									background: sdp.panelBg,
+									color: sdp.metaValue,
+									resize: "vertical",
+									minHeight: "60px",
+									fontSize: "12px",
+									fontFamily: "inherit",
+									boxSizing: "border-box"
+								}}
+							/>
+							<div style={{ display: "flex", gap: "8px" }}>
+								<button
+									onClick={() => {
+										setShowPostponeInput(false);
+										setPostponeNote("");
+									}}
+									style={{
+										flex: 1,
+										padding: "8px",
+										borderRadius: "8px",
+										border: `1px solid ${sdp.divider}`,
+										background: "transparent",
+										color: sdp.metaValue,
+										cursor: "pointer",
+										fontSize: "12px",
+										fontWeight: 600
+									}}
+								>
+									Cancelar
+								</button>
+								<button
+									onClick={() => onToggle("postponed", postponeNote)}
+									disabled={toggling}
+									style={{
+										flex: 1,
+										padding: "8px",
+										borderRadius: "8px",
+										border: "none",
+										background: "linear-gradient(135deg,#fb923c,#ea580c)",
+										color: "#fff",
+										cursor: toggling ? "wait" : "pointer",
+										fontSize: "12px",
+										fontWeight: 600,
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: "6px"
+									}}
+								>
+									{toggling && <Loader2 size={14} className="spinner" />}
+									{toggling ? "Cargando..." : "Guardar"}
+								</button>
+							</div>
+						</div>
+					) : (
+						<div style={{ display: "flex", gap: "10px", flexDirection: "column" }}>
+							{subtask.status !== "postponed" && !isCompleted && (
+								<button
+									onClick={() => setShowPostponeInput(true)}
+									disabled={toggling}
+									style={{
+										width: "100%",
+										padding: "9px",
+										borderRadius: "8px",
+										border: `1px solid ${sdp.divider}`,
+										background: "transparent",
+										color: "#fb923c",
+										cursor: "pointer",
+										fontSize: "13px",
+										fontWeight: 600,
+										transition: "background 0.15s"
+									}}
+									onMouseOver={(e) => (e.currentTarget.style.background = "rgba(251,146,60,0.1)")}
+									onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+								>
+									Posponer
+								</button>
+							)}
+							<button
+								onClick={() => onToggle(isCompleted ? "pending" : "completed")}
+								disabled={toggling}
+								data-testid="subtask-detail-toggle-status-btn"
+								style={{
+									width: "100%",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: "8px",
+									padding: "11px 16px",
+									borderRadius: "8px",
+									border: "none",
+									cursor: toggling ? "wait" : "pointer",
+									fontSize: "13px",
+									fontWeight: 700,
+									background: isCompleted ? sdp.ctaBg : "linear-gradient(135deg,#7c3aed,#6d28d9)",
+									color: isCompleted ? sdp.ctaClr : "#fff",
+									transition: "opacity 0.15s",
+									boxShadow: isCompleted ? "none" : "0 4px 14px rgba(124,58,237,0.35)",
+								}}
+								onMouseOver={(e) => {
+									if (!toggling) e.currentTarget.style.opacity = "0.85";
+								}}
+								onMouseOut={(e) => {
+									e.currentTarget.style.opacity = "1";
+								}}
+							>
+								{toggling ? (
+									<Loader2 size={15} className="spinner" />
+								) : isCompleted ? (
+									<Circle size={15} />
+								) : (
+									<CheckCircle2 size={15} />
+								)}
+								{toggling ? "Cargando..." : isCompleted ? "Marcar como pendiente" : "Marcar como completada"}
+							</button>
+						</div>
+					)}
 				</div>
 			</aside>
 

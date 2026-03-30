@@ -165,6 +165,8 @@ export default function TodayKanban({
 	} as const;
 
 	const [kanban, setKanban] = useState<KanbanState>(initialData ?? EMPTY_KANBAN);
+	const [pageMap, setPageMap] = useState<Record<KanbanGroup, number>>({ overdue: 1, today: 1, upcoming: 1, postponed: 1 });
+	const ITEMS_PER_PAGE = 10;
 	const [kanbanLoading, setKanbanLoading] = useState(!initialData);
 	const [selectedSubtask, setSelectedSubtask] = useState<{
 		subtask: Subtask;
@@ -210,8 +212,9 @@ export default function TodayKanban({
 		}
 		setKanbanLoading(true);
 		fetchTodayView()
-			.then((data) => {
+			.then((raw) => {
 				if (!cancelled) {
+					const data = 'results' in raw ? raw.results : raw;
 					const k: KanbanState = {
 						overdue: data.overdue,
 						today: data.today,
@@ -999,21 +1002,30 @@ export default function TodayKanban({
 								</p>
 							</div>
 						) : (
-							items
-								.filter((s) => statusFilter === "all" || s.status === statusFilter)
-								.filter(
-									(s) =>
-										courseFilter === "all" ||
-										(s.course_name ??
-											activities.find((a) => a.id === s.activity?.id)?.course_name ??
-											"Sin materia") === courseFilter,
-								)
-								.filter(
-									(s) =>
-										!searchQuery.trim() ||
-										s.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
-								)
-								.map((subtask) => {
+							(() => {
+								const filteredItems = items
+									.filter((s) => statusFilter === "all" || s.status === statusFilter)
+									.filter(
+										(s) =>
+											courseFilter === "all" ||
+											(s.course_name ??
+												activities.find((a) => a.id === s.activity?.id)?.course_name ??
+												"Sin materia") === courseFilter,
+									)
+									.filter(
+										(s) =>
+											!searchQuery.trim() ||
+											s.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+									);
+								
+								const currentPage = pageMap[group] || 1;
+								const maxLimit = currentPage * ITEMS_PER_PAGE;
+								const visibleItems = filteredItems.slice(0, maxLimit);
+								const hasMore = visibleItems.length < filteredItems.length;
+
+								return (
+									<>
+										{visibleItems.map((subtask) => {
 									const isCompleted = subtask.status === "completed";
 									const isToggling = togglingId === subtask.id;
 									const isSelected = selectedSubtask?.subtask.id === subtask.id;
@@ -1474,10 +1486,40 @@ export default function TodayKanban({
 											</div>
 										</div>
 									);
-								})
-						)}
-					</div>
-				))}
+								})}
+								{hasMore && (
+									<button
+										onClick={() => setPageMap(prev => ({ ...prev, [group]: (prev[group] || 1) + 1 }))}
+										data-testid={`today-load-more-${group}`}
+										style={{
+											marginTop: "8px",
+											padding: "10px",
+											width: "100%",
+											background: tv.chipBg,
+											border: `1px solid ${tv.chipBorder}`,
+											borderRadius: "8px",
+											color: accent,
+											fontSize: "13px",
+											fontWeight: 600,
+											cursor: "pointer",
+											transition: "all 0.15s",
+										}}
+										onMouseOver={(e) => {
+											e.currentTarget.style.background = tv.tabHoverBg;
+										}}
+										onMouseOut={(e) => {
+											e.currentTarget.style.background = tv.chipBg;
+										}}
+									>
+										Cargar Más
+									</button>
+								)}
+							</>
+						);
+					})()
+				)}
+			</div>
+		))}
 
 			{selectedSubtask && (
 				<SubtaskDetailPanel

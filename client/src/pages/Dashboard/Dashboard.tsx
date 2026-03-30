@@ -179,11 +179,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		if (subject) {
 			await deleteSubject(subject.id);
 			// Reload activities (cascade-deleted), subjects and today view
-			const [acts, subs, today] = await Promise.all([
+			const [actsRaw, subs, todayRaw] = await Promise.all([
 				fetchActivities(),
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
+			const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
+			const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
@@ -215,11 +217,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		if (subject) {
 			await updateSubject(subject.id, trimmed);
 			// Reload activities (course_name bulk-updated), subjects and today view
-			const [acts, subs, today] = await Promise.all([
+			const [actsRaw, subs, todayRaw] = await Promise.all([
 				fetchActivities(),
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
+			const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
+			const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
@@ -357,7 +361,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const refreshPlannerAfterConflictUpdate = useCallback(async () => {
-		const [acts, today] = await Promise.all([fetchActivities(), fetchTodayView()]);
+		const [actsRaw, todayRaw] = await Promise.all([fetchActivities(), fetchTodayView()]);
+		const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
+		const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
 		setActivities(Array.isArray(acts) ? acts : []);
 		setTodayData({
 			overdue: today.overdue,
@@ -369,7 +375,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 	const refreshTodayFromOrganizationMutation = useCallback(async () => {
 		try {
-			const todayView = await fetchTodayView();
+			const todayRaw = await fetchTodayView();
+			const todayView = 'results' in todayRaw ? todayRaw.results : todayRaw;
 			setTodayData({
 				overdue: todayView.overdue,
 				today: todayView.today,
@@ -531,7 +538,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			}
 
 			try {
-				const [me, acts, todayView, subs] = await Promise.all([
+				const [me, actsRaw, todayRaw, subs] = await Promise.all([
 					fetchMe(),
 					fetchActivities(),
 					fetchTodayView(),
@@ -539,6 +546,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				]);
 				if (!cancelled) {
 					setUser(me ?? null);
+					const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
+					const todayView = 'results' in todayRaw ? todayRaw.results : todayRaw;
 					setActivities(Array.isArray(acts) ? acts : []);
 					setTodayData({
 						overdue: todayView.overdue,
@@ -1085,7 +1094,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 							) : (
 								<GreetingIcon size={20} className="greeting-icon" />
 							)}
-							{greeting}.
+							{greeting}
 						</p>
 						<p className="sidebar-subtitle">¿Qué haremos hoy?</p>
 					</div>

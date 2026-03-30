@@ -22,6 +22,8 @@ export interface Activity {
 	subtask_count: number;
 	total_estimated_hours: number;
 	subtasks?: Subtask[];
+	total_subtasks_count?: number;
+	completed_subtasks_count?: number;
 }
 
 export interface Subtask {
@@ -37,6 +39,13 @@ export interface Subtask {
 	// Populated by TodayView endpoint (TodaySubtaskSerializer)
 	activity?: { id: number; title: string };
 	course_name?: string;
+}
+
+export interface PaginatedResponse<T> {
+	count: number;
+	next: string | null;
+	previous: string | null;
+	results: T;
 }
 
 export type TodayStatusFilter = "vencidas" | "hoy" | "proximas" | "pospuestas";
@@ -59,6 +68,8 @@ export interface TodayViewParams {
 	nDays?: number;
 	courseId?: number;
 	status?: TodayStatusFilter;
+	page?: number;
+	limit?: number;
 }
 
 export interface Subject {
@@ -88,8 +99,11 @@ export async function updateMe(payload: Partial<Pick<User, "max_daily_hours">>):
 	return data;
 }
 
-export async function fetchActivities(): Promise<Activity[]> {
-	const { data } = await client.get<Activity[]>("/activities/");
+export async function fetchActivities(page?: number, limit?: number): Promise<PaginatedResponse<Activity[]> | Activity[]> {
+	const params: Record<string, string | number> = {};
+	if (page !== undefined) params.page = page;
+	if (limit !== undefined) params.limit = limit;
+	const { data } = await client.get<PaginatedResponse<Activity[]> | Activity[]>("/activities/", { params });
 	return data;
 }
 
@@ -120,12 +134,14 @@ export async function deleteActivity(id: number): Promise<void> {
 	await client.delete(`/activities/${id}/`);
 }
 
-export async function fetchTodayView(params?: TodayViewParams): Promise<TodayViewResponse> {
+export async function fetchTodayView(params?: TodayViewParams): Promise<TodayViewResponse | PaginatedResponse<TodayViewResponse>> {
 	const query: Record<string, string | number> = {};
 	if (params?.nDays !== undefined) query.n_days = params.nDays;
 	if (params?.courseId !== undefined) query.courseId = params.courseId;
 	if (params?.status !== undefined) query.status = params.status;
-	const { data } = await client.get<TodayViewResponse>("/today/", { params: query });
+	if (params?.page !== undefined) query.page = params.page;
+	if (params?.limit !== undefined) query.limit = params.limit;
+	const { data } = await client.get<TodayViewResponse | PaginatedResponse<TodayViewResponse>>("/today/", { params: query });
 	return data;
 }
 
