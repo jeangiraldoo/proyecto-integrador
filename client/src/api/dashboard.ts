@@ -170,9 +170,11 @@ export async function updateSubtask(
 		>
 	>,
 ): Promise<Subtask> {
+	const { postponement_note, ...rest } = payload;
+	const submitPayload = postponement_note !== undefined ? { ...rest, note: postponement_note } : rest;
 	const { data } = await client.patch<Subtask>(
 		`/activities/${activityId}/subtasks/${subtaskId}/`,
-		payload,
+		submitPayload,
 	);
 	return data;
 }

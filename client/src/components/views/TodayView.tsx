@@ -112,7 +112,11 @@ export default function TodayKanban({
 	maxDailyHours?: number;
 	conflictDates?: string[];
 	onConflict?: (info: ConflictInfo) => void;
-	onSubtaskMutated?: () => void;
+	onSubtaskMutated?: (
+		subtaskId?: number,
+		patch?: Partial<Pick<Subtask, "estimated_hours" | "target_date" | "status">>,
+		previousStatus?: string,
+	) => void;
 	searchQuery?: string;
 }) {
 	const { isDark } = useTheme();
@@ -308,7 +312,7 @@ export default function TodayKanban({
 					? { group, subtask: { ...prev.subtask, status: nextStatus } }
 					: prev,
 			);
-			onSubtaskMutated?.();
+			onSubtaskMutated?.(subtask.id, { status: nextStatus }, subtask.status);
 			toast.success(nextLabels[nextStatus] ?? nextStatus);
 		} catch {
 			toast.error("No se pudo actualizar la tarea.");
@@ -375,7 +379,7 @@ export default function TodayKanban({
 				});
 			}
 		}
-		onSubtaskMutated?.();
+		onSubtaskMutated?.(subtask.id, fields, subtask.status);
 		toast.success("Tarea actualizada");
 	}
 
