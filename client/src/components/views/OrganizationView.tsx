@@ -21,6 +21,7 @@ import "@/pages/Dashboard/Dashboard.css";
 import { formatDate, daysUntil } from "@/pages/Dashboard/utils/dashboardUtils";
 import { EditActivityForm, SubjectFormModal } from "@/components/modals/Organizations/OrgModals";
 import SubtaskManagerModal from "@/components/modals/Subtasks/SubtaskManagerModal";
+import Pagination from "@/components/ui/Pagination";
 import { useTheme } from "@/hooks/useTheme";
 
 interface OrgViewProps {
@@ -269,10 +270,8 @@ export default function OrganizationView({
 	});
 
 	const paginatedSubjectKeys = useMemo(() => {
-		return allSubjectKeys.slice(0, orgPage * ORG_LIMIT);
+		return allSubjectKeys.slice((orgPage - 1) * ORG_LIMIT, orgPage * ORG_LIMIT);
 	}, [allSubjectKeys, orgPage]);
-
-	const hasMoreSubjects = paginatedSubjectKeys.length < allSubjectKeys.length;
 
 	if (allSubjectKeys.length === 0) {
 		return (
@@ -1081,32 +1080,11 @@ export default function OrganizationView({
 						</div>
 					);
 				})}
-				{hasMoreSubjects && (
-					<button
-						onClick={() => setOrgPage((prev) => prev + 1)}
-						style={{
-							marginTop: "8px",
-							padding: "10px",
-							width: "100%",
-							background: ov.subBg,
-							border: `1px solid ${ov.subBdr}`,
-							borderRadius: "12px",
-							color: ov.iconClr,
-							fontSize: "13px",
-							fontWeight: 600,
-							cursor: "pointer",
-							transition: "all 0.15s",
-						}}
-						onMouseOver={(e) => {
-							e.currentTarget.style.background = isDark ? "#132040" : "rgba(124,92,255,0.08)";
-						}}
-						onMouseOut={(e) => {
-							e.currentTarget.style.background = ov.subBg;
-						}}
-					>
-						Cargar Más Materias
-					</button>
-				)}
+				<Pagination
+					currentPage={orgPage}
+					totalPages={Math.ceil(allSubjectKeys.length / ORG_LIMIT)}
+					onPageChange={setOrgPage}
+				/>
 			</div>
 
 			{/* Subtask manager modal */}

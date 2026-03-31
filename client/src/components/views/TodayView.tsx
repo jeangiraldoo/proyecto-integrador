@@ -36,6 +36,7 @@ import {
 import { type ConflictInfo } from "@/components/modals/Activities/ConflictModal";
 import { SubtaskDetailPanel } from "@/components/shared/SubtaskDetailPanel";
 import { CreateSubtaskModal } from "@/components/modals/Subtasks/SubtaskModals";
+import Pagination from "@/components/ui/Pagination";
 
 /** Sorting rule ("Regla de Oro"):
  *  - Overdue  → chronological, oldest first (target_date ASC)
@@ -1023,9 +1024,11 @@ export default function TodayKanban({
 									);
 								
 								const currentPage = pageMap[group] || 1;
-								const maxLimit = currentPage * ITEMS_PER_PAGE;
-								const visibleItems = filteredItems.slice(0, maxLimit);
-								const hasMore = visibleItems.length < filteredItems.length;
+								const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+								const visibleItems = filteredItems.slice(
+									(currentPage - 1) * ITEMS_PER_PAGE,
+									currentPage * ITEMS_PER_PAGE
+								);
 
 								return (
 									<>
@@ -1491,32 +1494,12 @@ export default function TodayKanban({
 										</div>
 									);
 								})}
-								{hasMore && (
-									<button
-										onClick={() => setPageMap(prev => ({ ...prev, [group]: (prev[group] || 1) + 1 }))}
-										data-testid={`today-load-more-${group}`}
-										style={{
-											marginTop: "8px",
-											padding: "10px",
-											width: "100%",
-											background: tv.chipBg,
-											border: `1px solid ${tv.chipBorder}`,
-											borderRadius: "8px",
-											color: accent,
-											fontSize: "13px",
-											fontWeight: 600,
-											cursor: "pointer",
-											transition: "all 0.15s",
-										}}
-										onMouseOver={(e) => {
-											e.currentTarget.style.background = tv.tabHoverBg;
-										}}
-										onMouseOut={(e) => {
-											e.currentTarget.style.background = tv.chipBg;
-										}}
-									>
-										Cargar Más
-									</button>
+								{totalPages > 1 && (
+									<Pagination
+										currentPage={currentPage}
+										totalPages={totalPages}
+										onPageChange={(page) => setPageMap((prev) => ({ ...prev, [group]: page }))}
+									/>
 								)}
 							</>
 						);

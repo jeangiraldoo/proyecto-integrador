@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { type Activity } from "@/api/dashboard";
 import { useTheme } from "@/hooks/useTheme";
+import Pagination from "@/components/ui/Pagination";
 
 interface ProgressViewProps {
 	activities: Activity[];
@@ -8,6 +9,8 @@ interface ProgressViewProps {
 
 export default function ProgressView({ activities }: ProgressViewProps) {
 	const { isDark } = useTheme();
+	const [page, setPage] = useState(1);
+	const LIMIT = 10;
 
 	const stats = useMemo(() => {
 		let totalCompletedSubs = 0;
@@ -171,7 +174,7 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 							No hay actividades registradas.
 						</p>
 					)}
-					{activities.map((act) => {
+					{activities.slice((page - 1) * LIMIT, page * LIMIT).map((act) => {
 						const totalSubs = act.total_subtasks_count ?? act.subtask_count ?? 0;
 						const completedSubs = act.completed_subtasks_count ?? 0;
 						const pct = totalSubs > 0 ? Math.round((completedSubs / totalSubs) * 100) : 0;
@@ -216,6 +219,14 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 						);
 					})}
 				</div>
+
+				{activities.length > LIMIT && (
+					<Pagination
+						currentPage={page}
+						totalPages={Math.ceil(activities.length / LIMIT)}
+						onPageChange={setPage}
+					/>
+				)}
 			</div>
 		</div>
 	);
