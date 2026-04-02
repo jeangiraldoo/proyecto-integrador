@@ -38,9 +38,14 @@ export function classifyActivity(dueDateIso: string): SectionVariant {
 
 import type { Subtask } from "@/api/dashboard";
 
-export type KanbanGroup = "overdue" | "today" | "upcoming";
-export type KanbanState = { overdue: Subtask[]; today: Subtask[]; upcoming: Subtask[] };
-export const EMPTY_KANBAN: KanbanState = { overdue: [], today: [], upcoming: [] };
+export type KanbanGroup = "overdue" | "today" | "upcoming" | "postponed";
+export type KanbanState = {
+	overdue: Subtask[];
+	today: Subtask[];
+	upcoming: Subtask[];
+	postponed: Subtask[];
+};
+export const EMPTY_KANBAN: KanbanState = { overdue: [], today: [], upcoming: [], postponed: [] };
 
 export function checkDailyConflicts(
 	subtasks: Array<{ target_date: string; estimated_hours: number }>,

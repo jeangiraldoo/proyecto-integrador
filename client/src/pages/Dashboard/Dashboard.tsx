@@ -61,6 +61,7 @@ import {
 } from "@/pages/Dashboard/utils/dashboardUtils";
 import OrganizationView from "@/components/views/OrganizationView";
 import TodayKanban from "@/components/views/TodayView";
+import ProgressView from "@/components/views/ProgressView";
 import ConflictModal, {
 	type ConflictInfo,
 	type ConflictModalItem,
@@ -179,15 +180,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		if (subject) {
 			await deleteSubject(subject.id);
 			// Reload activities (cascade-deleted), subjects and today view
-			const [acts, subs, today] = await Promise.all([
+			const [actsRaw, subs, todayRaw] = await Promise.all([
 				fetchActivities(),
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
+			const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+			const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
-				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+				setTodayData({
+					overdue: today.overdue,
+					today: today.today,
+					upcoming: today.upcoming,
+					postponed: today.postponed ?? [],
+				});
 			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
@@ -210,15 +218,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 		if (subject) {
 			await updateSubject(subject.id, trimmed);
 			// Reload activities (course_name bulk-updated), subjects and today view
-			const [acts, subs, today] = await Promise.all([
+			const [actsRaw, subs, todayRaw] = await Promise.all([
 				fetchActivities(),
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
+			const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+			const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
-				setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+				setTodayData({
+					overdue: today.overdue,
+					today: today.today,
+					upcoming: today.upcoming,
+					postponed: today.postponed ?? [],
+				});
 			void refreshConflicts();
 		} else {
 			// Fallback: localStorage only
@@ -347,18 +362,27 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	);
 
 	const refreshPlannerAfterConflictUpdate = useCallback(async () => {
-		const [acts, today] = await Promise.all([fetchActivities(), fetchTodayView()]);
+		const [actsRaw, todayRaw] = await Promise.all([fetchActivities(), fetchTodayView()]);
+		const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+		const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 		setActivities(Array.isArray(acts) ? acts : []);
-		setTodayData({ overdue: today.overdue, today: today.today, upcoming: today.upcoming });
+		setTodayData({
+			overdue: today.overdue,
+			today: today.today,
+			upcoming: today.upcoming,
+			postponed: today.postponed ?? [],
+		});
 	}, []);
 
 	const refreshTodayFromOrganizationMutation = useCallback(async () => {
 		try {
-			const todayView = await fetchTodayView();
+			const todayRaw = await fetchTodayView();
+			const todayView = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setTodayData({
 				overdue: todayView.overdue,
 				today: todayView.today,
 				upcoming: todayView.upcoming,
+				postponed: todayView.postponed ?? [],
 			});
 		} catch (err) {
 			console.warn("No se pudo refrescar la vista de hoy tras mutar subtareas:", err);
@@ -368,30 +392,52 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	}, [refreshConflicts]);
 
 	const applySubtaskPatchLocally = useCallback(
-		(subtaskId: number, patch: Partial<Pick<Subtask, "estimated_hours" | "target_date">>) => {
+		(
+			subtaskId: number,
+			patch: Partial<Pick<Subtask, "estimated_hours" | "target_date" | "status">>,
+			previousStatus?: string,
+		) => {
 			setActivities((prev) =>
 				prev.map((activity) => {
-					if (!activity.subtasks?.some((subtask) => subtask.id === subtaskId)) return activity;
+					if (
+						!activity.subtasks?.some((subtask) => subtask.id === subtaskId) &&
+						activity.id !== resolveActivityIdForPatch(subtaskId, prev)
+					) {
+						return activity;
+					}
 
-					const nextSubtasks = activity.subtasks.map((subtask) =>
-						subtask.id === subtaskId ? { ...subtask, ...patch } : subtask,
-					);
+					const nextSubtasks =
+						activity.subtasks?.map((subtask) =>
+							subtask.id === subtaskId ? { ...subtask, ...patch } : subtask,
+						) ?? [];
 
 					const nextTotalEstimatedHours = nextSubtasks.reduce(
 						(sum, subtask) => sum + (Number(subtask.estimated_hours) || 0),
 						0,
 					);
 
+					let nextCompletedCount = activity.completed_subtasks_count ?? 0;
+					if (patch.status && patch.status !== previousStatus) {
+						if (patch.status === "completed") nextCompletedCount += 1;
+						if (previousStatus === "completed") nextCompletedCount -= 1;
+					}
+					nextCompletedCount = Math.max(0, nextCompletedCount);
+
 					return {
 						...activity,
 						subtasks: nextSubtasks,
 						total_estimated_hours: nextTotalEstimatedHours,
+						completed_subtasks_count: nextCompletedCount,
 					};
 				}),
 			);
 		},
 		[],
 	);
+
+	function resolveActivityIdForPatch(subtaskId: number, currentActivities: Activity[]) {
+		return currentActivities.find((a) => a.subtasks?.some((s) => s.id === subtaskId))?.id;
+	}
 
 	const applyTodayDataPatchLocally = useCallback(
 		(subtaskId: number, patch: Partial<Pick<Subtask, "estimated_hours" | "target_date">>) => {
@@ -436,6 +482,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 					overdue: prev.overdue.filter((subtask) => subtask.id !== subtaskId),
 					today: prev.today.filter((subtask) => subtask.id !== subtaskId),
 					upcoming: prev.upcoming.filter((subtask) => subtask.id !== subtaskId),
+					postponed: prev.postponed.filter((subtask) => subtask.id !== subtaskId),
 				};
 
 				nextState[targetGroup] = [...nextState[targetGroup], nextSubtask];
@@ -514,7 +561,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 			}
 
 			try {
-				const [me, acts, todayView, subs] = await Promise.all([
+				const [me, actsRaw, todayRaw, subs] = await Promise.all([
 					fetchMe(),
 					fetchActivities(),
 					fetchTodayView(),
@@ -522,11 +569,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				]);
 				if (!cancelled) {
 					setUser(me ?? null);
+					const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+					const todayView = "results" in todayRaw ? todayRaw.results : todayRaw;
 					setActivities(Array.isArray(acts) ? acts : []);
 					setTodayData({
 						overdue: todayView.overdue,
 						today: todayView.today,
 						upcoming: todayView.upcoming,
+						postponed: todayView.postponed ?? [],
 					});
 					setApiSubjects(Array.isArray(subs) ? subs : []);
 					void refreshConflicts();
@@ -1067,7 +1117,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 							) : (
 								<GreetingIcon size={20} className="greeting-icon" />
 							)}
-							{greeting}.
+							{greeting}
 						</p>
 						<p className="sidebar-subtitle">¿Qué haremos hoy?</p>
 					</div>
@@ -1499,11 +1549,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 								maxDailyHours={user?.max_daily_hours ?? 0}
 								conflictDates={conflictDates}
 								onConflict={handleConflictDetected}
-								onSubtaskMutated={() => {
+								onSubtaskMutated={(subtaskId, patch, prevStatus) => {
 									void refreshConflicts();
-									void fetchActivities().then((acts) =>
-										setActivities(Array.isArray(acts) ? acts : []),
-									);
+									if (subtaskId && patch) {
+										applySubtaskPatchLocally(subtaskId, patch, prevStatus);
+									} else {
+										void fetchActivities().then((acts) =>
+											setActivities(Array.isArray(acts) ? acts : []),
+										);
+									}
 								}}
 								searchQuery={searchQuery}
 							/>
@@ -1551,24 +1605,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						)}
 
 						{/* ===== PROGRESS VIEW ===== */}
-						{activeNav === "progress" && (
-							<div
-								className="fade-in"
-								data-testid="dashboard-progress-view"
-								style={{
-									animationDelay: "0.2s",
-									padding: "4rem 2rem",
-									textAlign: "center",
-									color: "#94a3b8",
-								}}
-							>
-								<BarChart3
-									size={48}
-									style={{ opacity: 0.2, margin: "0 auto 1rem auto", display: "block" }}
-								/>
-								<p>Vista de progreso en construcción...</p>
-							</div>
-						)}
+						{activeNav === "progress" && <ProgressView activities={activities} />}
 					</>
 				)}
 				{/* Subject name modal (from header button) */}

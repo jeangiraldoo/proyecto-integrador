@@ -21,6 +21,7 @@ import "@/pages/Dashboard/Dashboard.css";
 import { formatDate, daysUntil } from "@/pages/Dashboard/utils/dashboardUtils";
 import { EditActivityForm, SubjectFormModal } from "@/components/modals/Organizations/OrgModals";
 import SubtaskManagerModal from "@/components/modals/Subtasks/SubtaskManagerModal";
+import Pagination from "@/components/ui/Pagination";
 import { useTheme } from "@/hooks/useTheme";
 
 interface OrgViewProps {
@@ -31,7 +32,11 @@ interface OrgViewProps {
 	onRemoveSubject: (name: string) => Promise<void>;
 	onRenameSubject: (oldName: string, newName: string) => Promise<void>;
 	onActivityUpdate: (updated: Activity) => void;
-	onSubtaskMutated?: () => void;
+	onSubtaskMutated?: (
+		subtaskId?: number,
+		patch?: Partial<Pick<Subtask, "estimated_hours" | "target_date" | "status">>,
+		previousStatus?: string,
+	) => void;
 	dateLoadMap?: Record<string, number>;
 	conflictDates?: string[];
 	maxDailyHours?: number;
@@ -73,6 +78,9 @@ export default function OrganizationView({
 }: OrgViewProps) {
 	const { isDark } = useTheme();
 	const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+
+	const [orgPage, setOrgPage] = useState(1);
+	const ORG_LIMIT = 10;
 
 	useEffect(() => {
 		if (expandSubject?.subject) {
@@ -261,6 +269,10 @@ export default function OrganizationView({
 		return a.localeCompare(b);
 	});
 
+	const paginatedSubjectKeys = useMemo(() => {
+		return allSubjectKeys.slice((orgPage - 1) * ORG_LIMIT, orgPage * ORG_LIMIT);
+	}, [allSubjectKeys, orgPage]);
+
 	if (allSubjectKeys.length === 0) {
 		return (
 			<div
@@ -307,7 +319,7 @@ export default function OrganizationView({
 					gap: "1rem",
 				}}
 			>
-				{allSubjectKeys.map((subject) => {
+				{paginatedSubjectKeys.map((subject) => {
 					const acts = grouped[subject] ?? [];
 					const isOpen = expandedSubject === subject;
 					const subjectToken = toTestIdToken(subject);
@@ -501,10 +513,8 @@ export default function OrganizationView({
 												const isActOpen = expandedActivity === act.id;
 												const stState = subtaskStateByActivity[act.id];
 												const subtasks = stState?.items ?? [];
-												const completedSubs = subtasks.filter(
-													(s) => s.status === "completed",
-												).length;
-												const totalSubs = subtasks.length || act.subtask_count || 0;
+												const completedSubs = act.completed_subtasks_count ?? 0;
+												const totalSubs = act.total_subtasks_count ?? act.subtask_count ?? 0;
 
 												const isActOverdue =
 													act.status !== "completed" && daysUntil(act.due_date) < 0;
@@ -690,6 +700,49 @@ export default function OrganizationView({
 																		</span>
 																	)}
 																</div>
+																{/* PROGRESS BAR - MOVED TO HEADER */}
+																{totalSubs > 0 && (
+																	<div style={{ marginTop: "12px", maxWidth: "400px" }}>
+																		<div
+																			style={{
+																				display: "flex",
+																				justifyContent: "space-between",
+																				marginBottom: "4px",
+																			}}
+																		>
+																			<span
+																				style={{
+																					fontSize: "10px",
+																					color: ov.progLabel,
+																					fontWeight: 600,
+																				}}
+																			>
+																				PROGRESO
+																			</span>
+																			<span style={{ fontSize: "10px", color: ov.progCount }}>
+																				{completedSubs} de {totalSubs}
+																			</span>
+																		</div>
+																		<div
+																			style={{
+																				height: "5px",
+																				background: ov.progTrack,
+																				borderRadius: "4px",
+																				overflow: "hidden",
+																			}}
+																		>
+																			<div
+																				style={{
+																					height: "100%",
+																					width: `${totalSubs > 0 ? (completedSubs / totalSubs) * 100 : 0}%`,
+																					background: "linear-gradient(90deg,#7c3aed,#34d399)",
+																					borderRadius: "4px",
+																					transition: "width 0.4s cubic-bezier(0.16,1,0.3,1)",
+																				}}
+																			/>
+																		</div>
+																	</div>
+																)}
 															</div>
 															<div
 																style={{
@@ -800,48 +853,6 @@ export default function OrganizationView({
 																		padding: "6px 16px 14px 16px",
 																	}}
 																>
-																	{totalSubs > 0 && (
-																		<div style={{ marginBottom: "10px", marginTop: "6px" }}>
-																			<div
-																				style={{
-																					display: "flex",
-																					justifyContent: "space-between",
-																					marginBottom: "4px",
-																				}}
-																			>
-																				<span
-																					style={{
-																						fontSize: "10px",
-																						color: ov.progLabel,
-																						fontWeight: 600,
-																					}}
-																				>
-																					PROGRESO
-																				</span>
-																				<span style={{ fontSize: "10px", color: ov.progCount }}>
-																					{completedSubs} de {totalSubs}
-																				</span>
-																			</div>
-																			<div
-																				style={{
-																					height: "4px",
-																					background: ov.progTrack,
-																					borderRadius: "4px",
-																					overflow: "hidden",
-																				}}
-																			>
-																				<div
-																					style={{
-																						height: "100%",
-																						width: `${totalSubs > 0 ? (completedSubs / totalSubs) * 100 : 0}%`,
-																						background: "linear-gradient(90deg,#7c3aed,#34d399)",
-																						borderRadius: "4px",
-																						transition: "width 0.4s",
-																					}}
-																				/>
-																			</div>
-																		</div>
-																	)}
 																	{stState?.loading && (
 																		<div
 																			style={{
@@ -1069,6 +1080,11 @@ export default function OrganizationView({
 						</div>
 					);
 				})}
+				<Pagination
+					currentPage={orgPage}
+					totalPages={Math.ceil(allSubjectKeys.length / ORG_LIMIT)}
+					onPageChange={setOrgPage}
+				/>
 			</div>
 
 			{/* Subtask manager modal */}
@@ -1090,6 +1106,7 @@ export default function OrganizationView({
 						onActivityUpdate({
 							...subtaskModalActivity,
 							subtask_count: items.length,
+							completed_subtasks_count: items.filter((i) => i.status === "completed").length,
 							total_estimated_hours: items.reduce(
 								(s, x) => s + (Number(x.estimated_hours) || 0),
 								0,
@@ -1106,6 +1123,7 @@ export default function OrganizationView({
 							...act,
 							total_estimated_hours: newTotal,
 							subtask_count: items.length,
+							completed_subtasks_count: items.filter((i) => i.status === "completed").length,
 						});
 					}}
 				/>

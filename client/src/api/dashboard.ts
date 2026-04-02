@@ -22,6 +22,8 @@ export interface Activity {
 	subtask_count: number;
 	total_estimated_hours: number;
 	subtasks?: Subtask[];
+	total_subtasks_count?: number;
+	completed_subtasks_count?: number;
 }
 
 export interface Subtask {
@@ -29,21 +31,30 @@ export interface Subtask {
 	name: string;
 	estimated_hours: number;
 	target_date: string;
-	status: "pending" | "completed" | "in_progress";
+	status: "pending" | "completed" | "in_progress" | "postponed";
 	ordering: number;
 	created_at: string;
 	updated_at: string;
+	postponement_note?: string;
 	// Populated by TodayView endpoint (TodaySubtaskSerializer)
 	activity?: { id: number; title: string };
 	course_name?: string;
 }
 
-export type TodayStatusFilter = "vencidas" | "hoy" | "proximas";
+export interface PaginatedResponse<T> {
+	count: number;
+	next: string | null;
+	previous: string | null;
+	results: T;
+}
+
+export type TodayStatusFilter = "vencidas" | "hoy" | "proximas" | "pospuestas";
 
 export interface TodayViewResponse {
 	overdue: Subtask[];
 	today: Subtask[];
 	upcoming: Subtask[];
+	postponed?: Subtask[];
 	meta: {
 		n_days: number;
 		filters: {
@@ -57,6 +68,8 @@ export interface TodayViewParams {
 	nDays?: number;
 	courseId?: number;
 	status?: TodayStatusFilter;
+	page?: number;
+	limit?: number;
 }
 
 export interface Subject {
@@ -86,8 +99,16 @@ export async function updateMe(payload: Partial<Pick<User, "max_daily_hours">>):
 	return data;
 }
 
-export async function fetchActivities(): Promise<Activity[]> {
-	const { data } = await client.get<Activity[]>("/activities/");
+export async function fetchActivities(
+	page?: number,
+	limit?: number,
+): Promise<PaginatedResponse<Activity[]> | Activity[]> {
+	const params: Record<string, string | number> = {};
+	if (page !== undefined) params.page = page;
+	if (limit !== undefined) params.limit = limit;
+	const { data } = await client.get<PaginatedResponse<Activity[]> | Activity[]>("/activities/", {
+		params,
+	});
 	return data;
 }
 
@@ -118,12 +139,19 @@ export async function deleteActivity(id: number): Promise<void> {
 	await client.delete(`/activities/${id}/`);
 }
 
-export async function fetchTodayView(params?: TodayViewParams): Promise<TodayViewResponse> {
+export async function fetchTodayView(
+	params?: TodayViewParams,
+): Promise<TodayViewResponse | PaginatedResponse<TodayViewResponse>> {
 	const query: Record<string, string | number> = {};
 	if (params?.nDays !== undefined) query.n_days = params.nDays;
 	if (params?.courseId !== undefined) query.courseId = params.courseId;
 	if (params?.status !== undefined) query.status = params.status;
-	const { data } = await client.get<TodayViewResponse>("/today/", { params: query });
+	if (params?.page !== undefined) query.page = params.page;
+	if (params?.limit !== undefined) query.limit = params.limit;
+	const { data } = await client.get<TodayViewResponse | PaginatedResponse<TodayViewResponse>>(
+		"/today/",
+		{ params: query },
+	);
 	return data;
 }
 
@@ -146,12 +174,18 @@ export async function updateSubtask(
 	activityId: number,
 	subtaskId: number,
 	payload: Partial<
-		Pick<Subtask, "name" | "estimated_hours" | "target_date" | "status" | "ordering">
+		Pick<
+			Subtask,
+			"name" | "estimated_hours" | "target_date" | "status" | "ordering" | "postponement_note"
+		>
 	>,
 ): Promise<Subtask> {
+	const { postponement_note, ...rest } = payload;
+	const submitPayload =
+		postponement_note !== undefined ? { ...rest, note: postponement_note } : rest;
 	const { data } = await client.patch<Subtask>(
 		`/activities/${activityId}/subtasks/${subtaskId}/`,
-		payload,
+		submitPayload,
 	);
 	return data;
 }
