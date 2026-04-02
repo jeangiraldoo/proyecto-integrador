@@ -22,7 +22,7 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 			const actCompleted = act.completed_subtasks_count ?? 0;
 			totalSubsAll += actTotal;
 			totalCompletedSubs += actCompleted;
-			
+
 			// A an activity is completed if all subtasks are done, or if it explicitly says completed
 			if (actTotal > 0 && actCompleted >= actTotal) {
 				totallyCompletedActs += 1;
@@ -31,7 +31,8 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 			}
 		}
 
-		const percentSubs = totalSubsAll > 0 ? Math.round((totalCompletedSubs / totalSubsAll) * 100) : 0;
+		const percentSubs =
+			totalSubsAll > 0 ? Math.round((totalCompletedSubs / totalSubsAll) * 100) : 0;
 		return {
 			totalCompletedSubs,
 			totalSubsAll,
@@ -59,7 +60,7 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 				color: txtClr,
 				maxWidth: "900px",
 				margin: "0 auto",
-				fontFamily: "Inter, sans-serif"
+				fontFamily: "Inter, sans-serif",
 			}}
 		>
 			<h2 style={{ fontSize: "24px", fontWeight: 600, textAlign: "center", marginBottom: "2rem" }}>
@@ -122,7 +123,9 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 					}}
 				>
 					<div style={{ textAlign: "center" }}>
-						<p style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px 0" }}>Actividades completadas</p>
+						<p style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px 0" }}>
+							Actividades completadas
+						</p>
 						<div
 							style={{
 								height: "14px",
@@ -140,11 +143,15 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 								}}
 							/>
 						</div>
-						<p style={{ margin: 0, fontSize: "14px" }}>{stats.totallyCompletedActs} de {stats.totalActs}</p>
+						<p style={{ margin: 0, fontSize: "14px" }}>
+							{stats.totallyCompletedActs} de {stats.totalActs}
+						</p>
 					</div>
 
 					<div style={{ textAlign: "center" }}>
-						<p style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px 0" }}>Subtareas completadas</p>
+						<p style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px 0" }}>
+							Subtareas completadas
+						</p>
 						<div
 							style={{
 								height: "14px",
@@ -162,7 +169,9 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 								}}
 							/>
 						</div>
-						<p style={{ margin: 0, fontSize: "14px" }}>{stats.totalCompletedSubs} de {stats.totalSubsAll}</p>
+						<p style={{ margin: 0, fontSize: "14px" }}>
+							{stats.totalCompletedSubs} de {stats.totalSubsAll}
+						</p>
 					</div>
 				</div>
 
@@ -178,7 +187,7 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 						const totalSubs = act.total_subtasks_count ?? act.subtask_count ?? 0;
 						const completedSubs = act.completed_subtasks_count ?? 0;
 						const pct = totalSubs > 0 ? Math.round((completedSubs / totalSubs) * 100) : 0;
-						
+
 						return (
 							<div
 								key={act.id}
@@ -191,7 +200,15 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 									borderBottom: `1px solid ${cardBdr}`,
 								}}
 							>
-								<span style={{ fontSize: "14px", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+								<span
+									style={{
+										fontSize: "14px",
+										fontWeight: 500,
+										whiteSpace: "nowrap",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+									}}
+								>
 									{act.title}
 								</span>
 								<span style={{ fontSize: "12px", color: subClr }}>
@@ -214,7 +231,9 @@ export default function ProgressView({ activities }: ProgressViewProps) {
 										}}
 									/>
 								</div>
-								<span style={{ fontSize: "12px", textAlign: "right", fontWeight: 500 }}>{pct}%</span>
+								<span style={{ fontSize: "12px", textAlign: "right", fontWeight: 500 }}>
+									{pct}%
+								</span>
 							</div>
 						);
 					})}

@@ -99,11 +99,16 @@ export async function updateMe(payload: Partial<Pick<User, "max_daily_hours">>):
 	return data;
 }
 
-export async function fetchActivities(page?: number, limit?: number): Promise<PaginatedResponse<Activity[]> | Activity[]> {
+export async function fetchActivities(
+	page?: number,
+	limit?: number,
+): Promise<PaginatedResponse<Activity[]> | Activity[]> {
 	const params: Record<string, string | number> = {};
 	if (page !== undefined) params.page = page;
 	if (limit !== undefined) params.limit = limit;
-	const { data } = await client.get<PaginatedResponse<Activity[]> | Activity[]>("/activities/", { params });
+	const { data } = await client.get<PaginatedResponse<Activity[]> | Activity[]>("/activities/", {
+		params,
+	});
 	return data;
 }
 
@@ -134,14 +139,19 @@ export async function deleteActivity(id: number): Promise<void> {
 	await client.delete(`/activities/${id}/`);
 }
 
-export async function fetchTodayView(params?: TodayViewParams): Promise<TodayViewResponse | PaginatedResponse<TodayViewResponse>> {
+export async function fetchTodayView(
+	params?: TodayViewParams,
+): Promise<TodayViewResponse | PaginatedResponse<TodayViewResponse>> {
 	const query: Record<string, string | number> = {};
 	if (params?.nDays !== undefined) query.n_days = params.nDays;
 	if (params?.courseId !== undefined) query.courseId = params.courseId;
 	if (params?.status !== undefined) query.status = params.status;
 	if (params?.page !== undefined) query.page = params.page;
 	if (params?.limit !== undefined) query.limit = params.limit;
-	const { data } = await client.get<TodayViewResponse | PaginatedResponse<TodayViewResponse>>("/today/", { params: query });
+	const { data } = await client.get<TodayViewResponse | PaginatedResponse<TodayViewResponse>>(
+		"/today/",
+		{ params: query },
+	);
 	return data;
 }
 
@@ -171,7 +181,8 @@ export async function updateSubtask(
 	>,
 ): Promise<Subtask> {
 	const { postponement_note, ...rest } = payload;
-	const submitPayload = postponement_note !== undefined ? { ...rest, note: postponement_note } : rest;
+	const submitPayload =
+		postponement_note !== undefined ? { ...rest, note: postponement_note } : rest;
 	const { data } = await client.patch<Subtask>(
 		`/activities/${activityId}/subtasks/${subtaskId}/`,
 		submitPayload,

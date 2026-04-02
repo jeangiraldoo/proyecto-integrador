@@ -170,7 +170,12 @@ export default function TodayKanban({
 	} as const;
 
 	const [kanban, setKanban] = useState<KanbanState>(initialData ?? EMPTY_KANBAN);
-	const [pageMap, setPageMap] = useState<Record<KanbanGroup, number>>({ overdue: 1, today: 1, upcoming: 1, postponed: 1 });
+	const [pageMap, setPageMap] = useState<Record<KanbanGroup, number>>({
+		overdue: 1,
+		today: 1,
+		upcoming: 1,
+		postponed: 1,
+	});
 	const ITEMS_PER_PAGE = 10;
 	const [kanbanLoading, setKanbanLoading] = useState(!initialData);
 	const [selectedSubtask, setSelectedSubtask] = useState<{
@@ -219,7 +224,7 @@ export default function TodayKanban({
 		fetchTodayView()
 			.then((raw) => {
 				if (!cancelled) {
-					const data = 'results' in raw ? raw.results : raw;
+					const data = "results" in raw ? raw.results : raw;
 					const k: KanbanState = {
 						overdue: data.overdue,
 						today: data.today,
@@ -1022,491 +1027,514 @@ export default function TodayKanban({
 											!searchQuery.trim() ||
 											s.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
 									);
-								
+
 								const currentPage = pageMap[group] || 1;
 								const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 								const visibleItems = filteredItems.slice(
 									(currentPage - 1) * ITEMS_PER_PAGE,
-									currentPage * ITEMS_PER_PAGE
+									currentPage * ITEMS_PER_PAGE,
 								);
 
 								return (
 									<>
 										{visibleItems.map((subtask) => {
-									const isCompleted = subtask.status === "completed";
-									const isToggling = togglingId === subtask.id;
-									const isSelected = selectedSubtask?.subtask.id === subtask.id;
-									const sColor: Record<string, string> = {
-										pending: "#fbbf24",
-										in_progress: "#60a5fa",
-										completed: "#34d399",
-									};
-									const sLabel: Record<string, string> = {
-										pending: "Pendiente",
-										in_progress: "En progreso",
-										completed: "Completada",
-									};
-									const diff = daysUntil(subtask.target_date);
-									let dayText = "",
-										dayColor = "#7dd3fc",
-										dayBg = "rgba(125,211,252,0.1)";
-									if (!isCompleted) {
-										if (diff < 0) {
-											dayText = `hace ${Math.abs(diff)}d`;
-											dayColor = "#f87171";
-											dayBg = "rgba(248,113,113,0.12)";
-										} else if (diff === 0) {
-											dayText = "Hoy";
-											dayColor = "#fbbf24";
-											dayBg = "rgba(251,191,36,0.14)";
-										} else if (diff === 1) {
-											dayText = "Mañana";
-											dayColor = "#fb923c";
-											dayBg = "rgba(251,146,60,0.13)";
-										} else {
-											dayText = `${diff}d`; /* blue defaults above */
-										}
-									}
-									const borderColor = isSelected
-										? "#c084fc"
-										: isCompleted
-											? tv.cardLBdrDone
-											: (sColor[subtask.status] ?? accent);
-									return (
-										<div
-											key={subtask.id}
-											role="button"
-											tabIndex={0}
-											aria-pressed={isSelected}
-											data-testid={`today-subtask-card-${subtask.id}`}
-											onClick={() =>
-												setSelectedSubtask(
-													isSelected
-														? null
-														: {
-																subtask: kanban[group].find((s) => s.id === subtask.id) ?? subtask,
-																group,
-															},
-												)
+											const isCompleted = subtask.status === "completed";
+											const isToggling = togglingId === subtask.id;
+											const isSelected = selectedSubtask?.subtask.id === subtask.id;
+											const sColor: Record<string, string> = {
+												pending: "#fbbf24",
+												in_progress: "#60a5fa",
+												completed: "#34d399",
+											};
+											const sLabel: Record<string, string> = {
+												pending: "Pendiente",
+												in_progress: "En progreso",
+												completed: "Completada",
+											};
+											const diff = daysUntil(subtask.target_date);
+											let dayText = "",
+												dayColor = "#7dd3fc",
+												dayBg = "rgba(125,211,252,0.1)";
+											if (!isCompleted) {
+												if (diff < 0) {
+													dayText = `hace ${Math.abs(diff)}d`;
+													dayColor = "#f87171";
+													dayBg = "rgba(248,113,113,0.12)";
+												} else if (diff === 0) {
+													dayText = "Hoy";
+													dayColor = "#fbbf24";
+													dayBg = "rgba(251,191,36,0.14)";
+												} else if (diff === 1) {
+													dayText = "Mañana";
+													dayColor = "#fb923c";
+													dayBg = "rgba(251,146,60,0.13)";
+												} else {
+													dayText = `${diff}d`; /* blue defaults above */
+												}
 											}
-											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ")
-													setSelectedSubtask(isSelected ? null : { subtask, group });
-											}}
-											style={{
-												display: "flex",
-												alignItems: "center",
-												gap: "14px",
-												background: isSelected
-													? "rgba(192,132,252,0.08)"
-													: isCompleted
-														? tv.cardBgDone
-														: subtask.status === "in_progress"
-															? tv.cardBgProg
-															: tv.cardBg,
-												border: `1px solid ${isSelected ? "rgba(192,132,252,0.4)" : isCompleted ? tv.cardBdrDone : subtask.status === "in_progress" ? tv.cardBdrProg : tv.cardBdr}`,
-												borderLeft: `3px solid ${isCompleted ? tv.cardLBdrDone : borderColor}`,
-												borderRadius: "10px",
-												padding: "13px 16px 13px 14px",
-												cursor: "pointer",
-												transition: "all 0.15s",
-												outline: "none",
-												animation: "fadeInCard 0.17s ease both",
-											}}
-											onMouseOver={(e) => {
-												if (!isSelected) {
-													e.currentTarget.style.background = isCompleted
-														? tv.cardHoverBgDone
-														: tv.cardHoverBg;
-													e.currentTarget.style.borderColor = isCompleted
-														? tv.cardHoverBdrDone
-														: tv.cardHoverBdr;
-												}
-											}}
-											onMouseOut={(e) => {
-												if (!isSelected) {
-													e.currentTarget.style.background = isCompleted
-														? tv.cardBgDone
-														: tv.cardBg;
-													e.currentTarget.style.borderColor = isCompleted
-														? tv.cardBdrDone
-														: tv.cardBdr;
-												}
-											}}
-										>
-											{/* Status select – custom dropdown via portal */}
-											{(() => {
-												const sc =
-													subtask.status === "completed"
-														? "#34d399"
-														: subtask.status === "in_progress"
-															? "#60a5fa"
-															: "#64748b";
-												const statusLabel =
-													subtask.status === "completed"
-														? "Completada"
-														: subtask.status === "in_progress"
-															? "En progreso"
-															: "Pendiente";
-												const isOpen = openSelect?.id === subtask.id;
-												return (
-													<div style={{ position: "relative", flexShrink: 0 }}>
-														<button
-															disabled={isToggling}
-															onClick={(e) => {
-																e.stopPropagation();
-																if (isOpen) {
-																	setOpenSelect(null);
-																	return;
-																}
-																const rect = e.currentTarget.getBoundingClientRect();
-																setOpenSelect({
-																	id: subtask.id,
-																	top: rect.bottom + 4,
-																	left: rect.left,
-																});
-															}}
-															data-testid={`today-subtask-status-btn-${subtask.id}`}
-															style={{
-																display: "inline-flex",
-																alignItems: "center",
-																gap: "4px",
-																background: `${sc}14`,
-																border: `1px solid ${sc}44`,
-																color: sc,
-																borderRadius: "20px",
-																padding: "3px 8px 3px 9px",
-																fontSize: "11px",
-																fontWeight: 600,
-																letterSpacing: "0.01em",
-																cursor: isToggling ? "wait" : "pointer",
-																outline: "none",
-																opacity: isToggling ? 0.5 : 1,
-																transition: "all 0.15s",
-																fontFamily: "inherit",
-																whiteSpace: "nowrap",
-															}}
-														>
-															{isToggling ? <Loader2 size={10} className="spinner" /> : statusLabel}
-															<ChevronDown size={10} strokeWidth={2.5} style={{ opacity: 0.7 }} />
-														</button>
-														{isOpen &&
-															createPortal(
-																<>
-																	<div
-																		data-testid={`today-subtask-status-overlay-${subtask.id}`}
-																		style={{ position: "fixed", inset: 0, zIndex: 9998 }}
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			setOpenSelect(null);
-																		}}
-																	/>
-																	<div
-																		data-testid={`today-subtask-status-dropdown-${subtask.id}`}
-																		style={{
-																			position: "fixed",
-																			top: openSelect!.top,
-																			left: openSelect!.left,
-																			zIndex: 9999,
-																			background: tv.dropBg,
-																			border: `1px solid ${tv.dropBdr}`,
-																			borderRadius: "10px",
-																			overflow: "hidden",
-																			minWidth: "130px",
-																			boxShadow: tv.dropSh,
-																			animation: "dropdownOpen 0.15s cubic-bezier(0.16,1,0.3,1)",
-																			transformOrigin: "top left",
-																		}}
-																		onClick={(e) => e.stopPropagation()}
-																	>
-																		{!openSelect!.postponeMode ? (
-																			(
-																				[
-																					["pending", "Pendiente", "#64748b"],
-																					["in_progress", "En progreso", "#60a5fa"],
-																					["completed", "Completada", "#34d399"],
-																					["postponed", "Posponer", "#fb923c"],
-																				] as const
-																			).map(([val, label, color]) => (
-																				<button
-																					key={val}
-																					onClick={() => {
-																						if (val === "postponed") {
-																							setOpenSelect((prev) => ({
-																								...prev!,
-																								postponeMode: true,
-																							}));
-																							setPostponementNote(subtask.postponement_note || "");
-																						} else {
-																							setOpenSelect(null);
-																							void handleToggle(subtask, group, val as any);
-																						}
-																					}}
-																					data-testid={`today-subtask-status-option-${subtask.id}-${val}`}
-																					style={{
-																						display: "flex",
-																						alignItems: "center",
-																						gap: "8px",
-																						width: "100%",
-																						padding: "8px 12px",
-																						background:
-																							subtask.status === val ? `${color}20` : "transparent",
-																						border: "none",
-																						color: subtask.status === val ? color : tv.dropTxt,
-																						fontSize: "12px",
-																						fontWeight: subtask.status === val ? 600 : 400,
-																						cursor: "pointer",
-																						fontFamily: "inherit",
-																						textAlign: "left",
-																					}}
-																					onMouseEnter={(e) => {
-																						e.currentTarget.style.background = `${color}20`;
-																						e.currentTarget.style.color = color;
-																					}}
-																					onMouseLeave={(e) => {
-																						e.currentTarget.style.background =
-																							subtask.status === val ? `${color}20` : "transparent";
-																						e.currentTarget.style.color =
-																							subtask.status === val ? color : tv.dropTxt;
-																					}}
-																				>
-																					<span
-																						style={{
-																							width: 7,
-																							height: 7,
-																							borderRadius: "50%",
-																							background: color,
-																							flexShrink: 0,
-																							display: "inline-block",
-																						}}
-																					/>
-																					{label}
-																				</button>
-																			))
-																		) : (
-																			<div
-																				style={{
-																					padding: "12px",
-																					width: "200px",
-																					display: "flex",
-																					flexDirection: "column",
-																					gap: "8px",
-																				}}
-																				onClick={(e) => e.stopPropagation()}
-																			>
-																				<label
-																					style={{
-																						fontSize: "11px",
-																						fontWeight: 600,
-																						color: tv.dropTxt,
-																					}}
-																				>
-																					Razón (opcional)
-																				</label>
-																				<textarea
-																					autoFocus
-																					value={postponementNote}
-																					onChange={(e) => setPostponementNote(e.target.value)}
-																					placeholder="Ej: Falta de material..."
-																					style={{
-																						background: isDark ? "#0f172a" : "#fff",
-																						border: `1px solid ${tv.dropBdr}`,
-																						borderRadius: "6px",
-																						padding: "8px",
-																						fontSize: "12px",
-																						color: tv.dropTxt,
-																						resize: "vertical",
-																						minHeight: "60px",
-																						fontFamily: "inherit",
-																					}}
-																				/>
-																				<button
-																					onClick={() => {
-																						setOpenSelect(null);
-																						void handleToggle(
-																							subtask,
-																							group,
-																							"postponed",
-																							postponementNote,
-																						);
-																					}}
-																					style={{
-																						background: "linear-gradient(135deg,#7c3aed,#6d28d9)",
-																						color: "#fff",
-																						border: "none",
-																						borderRadius: "6px",
-																						padding: "6px 0",
-																						fontSize: "12px",
-																						fontWeight: 600,
-																						cursor: "pointer",
-																					}}
-																				>
-																					Guardar
-																				</button>
-																			</div>
-																		)}
-																	</div>
-																</>,
-																document.body,
-															)}
-													</div>
-												);
-											})()}
-
-											{/* Text content */}
-											<div style={{ flex: 1, minWidth: 0 }}>
-												<p
-													data-testid={`today-subtask-title-${subtask.id}`}
-													style={{
-														fontSize: "14px",
-														fontWeight: 600,
-														color: isCompleted
-															? tv.titDone
-															: subtask.status === "in_progress"
-																? tv.titProg
-																: tv.titNml,
-														textDecoration: isCompleted ? "line-through" : "none",
-														margin: "0 0 6px",
-														lineHeight: 1.35,
-														wordBreak: "break-word",
-													}}
-												>
-													{subtask.name}
-												</p>
+											const borderColor = isSelected
+												? "#c084fc"
+												: isCompleted
+													? tv.cardLBdrDone
+													: (sColor[subtask.status] ?? accent);
+											return (
 												<div
+													key={subtask.id}
+													role="button"
+													tabIndex={0}
+													aria-pressed={isSelected}
+													data-testid={`today-subtask-card-${subtask.id}`}
+													onClick={() =>
+														setSelectedSubtask(
+															isSelected
+																? null
+																: {
+																		subtask:
+																			kanban[group].find((s) => s.id === subtask.id) ?? subtask,
+																		group,
+																	},
+														)
+													}
+													onKeyDown={(e) => {
+														if (e.key === "Enter" || e.key === " ")
+															setSelectedSubtask(isSelected ? null : { subtask, group });
+													}}
 													style={{
 														display: "flex",
 														alignItems: "center",
-														gap: "7px",
-														flexWrap: "wrap",
+														gap: "14px",
+														background: isSelected
+															? "rgba(192,132,252,0.08)"
+															: isCompleted
+																? tv.cardBgDone
+																: subtask.status === "in_progress"
+																	? tv.cardBgProg
+																	: tv.cardBg,
+														border: `1px solid ${isSelected ? "rgba(192,132,252,0.4)" : isCompleted ? tv.cardBdrDone : subtask.status === "in_progress" ? tv.cardBdrProg : tv.cardBdr}`,
+														borderLeft: `3px solid ${isCompleted ? tv.cardLBdrDone : borderColor}`,
+														borderRadius: "10px",
+														padding: "13px 16px 13px 14px",
+														cursor: "pointer",
+														transition: "all 0.15s",
+														outline: "none",
+														animation: "fadeInCard 0.17s ease both",
+													}}
+													onMouseOver={(e) => {
+														if (!isSelected) {
+															e.currentTarget.style.background = isCompleted
+																? tv.cardHoverBgDone
+																: tv.cardHoverBg;
+															e.currentTarget.style.borderColor = isCompleted
+																? tv.cardHoverBdrDone
+																: tv.cardHoverBdr;
+														}
+													}}
+													onMouseOut={(e) => {
+														if (!isSelected) {
+															e.currentTarget.style.background = isCompleted
+																? tv.cardBgDone
+																: tv.cardBg;
+															e.currentTarget.style.borderColor = isCompleted
+																? tv.cardBdrDone
+																: tv.cardBdr;
+														}
 													}}
 												>
-													{subtask.course_name && (
-														<span
-															data-testid={`today-subtask-course-${subtask.id}`}
-															style={{
-																fontSize: "10px",
-																background: "rgba(192,132,252,0.14)",
-																color: "#c084fc",
-																padding: "2px 8px",
-																borderRadius: "20px",
-																fontWeight: 700,
-																flexShrink: 0,
-																maxWidth: "130px",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-																whiteSpace: "nowrap",
-															}}
-														>
-															{subtask.course_name}
-														</span>
-													)}
-													{subtask.activity && (
-														<span
-															data-testid={`today-subtask-activity-${subtask.id}`}
-															style={{
-																fontSize: "11px",
-																color: isCompleted ? tv.actDone : tv.actNml,
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-																whiteSpace: "nowrap",
-																maxWidth: "200px",
-															}}
-														>
-															{subtask.activity.title}
-														</span>
-													)}
-												</div>
-											</div>
+													{/* Status select – custom dropdown via portal */}
+													{(() => {
+														const sc =
+															subtask.status === "completed"
+																? "#34d399"
+																: subtask.status === "in_progress"
+																	? "#60a5fa"
+																	: "#64748b";
+														const statusLabel =
+															subtask.status === "completed"
+																? "Completada"
+																: subtask.status === "in_progress"
+																	? "En progreso"
+																	: "Pendiente";
+														const isOpen = openSelect?.id === subtask.id;
+														return (
+															<div style={{ position: "relative", flexShrink: 0 }}>
+																<button
+																	disabled={isToggling}
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		if (isOpen) {
+																			setOpenSelect(null);
+																			return;
+																		}
+																		const rect = e.currentTarget.getBoundingClientRect();
+																		setOpenSelect({
+																			id: subtask.id,
+																			top: rect.bottom + 4,
+																			left: rect.left,
+																		});
+																	}}
+																	data-testid={`today-subtask-status-btn-${subtask.id}`}
+																	style={{
+																		display: "inline-flex",
+																		alignItems: "center",
+																		gap: "4px",
+																		background: `${sc}14`,
+																		border: `1px solid ${sc}44`,
+																		color: sc,
+																		borderRadius: "20px",
+																		padding: "3px 8px 3px 9px",
+																		fontSize: "11px",
+																		fontWeight: 600,
+																		letterSpacing: "0.01em",
+																		cursor: isToggling ? "wait" : "pointer",
+																		outline: "none",
+																		opacity: isToggling ? 0.5 : 1,
+																		transition: "all 0.15s",
+																		fontFamily: "inherit",
+																		whiteSpace: "nowrap",
+																	}}
+																>
+																	{isToggling ? (
+																		<Loader2 size={10} className="spinner" />
+																	) : (
+																		statusLabel
+																	)}
+																	<ChevronDown
+																		size={10}
+																		strokeWidth={2.5}
+																		style={{ opacity: 0.7 }}
+																	/>
+																</button>
+																{isOpen &&
+																	createPortal(
+																		<>
+																			<div
+																				data-testid={`today-subtask-status-overlay-${subtask.id}`}
+																				style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+																				onClick={(e) => {
+																					e.stopPropagation();
+																					setOpenSelect(null);
+																				}}
+																			/>
+																			<div
+																				data-testid={`today-subtask-status-dropdown-${subtask.id}`}
+																				style={{
+																					position: "fixed",
+																					top: openSelect!.top,
+																					left: openSelect!.left,
+																					zIndex: 9999,
+																					background: tv.dropBg,
+																					border: `1px solid ${tv.dropBdr}`,
+																					borderRadius: "10px",
+																					overflow: "hidden",
+																					minWidth: "130px",
+																					boxShadow: tv.dropSh,
+																					animation:
+																						"dropdownOpen 0.15s cubic-bezier(0.16,1,0.3,1)",
+																					transformOrigin: "top left",
+																				}}
+																				onClick={(e) => e.stopPropagation()}
+																			>
+																				{!openSelect!.postponeMode ? (
+																					(
+																						[
+																							["pending", "Pendiente", "#64748b"],
+																							["in_progress", "En progreso", "#60a5fa"],
+																							["completed", "Completada", "#34d399"],
+																							["postponed", "Posponer", "#fb923c"],
+																						] as const
+																					).map(([val, label, color]) => (
+																						<button
+																							key={val}
+																							onClick={() => {
+																								if (val === "postponed") {
+																									setOpenSelect((prev) => ({
+																										...prev!,
+																										postponeMode: true,
+																									}));
+																									setPostponementNote(
+																										subtask.postponement_note || "",
+																									);
+																								} else {
+																									setOpenSelect(null);
+																									void handleToggle(
+																										subtask,
+																										group,
+																										val as Subtask["status"],
+																									);
+																								}
+																							}}
+																							data-testid={`today-subtask-status-option-${subtask.id}-${val}`}
+																							style={{
+																								display: "flex",
+																								alignItems: "center",
+																								gap: "8px",
+																								width: "100%",
+																								padding: "8px 12px",
+																								background:
+																									subtask.status === val
+																										? `${color}20`
+																										: "transparent",
+																								border: "none",
+																								color: subtask.status === val ? color : tv.dropTxt,
+																								fontSize: "12px",
+																								fontWeight: subtask.status === val ? 600 : 400,
+																								cursor: "pointer",
+																								fontFamily: "inherit",
+																								textAlign: "left",
+																							}}
+																							onMouseEnter={(e) => {
+																								e.currentTarget.style.background = `${color}20`;
+																								e.currentTarget.style.color = color;
+																							}}
+																							onMouseLeave={(e) => {
+																								e.currentTarget.style.background =
+																									subtask.status === val
+																										? `${color}20`
+																										: "transparent";
+																								e.currentTarget.style.color =
+																									subtask.status === val ? color : tv.dropTxt;
+																							}}
+																						>
+																							<span
+																								style={{
+																									width: 7,
+																									height: 7,
+																									borderRadius: "50%",
+																									background: color,
+																									flexShrink: 0,
+																									display: "inline-block",
+																								}}
+																							/>
+																							{label}
+																						</button>
+																					))
+																				) : (
+																					<div
+																						style={{
+																							padding: "12px",
+																							width: "200px",
+																							display: "flex",
+																							flexDirection: "column",
+																							gap: "8px",
+																						}}
+																						onClick={(e) => e.stopPropagation()}
+																					>
+																						<label
+																							style={{
+																								fontSize: "11px",
+																								fontWeight: 600,
+																								color: tv.dropTxt,
+																							}}
+																						>
+																							Razón (opcional)
+																						</label>
+																						<textarea
+																							autoFocus
+																							value={postponementNote}
+																							onChange={(e) => setPostponementNote(e.target.value)}
+																							placeholder="Ej: Falta de material..."
+																							style={{
+																								background: isDark ? "#0f172a" : "#fff",
+																								border: `1px solid ${tv.dropBdr}`,
+																								borderRadius: "6px",
+																								padding: "8px",
+																								fontSize: "12px",
+																								color: tv.dropTxt,
+																								resize: "vertical",
+																								minHeight: "60px",
+																								fontFamily: "inherit",
+																							}}
+																						/>
+																						<button
+																							onClick={() => {
+																								setOpenSelect(null);
+																								void handleToggle(
+																									subtask,
+																									group,
+																									"postponed",
+																									postponementNote,
+																								);
+																							}}
+																							style={{
+																								background:
+																									"linear-gradient(135deg,#7c3aed,#6d28d9)",
+																								color: "#fff",
+																								border: "none",
+																								borderRadius: "6px",
+																								padding: "6px 0",
+																								fontSize: "12px",
+																								fontWeight: 600,
+																								cursor: "pointer",
+																							}}
+																						>
+																							Guardar
+																						</button>
+																					</div>
+																				)}
+																			</div>
+																		</>,
+																		document.body,
+																	)}
+															</div>
+														);
+													})()}
 
-											{/* Right meta */}
-											<div
-												style={{
-													display: "flex",
-													flexDirection: "column",
-													alignItems: "flex-end",
-													gap: "6px",
-													flexShrink: 0,
-												}}
-											>
-												{dayText && (
-													<span
-														style={{
-															fontSize: "11px",
-															padding: "2px 9px",
-															borderRadius: "20px",
-															background: dayBg,
-															color: dayColor,
-															fontWeight: 700,
-															whiteSpace: "nowrap",
-														}}
-													>
-														{dayText}
-													</span>
-												)}
-												<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-													{subtask.estimated_hours > 0 && (
-														<span
-															data-testid={`today-subtask-hours-${subtask.id}`}
+													{/* Text content */}
+													<div style={{ flex: 1, minWidth: 0 }}>
+														<p
+															data-testid={`today-subtask-title-${subtask.id}`}
 															style={{
-																fontSize: "11px",
-																color: isCompleted ? tv.hrsDone : tv.hrsNml,
+																fontSize: "14px",
+																fontWeight: 600,
+																color: isCompleted
+																	? tv.titDone
+																	: subtask.status === "in_progress"
+																		? tv.titProg
+																		: tv.titNml,
+																textDecoration: isCompleted ? "line-through" : "none",
+																margin: "0 0 6px",
+																lineHeight: 1.35,
+																wordBreak: "break-word",
+															}}
+														>
+															{subtask.name}
+														</p>
+														<div
+															style={{
 																display: "flex",
 																alignItems: "center",
-																gap: "3px",
-																fontWeight: 600,
+																gap: "7px",
+																flexWrap: "wrap",
 															}}
 														>
-															<Clock size={10} />
-															{subtask.estimated_hours}h
-														</span>
-													)}
-													<span
-														data-testid={`today-subtask-status-pill-${subtask.id}`}
+															{subtask.course_name && (
+																<span
+																	data-testid={`today-subtask-course-${subtask.id}`}
+																	style={{
+																		fontSize: "10px",
+																		background: "rgba(192,132,252,0.14)",
+																		color: "#c084fc",
+																		padding: "2px 8px",
+																		borderRadius: "20px",
+																		fontWeight: 700,
+																		flexShrink: 0,
+																		maxWidth: "130px",
+																		overflow: "hidden",
+																		textOverflow: "ellipsis",
+																		whiteSpace: "nowrap",
+																	}}
+																>
+																	{subtask.course_name}
+																</span>
+															)}
+															{subtask.activity && (
+																<span
+																	data-testid={`today-subtask-activity-${subtask.id}`}
+																	style={{
+																		fontSize: "11px",
+																		color: isCompleted ? tv.actDone : tv.actNml,
+																		overflow: "hidden",
+																		textOverflow: "ellipsis",
+																		whiteSpace: "nowrap",
+																		maxWidth: "200px",
+																	}}
+																>
+																	{subtask.activity.title}
+																</span>
+															)}
+														</div>
+													</div>
+
+													{/* Right meta */}
+													<div
 														style={{
-															fontSize: "10px",
-															padding: "2px 8px",
-															borderRadius: "20px",
-															background: isCompleted
-																? "rgba(52,211,153,0.06)"
-																: `${sColor[subtask.status]}1a`,
-															color: isCompleted ? tv.statusDoneTxt : sColor[subtask.status],
-															fontWeight: 700,
 															display: "flex",
-															alignItems: "center",
-															gap: "4px",
-															whiteSpace: "nowrap",
+															flexDirection: "column",
+															alignItems: "flex-end",
+															gap: "6px",
+															flexShrink: 0,
 														}}
 													>
-														<span
-															style={{
-																width: 5,
-																height: 5,
-																borderRadius: "50%",
-																background: isCompleted ? tv.statusDoneTxt : sColor[subtask.status],
-																flexShrink: 0,
-															}}
-														/>
-														{sLabel[subtask.status]}
-													</span>
+														{dayText && (
+															<span
+																style={{
+																	fontSize: "11px",
+																	padding: "2px 9px",
+																	borderRadius: "20px",
+																	background: dayBg,
+																	color: dayColor,
+																	fontWeight: 700,
+																	whiteSpace: "nowrap",
+																}}
+															>
+																{dayText}
+															</span>
+														)}
+														<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+															{subtask.estimated_hours > 0 && (
+																<span
+																	data-testid={`today-subtask-hours-${subtask.id}`}
+																	style={{
+																		fontSize: "11px",
+																		color: isCompleted ? tv.hrsDone : tv.hrsNml,
+																		display: "flex",
+																		alignItems: "center",
+																		gap: "3px",
+																		fontWeight: 600,
+																	}}
+																>
+																	<Clock size={10} />
+																	{subtask.estimated_hours}h
+																</span>
+															)}
+															<span
+																data-testid={`today-subtask-status-pill-${subtask.id}`}
+																style={{
+																	fontSize: "10px",
+																	padding: "2px 8px",
+																	borderRadius: "20px",
+																	background: isCompleted
+																		? "rgba(52,211,153,0.06)"
+																		: `${sColor[subtask.status]}1a`,
+																	color: isCompleted ? tv.statusDoneTxt : sColor[subtask.status],
+																	fontWeight: 700,
+																	display: "flex",
+																	alignItems: "center",
+																	gap: "4px",
+																	whiteSpace: "nowrap",
+																}}
+															>
+																<span
+																	style={{
+																		width: 5,
+																		height: 5,
+																		borderRadius: "50%",
+																		background: isCompleted
+																			? tv.statusDoneTxt
+																			: sColor[subtask.status],
+																		flexShrink: 0,
+																	}}
+																/>
+																{sLabel[subtask.status]}
+															</span>
+														</div>
+													</div>
 												</div>
-											</div>
-										</div>
-									);
-								})}
-								{totalPages > 1 && (
-									<Pagination
-										currentPage={currentPage}
-										totalPages={totalPages}
-										onPageChange={(page) => setPageMap((prev) => ({ ...prev, [group]: page }))}
-									/>
-								)}
-							</>
-						);
-					})()
-				)}
-			</div>
-		))}
+											);
+										})}
+										{totalPages > 1 && (
+											<Pagination
+												currentPage={currentPage}
+												totalPages={totalPages}
+												onPageChange={(page) => setPageMap((prev) => ({ ...prev, [group]: page }))}
+											/>
+										)}
+									</>
+								);
+							})()
+						)}
+					</div>
+				))}
 
 			{selectedSubtask && (
 				<SubtaskDetailPanel

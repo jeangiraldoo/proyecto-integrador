@@ -365,7 +365,9 @@ export function EditSubtaskModal({
 									data-testid="edit-subtask-postponement-note-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>
@@ -698,7 +700,7 @@ export function CreateSubtaskModal({
 			};
 			await createSubtask(selectedActivityId as number, payload);
 			const rawToday = await fetchTodayView();
-			const todayView = 'results' in rawToday ? rawToday.results : rawToday;
+			const todayView = "results" in rawToday ? rawToday.results : rawToday;
 			const k: KanbanState = {
 				overdue: todayView.overdue,
 				today: todayView.today,
@@ -1285,7 +1287,9 @@ export function CreateSubtaskModal({
 									data-testid="create-subtask-postponement-note-input"
 									onFocus={(e) => (e.currentTarget.style.borderColor = "#c084fc")}
 									onBlur={(e) =>
-										(e.currentTarget.style.borderColor = isDark ? "#334155" : "rgba(124,92,255,0.22)")
+										(e.currentTarget.style.borderColor = isDark
+											? "#334155"
+											: "rgba(124,92,255,0.22)")
 									}
 								/>
 							</div>

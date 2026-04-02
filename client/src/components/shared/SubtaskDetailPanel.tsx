@@ -586,7 +586,7 @@ export function SubtaskDetailPanel({
 									minHeight: "60px",
 									fontSize: "12px",
 									fontFamily: "inherit",
-									boxSizing: "border-box"
+									boxSizing: "border-box",
 								}}
 							/>
 							<div style={{ display: "flex", gap: "8px" }}>
@@ -604,7 +604,7 @@ export function SubtaskDetailPanel({
 										color: sdp.metaValue,
 										cursor: "pointer",
 										fontSize: "12px",
-										fontWeight: 600
+										fontWeight: 600,
 									}}
 								>
 									Cancelar
@@ -625,7 +625,7 @@ export function SubtaskDetailPanel({
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
-										gap: "6px"
+										gap: "6px",
 									}}
 								>
 									{toggling && <Loader2 size={14} className="spinner" />}
@@ -649,7 +649,7 @@ export function SubtaskDetailPanel({
 										cursor: "pointer",
 										fontSize: "13px",
 										fontWeight: 600,
-										transition: "background 0.15s"
+										transition: "background 0.15s",
 									}}
 									onMouseOver={(e) => (e.currentTarget.style.background = "rgba(251,146,60,0.1)")}
 									onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
@@ -692,7 +692,11 @@ export function SubtaskDetailPanel({
 								) : (
 									<CheckCircle2 size={15} />
 								)}
-								{toggling ? "Cargando..." : isCompleted ? "Marcar como pendiente" : "Marcar como completada"}
+								{toggling
+									? "Cargando..."
+									: isCompleted
+										? "Marcar como pendiente"
+										: "Marcar como completada"}
 							</button>
 						</div>
 					)}

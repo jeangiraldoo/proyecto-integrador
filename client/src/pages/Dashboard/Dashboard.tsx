@@ -185,8 +185,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
-			const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
-			const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
+			const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+			const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
@@ -223,8 +223,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				fetchSubjects(),
 				fetchTodayView(),
 			]);
-			const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
-			const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
+			const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+			const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setActivities(Array.isArray(acts) ? acts : []);
 			setApiSubjects(Array.isArray(subs) ? subs : []);
 			if (today)
@@ -363,8 +363,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
 	const refreshPlannerAfterConflictUpdate = useCallback(async () => {
 		const [actsRaw, todayRaw] = await Promise.all([fetchActivities(), fetchTodayView()]);
-		const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
-		const today = 'results' in todayRaw ? todayRaw.results : todayRaw;
+		const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+		const today = "results" in todayRaw ? todayRaw.results : todayRaw;
 		setActivities(Array.isArray(acts) ? acts : []);
 		setTodayData({
 			overdue: today.overdue,
@@ -377,7 +377,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	const refreshTodayFromOrganizationMutation = useCallback(async () => {
 		try {
 			const todayRaw = await fetchTodayView();
-			const todayView = 'results' in todayRaw ? todayRaw.results : todayRaw;
+			const todayView = "results" in todayRaw ? todayRaw.results : todayRaw;
 			setTodayData({
 				overdue: todayView.overdue,
 				today: todayView.today,
@@ -392,16 +392,24 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 	}, [refreshConflicts]);
 
 	const applySubtaskPatchLocally = useCallback(
-		(subtaskId: number, patch: Partial<Pick<Subtask, "estimated_hours" | "target_date" | "status">>, previousStatus?: string) => {
+		(
+			subtaskId: number,
+			patch: Partial<Pick<Subtask, "estimated_hours" | "target_date" | "status">>,
+			previousStatus?: string,
+		) => {
 			setActivities((prev) =>
 				prev.map((activity) => {
-					if (!activity.subtasks?.some((subtask) => subtask.id === subtaskId) && activity.id !== resolveActivityIdForPatch(subtaskId, prev)) {
+					if (
+						!activity.subtasks?.some((subtask) => subtask.id === subtaskId) &&
+						activity.id !== resolveActivityIdForPatch(subtaskId, prev)
+					) {
 						return activity;
 					}
 
-					const nextSubtasks = activity.subtasks?.map((subtask) =>
-						subtask.id === subtaskId ? { ...subtask, ...patch } : subtask,
-					) ?? [];
+					const nextSubtasks =
+						activity.subtasks?.map((subtask) =>
+							subtask.id === subtaskId ? { ...subtask, ...patch } : subtask,
+						) ?? [];
 
 					const nextTotalEstimatedHours = nextSubtasks.reduce(
 						(sum, subtask) => sum + (Number(subtask.estimated_hours) || 0),
@@ -561,8 +569,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 				]);
 				if (!cancelled) {
 					setUser(me ?? null);
-					const acts = 'results' in actsRaw ? actsRaw.results : actsRaw;
-					const todayView = 'results' in todayRaw ? todayRaw.results : todayRaw;
+					const acts = "results" in actsRaw ? actsRaw.results : actsRaw;
+					const todayView = "results" in todayRaw ? todayRaw.results : todayRaw;
 					setActivities(Array.isArray(acts) ? acts : []);
 					setTodayData({
 						overdue: todayView.overdue,
@@ -1597,9 +1605,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 						)}
 
 						{/* ===== PROGRESS VIEW ===== */}
-						{activeNav === "progress" && (
-							<ProgressView activities={activities} />
-						)}
+						{activeNav === "progress" && <ProgressView activities={activities} />}
 					</>
 				)}
 				{/* Subject name modal (from header button) */}
