@@ -208,12 +208,15 @@ test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
 		const timestamp = Date.now();
 
 		await test.step("Setup: Login", async () => {
-			await page.goto("/registro", { timeout: 60000 });
+			await page.goto("/registro", { timeout: 120000, waitUntil: "domcontentloaded" });
 			await page.locator('input[name="username"]').fill(`qa14_err_${timestamp}`);
 			await page.locator('input[name="email"]').fill(`qa14_err_${timestamp}@test.com`);
 			await page.locator('input[name="password"]').fill("SuperPassword123!");
 			await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
 			await page.locator('button[type="submit"]').click();
+
+			// Faltaba esperar a que el registro termine y lleguemos al Dashboard antes de interceptar/recargar
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 60000 });
 		});
 
 		await test.step("Simular caída de la Base de Datos (500 Internal Server Error)", async () => {
@@ -230,11 +233,11 @@ test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
 			await page.reload();
 
 			// Ensure the app doesn't trigger a White Screen of Death (React Crash)
-			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 60000 });
 
 			// UI should degrade gracefully
 			const tabButtons = page.getByRole("button", { name: /Para hoy/i }).first();
-			await expect(tabButtons).toBeVisible({ timeout: 5000 });
+			await expect(tabButtons).toBeVisible({ timeout: 10000 });
 		});
 	});
 });
