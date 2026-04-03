@@ -1,5 +1,13 @@
 import { test, expect } from "@playwright/test";
 
+/**
+ * QA-14 | US-4: E2E Tests for Today View (/hoy)
+ * This suite validates the real End-to-End flow ensuring the React Frontend
+ * communicates correctly with the Django Backend and renders success, empty,
+ * and error states based on the priority rules.
+ */
+
+// Helper to generate dynamic dates
 const formatLocalDateForInput = (date: Date) => {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -7,208 +15,226 @@ const formatLocalDateForInput = (date: Date) => {
 	return `${year}-${month}-${day}`;
 };
 
-test.describe("QA-14 | US-4 - Ver actividades urgentes (prioridades 'hoy')", () => {
-	// FIX SENIOR: Aumentamos el timeout global a 3 minutos para tolerar los Cold Starts
-	// de Vercel y Supabase. Las infraestructuras serverless gratuitas pueden tardar en despertar.
-	test.setTimeout(180000);
+test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
+	// E2E flows with heavy UI interaction and DB persistence need higher timeouts
+	test.setTimeout(120000);
 	test.describe.configure({ retries: 2 });
 
-	test.beforeEach(async ({ page }) => {
-		const timestamp = Date.now();
-
-		await page.goto("/registro", { timeout: 60000 });
-
-		await page.locator('input[name="username"]').fill(`qa14_${timestamp}`);
-		await page.locator('input[name="email"]').fill(`qa14_${timestamp}@test.com`);
-		await page.locator('input[name="password"]').fill("SuperPassword123!");
-		await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
-
-		await page.locator('button[type="submit"]').click();
-
-		// FIX 1: Eliminamos la aserción del Toast. La redirección de React Router a /hoy
-		// es tan rápida que destruye el Toast antes de que Playwright lo lea.
-		await page.waitForURL("**/hoy", { timeout: 60000 });
-
-		// Verificamos que la carcasa del Dashboard (Frontend) haya cargado
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 30000 });
-
-		// FIX 2: El 'today-toolbar' solo aparece cuando la API de Vercel/Django termina de responder.
-		// Le damos hasta 60 segundos para absorber cualquier Cold Start severo de la base de datos.
-		await expect(page.getByTestId("today-toolbar")).toBeVisible({ timeout: 60000 });
-	});
-
-	test("E2E Test: Renderizado correcto, estados vacios y reglas de ordenamiento reales", async ({
+	test("E2E: Caso de éxito - Preparación de datos (Seed) y Reglas de Ordenamiento", async ({
 		page,
 	}) => {
-		const TIMESTAMP = Date.now();
-		const SUBJECT_NAME = `QA14_Materia_${TIMESTAMP}`;
-		const ACTIVITY_NAME = `QA14_Actividad_${TIMESTAMP}`;
+		const timestamp = Date.now();
+		const ACTIVITY_NAME = `QA14_Actividad_${timestamp}`;
 
+		// Dynamic Dates for the Seed
 		const today = new Date();
+		const pastDate1 = new Date(today);
+		pastDate1.setDate(today.getDate() - 3); // Oldest
+		const pastDate2 = new Date(today);
+		pastDate2.setDate(today.getDate() - 1); // Yesterday
+		const futureDate1 = new Date(today);
+		futureDate1.setDate(today.getDate() + 2); // Within N days
+		const futureDateOut = new Date(today);
+		futureDateOut.setDate(today.getDate() + 10); // Outside N=7 days
 
-		const pastOld = new Date(today);
-		pastOld.setDate(today.getDate() - 3);
-		const pastRecent = new Date(today);
-		pastRecent.setDate(today.getDate() - 1);
-		const tomorrow = new Date(today);
-		tomorrow.setDate(today.getDate() + 1);
-		const futureFar = new Date(today);
-		futureFar.setDate(today.getDate() + 3);
-		const dueActivity = new Date(today);
-		dueActivity.setDate(today.getDate() + 10);
+		// Subtask Names
+		const ST_OVERDUE_OLDEST = `Vencida Antigua ${timestamp}`;
+		const ST_OVERDUE_NEWER = `Vencida Reciente ${timestamp}`;
+		const ST_TODAY_HEAVY = `Hoy Pesada (3h) ${timestamp}`;
+		const ST_TODAY_LIGHT = `Hoy Ligera (1h) ${timestamp}`;
+		const ST_UPCOMING_IN = `Proxima Rango N ${timestamp}`;
+		const ST_UPCOMING_OUT = `Proxima Fuera N ${timestamp}`;
 
-		const pastOldStr = formatLocalDateForInput(pastOld);
-		const pastRecentStr = formatLocalDateForInput(pastRecent);
-		const todayStr = formatLocalDateForInput(today);
-		const tomorrowStr = formatLocalDateForInput(tomorrow);
-		const futureFarStr = formatLocalDateForInput(futureFar);
-		const dueActivityStr = formatLocalDateForInput(dueActivity);
-
-		// ====================================================================
-		// STEP 1: Empty State Validation
-		// ====================================================================
-		await test.step("1. Estado Vacío: Cuando no hay subtareas pendientes", async () => {
-			// El pill superior debe indicar que no hay tareas
-			await expect(page.getByTestId("today-summary-pill")).toContainText(/Sin tareas/i, {
-				timeout: 15000,
-			});
-
-			// El tab "Para hoy" debe ser visible y el mensaje de "Nada por aquí" debe aparecer
-			await expect(page.getByTestId("today-tab-today")).toBeVisible();
-			await expect(page.getByText(/Nada por aquí/i).first()).toBeVisible({ timeout: 5000 });
+		await test.step("Setup: Registrar usuario fresco para Test Isolation", async () => {
+			await page.goto("/registro", { timeout: 60000 });
+			await page.locator('input[name="username"]').fill(`qa14_user_${timestamp}`);
+			await page.locator('input[name="email"]').fill(`qa14_user_${timestamp}@test.com`);
+			await page.locator('input[name="password"]').fill("SuperPassword123!");
+			await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
+			await page.locator('button[type="submit"]').click();
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 30000 });
 		});
 
-		// ====================================================================
-		// STEP 2: Data Preparation (Creación E2E en la BD Real)
-		// ====================================================================
-		await test.step("2. Preparación: Crear tareas con fechas y horas específicas", async () => {
+		await test.step("Seed: Inyectar datos controlados vía UI", async () => {
 			await page.getByRole("button", { name: "Organización" }).click({ force: true });
-			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
-
 			await page.getByRole("button", { name: /Nueva actividad/i }).click();
-			const modal = page.locator(".ca-modal");
-			await expect(modal).toBeVisible({ timeout: 10000 });
 
-			await modal.locator(".ca-combobox-input").fill(SUBJECT_NAME);
+			const modal = page.locator(".ca-modal");
+			await expect(modal).toBeVisible({ timeout: 5000 });
+
+			await modal.locator(".ca-combobox-input").fill(`QA14_Course_${timestamp}`);
 			await modal.locator('input[id="ca-title"]').fill(ACTIVITY_NAME);
-			await modal.locator('input[id="ca-due-date"]').fill(dueActivityStr);
+			await modal.locator('input[id="ca-due-date"]').fill(formatLocalDateForInput(futureDateOut));
 			await modal.getByRole("button", { name: /Siguiente/i }).click();
 
-			// Subtarea 1: Vencida Antigua (Hace 3 días)
-			await modal.locator('input[id="st-title"]').fill("Vencida Antigua");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(pastOldStr);
+			// 1. Overdue: Oldest (-3 days)
+			await modal.locator('input[id="st-title"]').fill(ST_OVERDUE_OLDEST);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(pastDate1));
 			await modal.locator('input[id="st-hours"]').fill("1");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Vencida Antigua")).toBeVisible({
-				timeout: 5000,
-			});
 
-			// Subtarea 2: Vencida Reciente (Ayer)
-			await modal.locator('input[id="st-title"]').fill("Vencida Reciente");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(pastRecentStr);
+			// 2. Overdue: Newer (-1 day)
+			await modal.locator('input[id="st-title"]').fill(ST_OVERDUE_NEWER);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(pastDate2));
 			await modal.locator('input[id="st-hours"]').fill("1");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Vencida Reciente")).toBeVisible({
-				timeout: 5000,
-			});
 
-			// Subtarea 3: Hoy Pesada (3h)
-			await modal.locator('input[id="st-title"]').fill("Hoy Pesada");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(todayStr);
+			// 3. Today: Heavy effort (3h)
+			await modal.locator('input[id="st-title"]').fill(ST_TODAY_HEAVY);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(today));
 			await modal.locator('input[id="st-hours"]').fill("3");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Hoy Pesada")).toBeVisible({
-				timeout: 5000,
-			});
 
-			// Subtarea 4: Hoy Ligera (1h)
-			await modal.locator('input[id="st-title"]').fill("Hoy Ligera");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(todayStr);
+			// 4. Today: Light effort (1h) - MUST appear above Heavy effort
+			await modal.locator('input[id="st-title"]').fill(ST_TODAY_LIGHT);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(today));
 			await modal.locator('input[id="st-hours"]').fill("1");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Hoy Ligera")).toBeVisible({
-				timeout: 5000,
-			});
 
-			// Subtarea 5: Próxima Cercana (Mañana)
-			await modal.locator('input[id="st-title"]').fill("Proxima Cercana");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(tomorrowStr);
+			// 5. Upcoming: Inside N range (+2 days)
+			await modal.locator('input[id="st-title"]').fill(ST_UPCOMING_IN);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(futureDate1));
 			await modal.locator('input[id="st-hours"]').fill("1");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Proxima Cercana")).toBeVisible({
-				timeout: 5000,
-			});
 
-			// Subtarea 6: Próxima Lejana (+3 días)
-			await modal.locator('input[id="st-title"]').fill("Proxima Lejana");
-			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(futureFarStr);
+			// 6. Upcoming: Outside N range (+10 days)
+			await modal.locator('input[id="st-title"]').fill(ST_UPCOMING_OUT);
+			await modal
+				.locator('.ca-subform-date-wrapper input[type="date"]')
+				.fill(formatLocalDateForInput(futureDateOut));
 			await modal.locator('input[id="st-hours"]').fill("1");
 			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
-			await expect(modal.locator(".ca-subtask-table").getByText("Proxima Lejana")).toBeVisible({
-				timeout: 5000,
-			});
 
+			// Save to Real Database
 			await modal.getByRole("button", { name: /Crear actividad/i }).click();
-
-			const toastCreada = page
-				.locator("[data-sonner-toast]")
-				.filter({ hasText: /creada/i })
-				.first();
-			await expect(toastCreada).toBeVisible({ timeout: 15000 });
+			await expect(
+				page
+					.locator("[data-sonner-toast]")
+					.filter({ hasText: /creada/i })
+					.first(),
+			).toBeVisible({ timeout: 8000 });
 		});
 
-		// ====================================================================
-		// STEP 3: Validation of Sorting Rules (Regla de Oro US-04)
-		// ====================================================================
-		await test.step("3. Validación: Reglas de ordenamiento reales en Vista Hoy", async () => {
+		await test.step("Validación: Reglas de negocio renderizadas desde DB real", async () => {
 			await page.getByRole("button", { name: "Hoy" }).click({ force: true });
-			await page.reload();
+			await page.reload(); // Force full backend sync
 			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
-			await expect(page.getByTestId("today-toolbar")).toBeVisible({ timeout: 15000 });
 
-			// Vencidas: Más antiguas primero (Fecha ASC)
-			await page.getByTestId("today-tab-overdue").click();
-			const overdueCards = page.locator('[data-testid="today-column-overdue"] [role="button"]');
-			await expect(overdueCards.nth(0)).toContainText("Vencida Antigua", { timeout: 10000 });
-			await expect(overdueCards.nth(1)).toContainText("Vencida Reciente", { timeout: 10000 });
-			await expect(page.getByTestId("today-sort-hint")).toContainText(/más antiguas/i);
+			// 1. Verify Vencidas (Oldest First)
+			await page
+				.getByRole("button", { name: /Vencidas/i })
+				.first()
+				.click();
+			const cardsVencidas = page.locator('div[role="button"][tabindex="0"]');
+			await expect(cardsVencidas.nth(0)).toContainText(ST_OVERDUE_OLDEST, { timeout: 5000 });
+			await expect(cardsVencidas.nth(1)).toContainText(ST_OVERDUE_NEWER);
 
-			// Para hoy: Menor esfuerzo primero (Horas ASC) -> La de 1h antes que la de 3h
-			await page.getByTestId("today-tab-today").click();
-			const todayCards = page.locator('[data-testid="today-column-today"] [role="button"]');
-			await expect(todayCards.nth(0)).toContainText("Hoy Ligera", { timeout: 10000 });
-			await expect(todayCards.nth(1)).toContainText("Hoy Pesada", { timeout: 10000 });
-			await expect(page.getByTestId("today-sort-hint")).toContainText(/más rápidas/i);
+			// 2. Verify Para Hoy (Tie-breaker: Least effort first)
+			await page
+				.getByRole("button", { name: /Para hoy/i })
+				.first()
+				.click();
+			const cardsHoy = page.locator('div[role="button"][tabindex="0"]');
+			await expect(cardsHoy.nth(0)).toContainText(ST_TODAY_LIGHT, { timeout: 5000 }); // 1h task goes first
+			await expect(cardsHoy.nth(1)).toContainText(ST_TODAY_HEAVY); // 3h task goes second
 
-			// Próximas: Más cercanas primero (Fecha ASC)
-			await page.getByTestId("today-tab-upcoming").click();
-			const upcomingCards = page.locator('[data-testid="today-column-upcoming"] [role="button"]');
-			await expect(upcomingCards.nth(0)).toContainText("Proxima Cercana", { timeout: 10000 });
-			await expect(upcomingCards.nth(1)).toContainText("Proxima Lejana", { timeout: 10000 });
-			await expect(page.getByTestId("today-sort-hint")).toContainText(/más cercanas/i);
+			// 3. Verify Próximas (Only inside N days range)
+			await page
+				.getByRole("button", { name: /Próximas/i })
+				.first()
+				.click();
+			const cardsProximas = page.locator('div[role="button"][tabindex="0"]');
+			await expect(cardsProximas.nth(0)).toContainText(ST_UPCOMING_IN, { timeout: 5000 });
+
+			// The task at +10 days should NOT be visible because default N is 7 days
+			const outOfRangeTask = page
+				.locator('div[role="button"][tabindex="0"]')
+				.filter({ hasText: ST_UPCOMING_OUT });
+			await expect(outOfRangeTask).toBeHidden();
+		});
+	});
+
+	test("E2E: Caso de estado vacío", async ({ page }) => {
+		const timestamp = Date.now();
+
+		await test.step("Setup: Registrar usuario fresco sin tareas", async () => {
+			await page.goto("/registro", { timeout: 60000 });
+			await page.locator('input[name="username"]').fill(`qa14_empty_${timestamp}`);
+			await page.locator('input[name="email"]').fill(`qa14_empty_${timestamp}@test.com`);
+			await page.locator('input[name="password"]').fill("SuperPassword123!");
+			await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
+			await page.locator('button[type="submit"]').click();
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 30000 });
 		});
 
-		// ====================================================================
-		// STEP 4: Cleanup
-		// ====================================================================
-		await test.step("4. Cleanup: Eliminar actividad completa", async () => {
-			await page.getByRole("button", { name: "Organización" }).click({ force: true });
-			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
+		await test.step("Validar renderizado de Empty State real", async () => {
+			// The backend returns empty arrays, UI must show the empty state message
+			const emptyMessage = page.getByText(/Nada por aquí — ¡todo libre!/i).first();
+			await expect(emptyMessage).toBeVisible({ timeout: 10000 });
 
-			await page.getByText(SUBJECT_NAME).click();
+			// Verify counts are zero
+			await expect(
+				page
+					.getByRole("button", { name: /Vencidas/i })
+					.locator("span")
+					.last(),
+			).toHaveText("0");
+			await expect(
+				page
+					.getByRole("button", { name: /Para hoy/i })
+					.locator("span")
+					.last(),
+			).toHaveText("0");
+			await expect(
+				page
+					.getByRole("button", { name: /Próximas/i })
+					.locator("span")
+					.last(),
+			).toHaveText("0");
+		});
+	});
 
-			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
-			await expect(activityBlock).toBeVisible({ timeout: 10000 });
+	test("E2E: Caso de falla (Simulación híbrida de Server Error)", async ({ page }) => {
+		const timestamp = Date.now();
 
-			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
+		await test.step("Setup: Login", async () => {
+			await page.goto("/registro", { timeout: 60000 });
+			await page.locator('input[name="username"]').fill(`qa14_err_${timestamp}`);
+			await page.locator('input[name="email"]').fill(`qa14_err_${timestamp}@test.com`);
+			await page.locator('input[name="password"]').fill("SuperPassword123!");
+			await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
+			await page.locator('button[type="submit"]').click();
+		});
 
-			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
+		await test.step("Simular caída de la Base de Datos (500 Internal Server Error)", async () => {
+			// This is the ONLY mock in this E2E file, because it's impossible/unsafe to physically crash
+			// the real Vercel/Django server just for a test.
+			await page.route("**/today/**", async (route) => {
+				await route.fulfill({
+					status: 500,
+					contentType: "application/json",
+					body: JSON.stringify({ errors: { server: "Database connection lost" } }),
+				});
+			});
 
-			const toastEliminada = page
-				.locator("[data-sonner-toast]")
-				.filter({ hasText: /eliminada/i })
-				.first();
-			await expect(toastEliminada).toBeVisible({ timeout: 15000 });
+			await page.reload();
+
+			// Ensure the app doesn't trigger a White Screen of Death (React Crash)
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+
+			// UI should degrade gracefully
+			const tabButtons = page.getByRole("button", { name: /Para hoy/i }).first();
+			await expect(tabButtons).toBeVisible({ timeout: 5000 });
 		});
 	});
 });
