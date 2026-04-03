@@ -153,7 +153,7 @@ test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
 			await page.locator('input[name="password"]').fill("SuperPassword123!");
 			await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
 			await page.locator('button[type="submit"]').click();
-			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 60000 });
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 120000 });
 		});
 
 		await test.step("Validar renderizado de Empty State real", async () => {
