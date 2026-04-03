@@ -25,20 +25,16 @@ test.describe("QA-14 | US-4 - Ver actividades urgentes (prioridades 'hoy')", () 
 
 		await page.locator('button[type="submit"]').click();
 
-		// GARANTÍA 1: Esperamos el toast de cuenta creada. Esto nos asegura que la BD respondió.
-		await expect(
-			page
-				.locator("[data-sonner-toast]")
-				.filter({ hasText: /cuenta/i })
-				.first(),
-		).toBeVisible({ timeout: 60000 });
+		// FIX 1: Eliminamos la aserción del Toast. La redirección de React Router a /hoy
+		// es tan rápida que destruye el Toast antes de que Playwright lo lea.
+		await page.waitForURL("**/hoy", { timeout: 60000 });
 
-		// GARANTÍA 2: Esperamos que el enrutador de React nos lleve a la vista Hoy.
-		await page.waitForURL("**/hoy", { timeout: 30000 });
-
-		// GARANTÍA 3: Esperamos a que el spinner desaparezca y el Toolbar del Kanban se renderice.
+		// Verificamos que la carcasa del Dashboard (Frontend) haya cargado
 		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 30000 });
-		await expect(page.getByTestId("today-toolbar")).toBeVisible({ timeout: 20000 });
+
+		// FIX 2: El 'today-toolbar' solo aparece cuando la API de Vercel/Django termina de responder.
+		// Le damos hasta 60 segundos para absorber cualquier Cold Start severo de la base de datos.
+		await expect(page.getByTestId("today-toolbar")).toBeVisible({ timeout: 60000 });
 	});
 
 	test("E2E Test: Renderizado correcto, estados vacios y reglas de ordenamiento reales", async ({
