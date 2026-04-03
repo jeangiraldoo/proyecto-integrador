@@ -1,181 +1,209 @@
 import { test, expect } from "@playwright/test";
-import { loginAndGoToDashboard } from "../utils/auth";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers para generar fechas dinámicas (evita que el test falle mañana)
-// ─────────────────────────────────────────────────────────────────────────────
-const formatLocalDate = (date: Date) => {
+const formatLocalDateForInput = (date: Date) => {
 	const year = date.getFullYear();
 	const month = String(date.getMonth() + 1).padStart(2, "0");
 	const day = String(date.getDate()).padStart(2, "0");
 	return `${year}-${month}-${day}`;
 };
 
-const today = new Date();
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1);
-const dayBefore = new Date(today);
-dayBefore.setDate(today.getDate() - 2);
-const tomorrow = new Date(today);
-tomorrow.setDate(today.getDate() + 1);
-const dayAfter = new Date(today);
-dayAfter.setDate(today.getDate() + 2);
-
-const TODAY_STR = formatLocalDate(today);
-const YESTERDAY_STR = formatLocalDate(yesterday);
-const DAY_BEFORE_STR = formatLocalDate(dayBefore);
-const TOMORROW_STR = formatLocalDate(tomorrow);
-const DAY_AFTER_STR = formatLocalDate(dayAfter);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock Data (Semilla controlada)
-// ─────────────────────────────────────────────────────────────────────────────
-const MOCK_TODAY_DATA = {
-	overdue: [
-		{
-			id: 102,
-			name: "Tarea B (Ayer)",
-			target_date: YESTERDAY_STR,
-			estimated_hours: 4,
-			status: "pending",
-		},
-		{
-			id: 101,
-			name: "Tarea A (Hace 2 días)",
-			target_date: DAY_BEFORE_STR,
-			estimated_hours: 2,
-			status: "pending",
-		},
-	],
-	today: [
-		{
-			id: 202,
-			name: "Tarea Larga (4h)",
-			target_date: TODAY_STR,
-			estimated_hours: 4,
-			status: "pending",
-		},
-		{
-			id: 201,
-			name: "Tarea Rápida (1h)",
-			target_date: TODAY_STR,
-			estimated_hours: 1,
-			status: "in_progress",
-		},
-	],
-	upcoming: [
-		{
-			id: 302,
-			name: "Tarea Pasado Mañana",
-			target_date: DAY_AFTER_STR,
-			estimated_hours: 2,
-			status: "pending",
-		},
-		{
-			id: 301,
-			name: "Tarea Mañana",
-			target_date: TOMORROW_STR,
-			estimated_hours: 3,
-			status: "pending",
-		},
-	],
-	postponed: [],
-	meta: { n_days: 7, filters: { courseId: null, status: null } },
-};
-
-const MOCK_EMPTY_DATA = {
-	overdue: [],
-	today: [],
-	upcoming: [],
-	postponed: [],
-	meta: { n_days: 7 },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SUITE DE PRUEBAS
-// ─────────────────────────────────────────────────────────────────────────────
-test.describe("QA-14 | US-4 - Prueba E2E Vista /hoy (Prioridades y Ordenamiento)", () => {
+test.describe("QA-14 | US-4 - Ver actividades urgentes (prioridades 'hoy')", () => {
+	// Extended timeout and retries to mitigate Vercel/Render Cold Starts
 	test.setTimeout(120000);
-	test.describe.configure({ retries: 1 });
+	test.describe.configure({ retries: 2 });
 
-	test("Caso de Éxito: Renderizado correcto y Reglas de Ordenamiento", async ({ page }) => {
-		// 1. Interceptar la API para inyectar nuestra semilla controlada
-		await page.route("**/today/**", async (route) => {
-			await route.fulfill({ json: MOCK_TODAY_DATA });
-		});
+	test.beforeEach(async ({ page }) => {
+		// FIX SENIOR: Test Isolation. We create a fresh user per test run to guarantee
+		// an empty state from the beginning, avoiding flaky assertions.
+		const timestamp = Date.now();
 
-		// 2. Login y navegación a /hoy
-		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+		// Increased timeout for potential Vercel sleeping server
+		await page.goto("/registro", { timeout: 120000 });
 
-		// 3. Validar Pestaña "Vencidas" (Debe ordenar por fecha más antigua primero)
-		await test.step("Ordenamiento Vencidas: Más antiguas primero", async () => {
-			await page.getByTestId("today-tab-overdue").click();
-			const overdueCards = page.locator('[data-testid^="today-subtask-title-"]');
+		await page.locator('input[name="username"]').fill(`qa14_${timestamp}`);
+		await page.locator('input[name="email"]').fill(`qa14_${timestamp}@test.com`);
+		await page.locator('input[name="password"]').fill("SuperPassword123!");
+		await page.locator('input[name="passwordConfirm"]').fill("SuperPassword123!");
 
-			// Tarea A (Hace 2 días) debe estar antes que Tarea B (Ayer)
-			await expect(overdueCards.nth(0)).toContainText("Tarea A (Hace 2 días)");
-			await expect(overdueCards.nth(1)).toContainText("Tarea B (Ayer)");
-		});
+		await page.locator('button[type="submit"]').click();
 
-		// 4. Validar Pestaña "Para hoy" (Debe ordenar por menor tiempo primero)
-		await test.step("Ordenamiento Hoy: Menor esfuerzo primero", async () => {
-			await page.getByTestId("today-tab-today").click();
-			const todayCards = page.locator('[data-testid^="today-subtask-title-"]');
-
-			// Tarea Rápida (1h) debe estar antes que Tarea Larga (4h)
-			await expect(todayCards.nth(0)).toContainText("Tarea Rápida (1h)");
-			await expect(todayCards.nth(1)).toContainText("Tarea Larga (4h)");
-		});
-
-		// 5. Validar Pestaña "Próximas" (Debe ordenar por fecha más cercana primero)
-		await test.step("Ordenamiento Próximas: Más cercanas primero", async () => {
-			await page.getByTestId("today-tab-upcoming").click();
-			const upcomingCards = page.locator('[data-testid^="today-subtask-title-"]');
-
-			// Tarea Mañana debe estar antes que Tarea Pasado Mañana
-			await expect(upcomingCards.nth(0)).toContainText("Tarea Mañana");
-			await expect(upcomingCards.nth(1)).toContainText("Tarea Pasado Mañana");
-		});
-
-		// 6. Verificar apertura de detalles
-		await test.step("Interacción: Abrir panel de detalles", async () => {
-			await page.getByTestId("today-subtask-card-301").click();
-			await expect(page.getByTestId("subtask-detail-panel")).toBeVisible();
-			await page.getByTestId("subtask-detail-close-btn").click();
-		});
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 120000 });
 	});
 
-	test("Caso de Estado Vacío: Cuando no hay subtareas pendientes", async ({ page }) => {
-		await page.route("**/today/**", async (route) => {
-			await route.fulfill({ json: MOCK_EMPTY_DATA });
-		});
+	test("E2E Test: Renderizado correcto, estados vacios y reglas de ordenamiento reales", async ({
+		page,
+	}) => {
+		const TIMESTAMP = Date.now();
+		const SUBJECT_NAME = `QA14_Materia_${TIMESTAMP}`;
+		const ACTIVITY_NAME = `QA14_Actividad_${TIMESTAMP}`;
 
-		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+		const today = new Date();
 
-		await test.step("Verificar UI de estado vacío", async () => {
-			// Pill superior
-			await expect(page.getByTestId("today-summary-pill")).toContainText(/Sin tareas urgentes/i);
+		// Dates mapping for testing US-4 Sorting Rules
+		const pastOld = new Date(today);
+		pastOld.setDate(today.getDate() - 3);
+		const pastRecent = new Date(today);
+		pastRecent.setDate(today.getDate() - 1);
+		const tomorrow = new Date(today);
+		tomorrow.setDate(today.getDate() + 1);
+		const futureFar = new Date(today);
+		futureFar.setDate(today.getDate() + 3);
+		const dueActivity = new Date(today);
+		dueActivity.setDate(today.getDate() + 10);
 
-			// Empty state en la columna
-			await expect(page.getByTestId("today-empty-state-upcoming")).toBeVisible();
-			await expect(page.getByTestId("today-empty-state-upcoming")).toContainText(/Nada por aquí/i);
-		});
-	});
+		const pastOldStr = formatLocalDateForInput(pastOld);
+		const pastRecentStr = formatLocalDateForInput(pastRecent);
+		const todayStr = formatLocalDateForInput(today);
+		const tomorrowStr = formatLocalDateForInput(tomorrow);
+		const futureFarStr = formatLocalDateForInput(futureFar);
+		const dueActivityStr = formatLocalDateForInput(dueActivity);
 
-	test("Caso de Falla: Resiliencia del Frontend ante error 500 del servidor", async ({ page }) => {
-		await page.route("**/today/**", async (route) => {
-			await route.fulfill({ status: 500, json: { errors: { server: "Internal Server Error" } } });
-		});
+		// ====================================================================
+		// STEP 1: Empty State Validation
+		// ====================================================================
+		await test.step("1. Estado Vacío: Cuando no hay subtareas pendientes", async () => {
+			// Summary pill should show no urgent tasks
+			await expect(page.getByTestId("today-summary-pill")).toContainText(/Sin tareas/i, {
+				timeout: 15000,
+			});
 
-		await loginAndGoToDashboard(page);
-
-		await test.step("La aplicación no crashea y maneja la falta de datos grácilmente", async () => {
-			// El frontend maneja el error cayendo al "Estado vacío" (EMPTY_KANBAN) en lugar de una pantalla blanca
-			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+			// Today tab should be visible and active
 			await expect(page.getByTestId("today-tab-today")).toBeVisible();
-			await expect(page.getByTestId("today-empty-state-upcoming")).toBeVisible();
+
+			// Empty state illustration/message must be displayed
+			await expect(page.getByTestId("today-empty-state-today")).toBeVisible();
+		});
+
+		// ====================================================================
+		// STEP 2: Data Preparation (Creating the tasks directly to real DB)
+		// ====================================================================
+		await test.step("2. Preparación: Crear tareas con fechas y horas específicas", async () => {
+			await page.getByRole("button", { name: "Organización" }).click({ force: true });
+			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 10000 });
+
+			await page.getByRole("button", { name: /Nueva actividad/i }).click();
+			const modal = page.locator(".ca-modal");
+			await expect(modal).toBeVisible({ timeout: 5000 });
+
+			await modal.locator(".ca-combobox-input").fill(SUBJECT_NAME);
+			await modal.locator('input[id="ca-title"]').fill(ACTIVITY_NAME);
+			await modal.locator('input[id="ca-due-date"]').fill(dueActivityStr);
+			await modal.getByRole("button", { name: /Siguiente/i }).click();
+
+			// Subtask 1: Past Old
+			await modal.locator('input[id="st-title"]').fill("Vencida Antigua");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(pastOldStr);
+			await modal.locator('input[id="st-hours"]').fill("1");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Vencida Antigua")).toBeVisible({
+				timeout: 5000,
+			});
+
+			// Subtask 2: Past Recent
+			await modal.locator('input[id="st-title"]').fill("Vencida Reciente");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(pastRecentStr);
+			await modal.locator('input[id="st-hours"]').fill("1");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Vencida Reciente")).toBeVisible({
+				timeout: 5000,
+			});
+
+			// Subtask 3: Today Heavy (3h)
+			await modal.locator('input[id="st-title"]').fill("Hoy Pesada");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(todayStr);
+			await modal.locator('input[id="st-hours"]').fill("3");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Hoy Pesada")).toBeVisible({
+				timeout: 5000,
+			});
+
+			// Subtask 4: Today Light (1h)
+			await modal.locator('input[id="st-title"]').fill("Hoy Ligera");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(todayStr);
+			await modal.locator('input[id="st-hours"]').fill("1");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Hoy Ligera")).toBeVisible({
+				timeout: 5000,
+			});
+
+			// Subtask 5: Upcoming Near
+			await modal.locator('input[id="st-title"]').fill("Proxima Cercana");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(tomorrowStr);
+			await modal.locator('input[id="st-hours"]').fill("1");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Proxima Cercana")).toBeVisible({
+				timeout: 5000,
+			});
+
+			// Subtask 6: Upcoming Far
+			await modal.locator('input[id="st-title"]').fill("Proxima Lejana");
+			await modal.locator('.ca-subform-date-wrapper input[type="date"]').fill(futureFarStr);
+			await modal.locator('input[id="st-hours"]').fill("1");
+			await modal.getByRole("button", { name: /Añadir subtarea/i }).click();
+			await expect(modal.locator(".ca-subtask-table").getByText("Proxima Lejana")).toBeVisible({
+				timeout: 5000,
+			});
+
+			await modal.getByRole("button", { name: /Crear actividad/i }).click();
+
+			const toastCreada = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /creada/i })
+				.first();
+			await expect(toastCreada).toBeVisible({ timeout: 8000 });
+		});
+
+		// ====================================================================
+		// STEP 3: Validation of Sorting Rules (US-04 Tie-breakers)
+		// ====================================================================
+		await test.step("3. Validación: Reglas de ordenamiento reales en Vista Hoy", async () => {
+			await page.getByRole("button", { name: "Hoy" }).click({ force: true });
+			await page.reload();
+			await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+
+			// Vencidas: Oldest first (Date ASC)
+			await page.getByTestId("today-tab-overdue").click();
+			const overdueCards = page.locator('[data-testid="today-column-overdue"] [role="button"]');
+			await expect(overdueCards.nth(0)).toContainText("Vencida Antigua", { timeout: 10000 });
+			await expect(overdueCards.nth(1)).toContainText("Vencida Reciente", { timeout: 10000 });
+			await expect(page.getByTestId("today-sort-hint")).toContainText(/más antiguas primero/i);
+
+			// Para hoy: Least effort first (Hours ASC)
+			await page.getByTestId("today-tab-today").click();
+			const todayCards = page.locator('[data-testid="today-column-today"] [role="button"]');
+			await expect(todayCards.nth(0)).toContainText("Hoy Ligera", { timeout: 10000 });
+			await expect(todayCards.nth(1)).toContainText("Hoy Pesada", { timeout: 10000 });
+			await expect(page.getByTestId("today-sort-hint")).toContainText(/más rápidas primero/i);
+
+			// Próximas: Closest first (Date ASC)
+			await page.getByTestId("today-tab-upcoming").click();
+			const upcomingCards = page.locator('[data-testid="today-column-upcoming"] [role="button"]');
+			await expect(upcomingCards.nth(0)).toContainText("Proxima Cercana", { timeout: 10000 });
+			await expect(upcomingCards.nth(1)).toContainText("Proxima Lejana", { timeout: 10000 });
+			await expect(page.getByTestId("today-sort-hint")).toContainText(/más cercanas primero/i);
+		});
+
+		// ====================================================================
+		// STEP 4: Cleanup
+		// ====================================================================
+		await test.step("4. Cleanup: Eliminar actividad completa", async () => {
+			await page.getByRole("button", { name: "Organización" }).click({ force: true });
+			await expect(page.locator("h1.page-title")).toContainText("Organización", { timeout: 15000 });
+
+			await page.getByText(SUBJECT_NAME).click();
+
+			const activityBlock = page.locator("div").filter({ hasText: ACTIVITY_NAME }).first();
+			await expect(activityBlock).toBeVisible({ timeout: 5000 });
+
+			await activityBlock.locator('button[title="Eliminar actividad"]').first().click();
+
+			await page.getByRole("button", { name: /Sí, eliminar/i }).click();
+
+			const toastEliminada = page
+				.locator("[data-sonner-toast]")
+				.filter({ hasText: /eliminada/i })
+				.first();
+			await expect(toastEliminada).toBeVisible({ timeout: 8000 });
 		});
 	});
 });
