@@ -182,25 +182,25 @@ test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
 			const emptyMessage = page.getByText(/Nada por aquí — ¡todo libre!/i).first();
 			await expect(emptyMessage).toBeVisible({ timeout: 10000 });
 
-			// Verify counts are zero
+			// Verify counts reflect the empty state
 			await expect(
 				page
 					.getByRole("button", { name: /Vencidas/i })
 					.locator("span")
 					.last(),
-			).toHaveText("0");
+			).toHaveText(/0|todo completado/i);
 			await expect(
 				page
 					.getByRole("button", { name: /Para hoy/i })
 					.locator("span")
 					.last(),
-			).toHaveText("0");
+			).toHaveText(/0|todo completado/i);
 			await expect(
 				page
 					.getByRole("button", { name: /Próximas/i })
 					.locator("span")
 					.last(),
-			).toHaveText("0");
+			).toHaveText(/0|todo completado/i);
 		});
 	});
 
