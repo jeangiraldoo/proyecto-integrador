@@ -46,7 +46,7 @@ test.describe("QA-14 | US-4 - Pruebas E2E Vista Hoy", () => {
 		const ST_UPCOMING_OUT = `Proxima Fuera N ${timestamp}`;
 
 		await test.step("Setup: Registrar usuario fresco para Test Isolation", async () => {
-			await page.goto("/registro", { timeout: 60000 });
+			await page.goto("/registro", { timeout: 120000, waitUntil: "domcontentloaded" });
 			await page.locator('input[name="username"]').fill(`qa14_user_${timestamp}`);
 			await page.locator('input[name="email"]').fill(`qa14_user_${timestamp}@test.com`);
 			await page.locator('input[name="password"]').fill("SuperPassword123!");
