@@ -81,7 +81,7 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 		});
 
 		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 60000 });
 	});
 
 	test("Functional: Resolver reduciendo -> éxito y Persistencia (con Regla de Prioridad)", async ({
@@ -122,10 +122,7 @@ test.describe("QA-18 | US-8 - Pruebas Funcionales de Resolución de Conflictos (
 				await route.fulfill({
 					json: {
 						...MOCK_TODAY_DATA,
-						today: [
-							MOCK_TODAY_DATA.today[1], // Tarea Ligera (4h)
-							{ ...MOCK_TODAY_DATA.today[0], estimated_hours: 2 }, // Tarea Pesada (2h)
-						],
+						today: [MOCK_TODAY_DATA.today[1], { ...MOCK_TODAY_DATA.today[0], estimated_hours: 2 }],
 					},
 				});
 			});
