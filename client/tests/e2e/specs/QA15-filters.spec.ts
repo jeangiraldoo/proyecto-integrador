@@ -53,7 +53,7 @@ test.describe("QA-15 | US-5 - Filtrar por curso y validar reglas de ordenamiento
 		await expect(hintProximas).toBeVisible();
 	});
 
-	test("Should keep UI state without reloading when clearing filters (Acceptance Criteria #1)", async ({
+	test("Debe mantener el estado de la UI sin recargar al limpiar filtros (Criterio de Aceptación #1)", async ({
 		page,
 	}) => {
 		const btnLimpiar = page.getByRole("button", { name: /Limpiar/i });
