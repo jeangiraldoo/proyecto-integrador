@@ -21,7 +21,7 @@ test.describe("QA-16 | US-6 - Reprogramacion de actividades/subtareas", () => {
 		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 20000 });
 	});
 
-	test("E2E Test: Reschedule an upcoming subtask to today and validate persistence", async ({
+	test("E2E Test: Reprogramar una subtarea próxima para hoy y validar su persistencia", async ({
 		page,
 	}) => {
 		await test.step("Dado: Subtarea próxima y Usuario autenticado", async () => {

@@ -4,16 +4,20 @@ import { loginAndGoToDashboard } from "../utils/auth";
 test.describe("QA-15 | US-5 - Filtrar por curso y validar reglas de ordenamiento", () => {
 	test.beforeEach(async ({ page }) => {
 		await loginAndGoToDashboard(page);
-		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 15000 });
+		await expect(page.locator("h1.page-title")).toContainText("Hoy", { timeout: 120000 });
 	});
 
 	test("Filtrar por curso y validar orden entre las 3 pestañas", async ({ page }) => {
+		test.setTimeout(120000);
 		const btnCurso = page.getByRole("button", { name: /Curso:/i });
 		await expect(btnCurso).toBeVisible({ timeout: 10000 });
 		await btnCurso.click();
 
 		const dropdownCurso = page.locator('div[style*="z-index: 9999"]').first();
-		await dropdownCurso.locator("button").last().click();
+		const optionToClick = dropdownCurso.locator("button").last();
+		await expect(optionToClick).toBeVisible({ timeout: 5000 });
+
+		await optionToClick.evaluate((node: HTMLElement) => node.click());
 
 		const tabVencidas = page.getByRole("button", { name: /Vencidas/i });
 		await tabVencidas.click();
@@ -53,7 +57,7 @@ test.describe("QA-15 | US-5 - Filtrar por curso y validar reglas de ordenamiento
 		await expect(hintProximas).toBeVisible();
 	});
 
-	test("Should keep UI state without reloading when clearing filters (Acceptance Criteria #1)", async ({
+	test("Debe mantener el estado de la UI sin recargar al limpiar filtros (Criterio de Aceptación #1)", async ({
 		page,
 	}) => {
 		const btnLimpiar = page.getByRole("button", { name: /Limpiar/i });

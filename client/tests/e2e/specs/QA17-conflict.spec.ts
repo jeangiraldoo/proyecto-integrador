@@ -35,7 +35,7 @@ test.describe("QA-17 | US-7 - Detectar conflicto por sobrecarga diaria", () => {
 		});
 	});
 
-	test("E2E & Funcional: Deteccion, cancelacion y resolucion automatica", async ({ page }) => {
+	test("E2E Test: Deteccion, cancelacion y resolucion automatica", async ({ page }) => {
 		const TIMESTAMP = Date.now();
 		const SUBJECT_NAME = `QA17_Materia_${TIMESTAMP}`;
 		const ACTIVITY_NAME = `QA17_Actividad_${TIMESTAMP}`;
