@@ -15,6 +15,9 @@ const STORAGE_KEY_TO_ONBOARDING: Record<string, OnboardingKey> = {
 const TARGET_CHECK_DELAY_MS = 250;
 const MAX_TARGET_CHECK_RETRIES = 8;
 
+/** True when the page is running under a WebDriver-based automation tool (e.g. Playwright). */
+const IS_WEBDRIVER = navigator.webdriver;
+
 function getScopedStorageKey(baseKey: string, userId?: number): string {
 	return userId ? `${baseKey}_user_${userId}` : baseKey;
 }
@@ -39,6 +42,7 @@ export default function OnboardingTour({ user, onTourComplete }: OnboardingTourP
 	const [currentOnboardingKey, setCurrentOnboardingKey] = useState<OnboardingKey | null>(null);
 
 	useEffect(() => {
+		if (IS_WEBDRIVER) return;
 		let startTimerId: number | null = null;
 		let retryTimerId: number | null = null;
 		const path = location.pathname;
@@ -203,6 +207,8 @@ export default function OnboardingTour({ user, onTourComplete }: OnboardingTourP
 			}
 		}
 	};
+
+	if (IS_WEBDRIVER) return null;
 
 	return (
 		<Joyride
