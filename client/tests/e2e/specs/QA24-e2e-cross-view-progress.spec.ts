@@ -30,6 +30,11 @@ const MOCK_USER = {
 	email: "qa24@test.com",
 	name: "QA24 CrossView User",
 	max_daily_hours: 8,
+	onboarding: {
+		has_seen_tour: true,
+		has_seen_org_tour: true,
+		has_seen_progress_tour: true,
+	},
 };
 
 // ── Actividad 801: 0/2 completadas inicialmente ───────────────────────────
