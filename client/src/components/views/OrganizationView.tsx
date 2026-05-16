@@ -398,6 +398,10 @@ export default function OrganizationView({
 							{/* Subject header row */}
 							<div
 								data-testid={`org-subject-header-${subjectToken}`}
+								role="button"
+								tabIndex={0}
+								aria-expanded={isOpen}
+								aria-label={`${subject} — ${isOpen ? "contraer" : "expandir"} materia`}
 								style={{
 									display: "flex",
 									alignItems: "center",
@@ -408,6 +412,12 @@ export default function OrganizationView({
 									transition: "background 0.2s",
 								}}
 								onClick={() => setExpandedSubject(isOpen ? null : subject)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										setExpandedSubject(isOpen ? null : subject);
+									}
+								}}
 							>
 								<BookOpen size={18} color="#c084fc" style={{ flexShrink: 0 }} />
 								<span style={{ fontWeight: 700, fontSize: "15px", color: ov.subTitle, flex: 1 }}>

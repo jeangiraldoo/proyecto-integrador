@@ -258,6 +258,7 @@ export function SubtaskDetailPanel({
 						<button
 							onClick={() => setDeleteStep(true)}
 							title="Eliminar"
+							aria-label="Eliminar"
 							data-testid="subtask-detail-delete-btn"
 							style={{
 								background: "none",
