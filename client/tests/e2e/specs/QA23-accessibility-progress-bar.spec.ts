@@ -31,6 +31,11 @@ const MOCK_USER = {
 	email: "qa23@test.com",
 	name: "QA23 A11y User",
 	max_daily_hours: 8,
+	onboarding: {
+		has_seen_tour: true,
+		has_seen_org_tour: true,
+		has_seen_progress_tour: true,
+	},
 };
 
 // Actividad 701: 1 de 2 subtareas completadas → progreso 50%

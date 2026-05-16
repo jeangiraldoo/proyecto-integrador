@@ -1431,6 +1431,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 												className="filter-close"
 												onClick={() => setFiltersOpen(false)}
 												data-testid="dashboard-filters-close-btn"
+												aria-label="Cerrar filtros"
 											>
 												<X size={14} />
 											</button>

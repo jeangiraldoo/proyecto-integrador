@@ -27,6 +27,11 @@ const MOCK_USER = {
 	email: "qa20@test.com",
 	name: "QA20 A11y User",
 	max_daily_hours: 8,
+	onboarding: {
+		has_seen_tour: true,
+		has_seen_org_tour: true,
+		has_seen_progress_tour: true,
+	},
 };
 
 const MOCK_TODAY_DATA = {

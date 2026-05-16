@@ -28,6 +28,11 @@ const MOCK_USER = {
 	email: "qa22@test.com",
 	name: "QA22 Progress User",
 	max_daily_hours: 8,
+	onboarding: {
+		has_seen_tour: true,
+		has_seen_org_tour: true,
+		has_seen_progress_tour: true,
+	},
 };
 
 // ── Actividad 1: 3 subtareas, 1 completada ─────────────────────────────────
