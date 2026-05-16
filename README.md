@@ -1,4 +1,4 @@
-# Advancy — Planificador de Estudio
+# Luma — Planificador de Estudio
 
 Aplicación web para gestionar actividades evaluativas universitarias: planificar, ejecutar,
 reprogramar y visualizar progreso académico.
@@ -193,8 +193,8 @@ Para evaluar las funcionalidades sin crear un usuario, usa la cuenta registrada 
 | Campo      | Valor                                          |
 | ---------- | ---------------------------------------------- |
 | URL        | https://proyecto-integrador-as97.onrender.com/ |
-| Usuario    | `demo`                                         |
-| Contraseña | `demo1234`                                     |
+| Usuario    | `jean`                                         |
+| Contraseña | `superjean`                                    |
 
 > La cuenta demo tiene actividades, subtareas y progreso precargados para demostrar todos los flujos
 > del backlog.
@@ -225,4 +225,3 @@ VITE_API_BASE_URL=https://proyecto-integrador-as97.onrender.com/
 
 ---
 
-_Hecho con ❤️ por el equipo Advancy — Sprint 5_
